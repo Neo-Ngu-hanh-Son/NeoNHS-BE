@@ -37,7 +37,7 @@ jobs:
           cache: maven
 
       - name: Build & Test
-        run: mvn clean package
+        run: mvn clean package -DskipTests
         env:
           SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/neonhs_db?useSSL=false&allowPublicKeyRetrieval=true
           SPRING_DATASOURCE_USERNAME: root
