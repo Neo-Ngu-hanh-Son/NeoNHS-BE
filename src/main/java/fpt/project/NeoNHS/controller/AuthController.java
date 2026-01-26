@@ -6,6 +6,7 @@ import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.AuthResponse;
 import fpt.project.NeoNHS.service.AuthService;
 import lombok.RequiredArgsConstructor;
+import org.apache.coyote.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,7 +15,6 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
-
     private final AuthService authService;
 
     @PostMapping("/login")
@@ -28,5 +28,23 @@ public class AuthController {
         AuthResponse data = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(HttpStatus.CREATED, "Registration successful", data));
+    }
+
+    @PostMapping("/google-login")
+    public ResponseEntity<ApiResponse<AuthResponse>> googleLogin(@RequestParam String idToken) throws Exception {
+        AuthResponse data = authService.googleLogin(idToken);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Google login successful", data));
+    }
+
+    @GetMapping("/ping")
+    public ResponseEntity<ApiResponse<String>> ping() {
+        System.out.println("Ping received");
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ApiResponse.success(HttpStatus.OK, "pong", "pong ping pong"));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<String>> logout() {
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Logout successful", "Logged out"));
     }
 }

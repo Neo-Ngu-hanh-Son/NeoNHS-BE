@@ -1,8 +1,10 @@
 package fpt.project.NeoNHS.service.impl;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import fpt.project.NeoNHS.dto.request.LoginRequest;
 import fpt.project.NeoNHS.dto.request.RegisterRequest;
 import fpt.project.NeoNHS.dto.response.AuthResponse;
+import fpt.project.NeoNHS.dto.response.auth.UserInfoResponse;
 import fpt.project.NeoNHS.entity.User;
 import fpt.project.NeoNHS.enums.UserRole;
 import fpt.project.NeoNHS.exception.BadRequestException;
@@ -14,10 +16,15 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +34,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final GoogleTokenVerifier googleTokenVerifier;
 
     @Override
     public AuthResponse login(LoginRequest request) {
@@ -46,10 +54,13 @@ public class AuthServiceImpl implements AuthService {
         return AuthResponse.builder()
                 .accessToken(token)
                 .tokenType("Bearer")
-                .userId(user.getId())
-                .email(user.getEmail())
-                .fullname(user.getFullname())
-                .role(user.getRole())
+                .userInfo(UserInfoResponse.builder()
+                        .id(user.getId())
+                        .email(user.getEmail())
+                        .fullname(user.getFullname())
+                        .role(user.getRole())
+                        .avatarUrl(user.getAvatarUrl())
+                        .build())
                 .build();
     }
 
@@ -77,16 +88,58 @@ public class AuthServiceImpl implements AuthService {
                 )
         );
 
+        return getAuthResponse(user, authentication);
+    }
+
+    @Override
+    public AuthResponse googleLogin(String idToken) {
+        try {
+            GoogleIdToken.Payload result = googleTokenVerifier.verify(idToken);
+            System.out.println("[AuthServiceImpl] Google ID Token payload email: " + result.getEmail());
+            User user = userRepository.findByEmail(result.getEmail())
+                    .orElseGet(() -> createUserFromGooglePayload(result));
+            // Generate JWT token
+            UserPrincipal userPrincipal = UserPrincipal.create(user);
+            Authentication authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            userPrincipal,
+                            null,
+                            userPrincipal.getAuthorities()
+                    );
+
+            return getAuthResponse(user, authentication);
+        } catch (Exception e) {
+            System.out.println("[AuthServiceImpl] Google login failed: " + e.getMessage());
+            throw new BadRequestException("Google login failed: " + e.getMessage());
+        }
+    }
+
+    private AuthResponse getAuthResponse(User user, Authentication authentication) {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String token = jwtTokenProvider.generateToken(authentication);
-
         return AuthResponse.builder()
                 .accessToken(token)
                 .tokenType("Bearer")
-                .userId(user.getId())
-                .email(user.getEmail())
-                .fullname(user.getFullname())
-                .role(user.getRole())
+                .userInfo(UserInfoResponse.builder()
+                        .id(user.getId())
+                        .email(user.getEmail())
+                        .fullname(user.getFullname())
+                        .role(user.getRole())
+                        .avatarUrl(user.getAvatarUrl())
+                        .build())
                 .build();
+    }
+
+    private User createUserFromGooglePayload(GoogleIdToken.Payload result) {
+        User u = User.builder()
+                .fullname((String) result.get("name"))
+                .email(result.getEmail())
+                .role(UserRole.TOURIST)
+                .avatarUrl(result.get("picture") != null ? (String) result.get("picture") : "defaultAvatar.png")
+                .passwordHash(passwordEncoder.encode("google_oauth2_user"))
+                .isActive(true)
+                .createdAt(LocalDateTime.now())
+                .build();
+        return userRepository.save(u);
     }
 }
