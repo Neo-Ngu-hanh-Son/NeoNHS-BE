@@ -27,5 +27,5 @@ app:
     expiration-ms: 86400000  # 24 hours
 
 google-auth:
-  client-id: 755323177378-11nm4ungk8le19dtj6a0mlqfdiknhiot.apps.googleusercontent.com
-  client-secret: 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
+  client-id: ${GOOGLE_AUTH_CLIENT_ID}
+  client-secret: ${GOOGLE_AUTH_CLIENT_SECRET}

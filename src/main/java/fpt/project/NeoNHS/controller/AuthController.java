@@ -7,6 +7,7 @@ import fpt.project.NeoNHS.dto.response.AuthResponse;
 import fpt.project.NeoNHS.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.Response;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -40,7 +41,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse<String>> ping() {
         System.out.println("Ping received");
         return ResponseEntity.status(HttpStatus.OK)
-                .body(ApiResponse.success(HttpStatus.OK, "pong", "pong ping pong"));
+                .body(ApiResponse.success(HttpStatus.OK, "pong", "pong"));
     }
 
     @PostMapping("/logout")
