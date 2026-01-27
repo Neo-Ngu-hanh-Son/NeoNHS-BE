@@ -1,13 +1,11 @@
 package fpt.project.NeoNHS.controller;
 
-import fpt.project.NeoNHS.dto.request.LoginRequest;
-import fpt.project.NeoNHS.dto.request.RegisterRequest;
+import fpt.project.NeoNHS.dto.request.auth.LoginRequest;
+import fpt.project.NeoNHS.dto.request.auth.RegisterRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.AuthResponse;
 import fpt.project.NeoNHS.service.AuthService;
 import lombok.RequiredArgsConstructor;
-import org.apache.coyote.Response;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,7 +26,8 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> register(@RequestBody RegisterRequest request) {
         AuthResponse data = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(HttpStatus.CREATED, "Registration successful", data));
+                .body(ApiResponse.success(HttpStatus.CREATED,
+                        "Registration successful, please check your email for verification", data));
     }
 
     @PostMapping("/google-login")
@@ -47,5 +46,11 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<String>> logout() {
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Logout successful", "Logged out"));
+    }
+
+    @GetMapping("/test-email")
+    public ResponseEntity<ApiResponse<String>> testEmail() {
+        authService.sendTestEmail();
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Test email sent", "Email sent"));
     }
 }

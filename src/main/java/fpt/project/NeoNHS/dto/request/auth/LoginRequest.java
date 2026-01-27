@@ -1,4 +1,4 @@
-package fpt.project.NeoNHS.dto.request;
+package fpt.project.NeoNHS.dto.request.auth;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,10 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RegisterRequest {
-
-    private String fullname;
+public class LoginRequest {
     private String email;
     private String password;
-    private String phoneNumber;
 }

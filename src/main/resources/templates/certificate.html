@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Japanese Course Certificate</title>
+    <style>
+        /* Reset and core styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Font declarations with full paths */
+        @font-face {
+            font-family: 'NotoSansJP';
+            src: url('/fonts/NotoSansJP-Regular.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        @font-face {
+            font-family: 'NotoSansJP';
+            src: url('/fonts/NotoSansJP-Bold.ttf') format('truetype');
+            font-weight: bold;
+            font-style: normal;
+        }
+
+        /* Main styles with explicit sizes */
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #ffffff;
+            color: #333333;
+        }
+
+        /* Certificate container with fixed dimensions */
+        .certificate-container {
+            width: 160mm; /* A4 width */
+            height: 220mm; /* A4 height */
+            margin: 0 auto;
+            padding: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .certificate {
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            border: 12px solid #e74c3c;
+            padding: 40px;
+            position: relative;
+        }
+
+        /* Header section */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-top: 10px;
+        }
+
+        .logo {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            background-color: #f8f9fa;
+            border: 2px solid #e74c3c;
+            text-align: center;
+            line-height: 120px;
+            font-family: 'NotoSansJP', 'MS Gothic', 'MS Mincho', sans-serif;
+            font-size: 24px;
+            color: #e74c3c;
+        }
+
+        .title {
+            font-size: 36px;
+            font-weight: bold;
+            color: #e74c3c;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 24px;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .japanese-title {
+            font-family: 'NotoSansJP', 'MS Gothic', 'MS Mincho', sans-serif;
+            font-size: 22px;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        /* Content section */
+        .content {
+            text-align: center;
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .name {
+            font-size: 28px;
+            font-weight: bold;
+            border-bottom: 2px solid #333;
+            display: inline-block;
+            padding: 0 20px;
+            margin: 15px 0;
+            min-width: 300px;
+        }
+
+        /* Course details section */
+        .course-details {
+            text-align: center;
+            margin: 30px 0;
+            font-size: 18px;
+            line-height: 1.8;
+        }
+
+        /* Footer section */
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+        }
+
+        .signature {
+            width: 300px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .signature-line {
+            border-top: 1px solid #333;
+            margin-top: 40px;
+            padding-top: 10px;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .certificate-id {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            font-size: 12px;
+            color: #777;
+        }
+
+        .badge {
+            position: absolute;
+            bottom: 40px;
+            right: 40px;
+            width: 120px;
+            height: 120px;
+            text-align: center;
+            line-height: 120px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #e74c3c;
+            border: 2px dashed #e74c3c;
+            border-radius: 50%;
+            transform: rotate(-15deg);
+        }
+
+        /* Helper class for Japanese text */
+        .japanese {
+            font-family: 'NotoSansJP', 'MS Gothic', 'MS Mincho', 'IPAMincho', 'IPAGothic', sans-serif;
+        }
+    </style>
+</head>
+<body>
+<div class="certificate-container">
+    <div class="certificate">
+        <div class="header">
+<!--            <div class="logo japanese">日本語</div>-->
+            <img src="https://res.cloudinary.com/donifpb7x/image/upload/v1745482695/cer_zhq66z.png" alt="nihon" width="200" height="120"/>
+            <div class="title">Certificate of Completion</div>
+            <div class="subtitle">Japanese Language Course</div>
+<!--            <div class="japanese-title japanese">日本語コース修了証書</div>-->
+            <img src="https://res.cloudinary.com/donifpb7x/image/upload/v1745484071/cer1_z7c4wu.png" alt="nihon" width="200" height="40"/>
+        </div>
+
+        <div class="content">
+            This is to certify that
+            <div class="name" th:text="${userName}">Student Name</div>
+            has successfully completed the Japanese language course
+            <div class="name" th:text="${courseName}">Course Name</div>
+        </div>
+
+        <div class="course-details">
+            <strong>Course Level:</strong> <span th:text="${courseLevel}">Level</span><br/>
+            <strong>Duration:</strong> <span th:text="${duration}">12</span> hours<br/>
+            <strong>Completion Date:</strong> <span th:text="${completionDate}">Date</span>
+        </div>
+
+        <div class="footer">
+            <div class="signature">
+                <div class="signature-line">Academy Director : JLEARNING</div>
+            </div>
+        </div>
+
+        <div class="certificate-id">Certificate ID: <span th:text="${certificateId}">ID12345</span></div>
+
+        <div class="badge">SIGNATURE</div>
+    </div>
+</div>
+</body>
+</html>
