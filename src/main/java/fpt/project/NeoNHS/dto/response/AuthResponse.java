@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.dto.response;
 
+import fpt.project.NeoNHS.dto.response.auth.UserInfoResponse;
 import fpt.project.NeoNHS.enums.UserRole;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,13 +14,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AuthResponse {
-
     private String accessToken;
-
     @Builder.Default
     private String tokenType = "Bearer";
-    private UUID userId;
-    private String email;
-    private String fullname;
-    private UserRole role;
+    private UserInfoResponse userInfo;
 }
