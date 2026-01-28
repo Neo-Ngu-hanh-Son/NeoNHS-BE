@@ -5,8 +5,6 @@ import org.springframework.stereotype.Component;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
-import java.time.LocalDateTime;
-
 @Component
 @RequiredArgsConstructor
 public class GenerateMailTemplateHelper {

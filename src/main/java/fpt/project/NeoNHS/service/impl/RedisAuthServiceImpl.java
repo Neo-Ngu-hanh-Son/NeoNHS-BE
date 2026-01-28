@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class RedisAuthServiceImpl implements RedisAuthService {
 
-    private static final int OTP_TTL_MINUTES = 5;
+    private static final int OTP_TTL_MINUTES = 2;
     private static final int MAX_ATTEMPTS = 5;
 
     private final StringRedisTemplate redis;

@@ -4,6 +4,7 @@ import fpt.project.NeoNHS.dto.request.auth.LoginRequest;
 import fpt.project.NeoNHS.dto.request.auth.RegisterRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.AuthResponse;
+import fpt.project.NeoNHS.entity.User;
 import fpt.project.NeoNHS.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -38,7 +39,6 @@ public class AuthController {
 
     @GetMapping("/ping")
     public ResponseEntity<ApiResponse<String>> ping() {
-        System.out.println("Ping received");
         return ResponseEntity.status(HttpStatus.OK)
                 .body(ApiResponse.success(HttpStatus.OK, "pong", "pong"));
     }
@@ -48,9 +48,22 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Logout successful", "Logged out"));
     }
 
+    @PostMapping("/verify")
+    public ResponseEntity<ApiResponse<String>> verify(@RequestParam String email, @RequestParam String otp) {
+        authService.verifyOtp(email, otp);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Verification successful", "Verification successful"));
+    }
+
+    @GetMapping("/resend-verify-email")
+    public ResponseEntity<ApiResponse<String>> resendVerifyEmail(@RequestParam String email) {
+        authService.sendVerifyEmail(email);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Verification email resent", "Email resent"));
+    }
+
     @GetMapping("/test-email")
     public ResponseEntity<ApiResponse<String>> testEmail() {
         authService.sendTestEmail();
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Test email sent", "Email sent"));
     }
+
 }

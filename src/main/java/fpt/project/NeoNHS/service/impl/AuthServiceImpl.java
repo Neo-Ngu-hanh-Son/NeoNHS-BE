@@ -16,6 +16,7 @@ import fpt.project.NeoNHS.security.JwtTokenProvider;
 import fpt.project.NeoNHS.security.UserPrincipal;
 import fpt.project.NeoNHS.service.AuthService;
 import fpt.project.NeoNHS.service.MailService;
+import fpt.project.NeoNHS.service.RedisAuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -26,6 +27,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Random;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +40,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final GoogleTokenVerifier googleTokenVerifier;
     private final MailService mailService;
+    private final RedisAuthService redisAuthService;
 
     @Override
     public AuthResponse login(LoginRequest request) {
@@ -71,6 +75,13 @@ public class AuthServiceImpl implements AuthService {
                         .fullname(user.getFullname())
                         .role(user.getRole())
                         .avatarUrl(user.getAvatarUrl())
+                        .isActive(user.getIsActive())
+                        .isVerified(user.getIsVerified())
+                        .createdAt(user.getCreatedAt())
+                        .updatedAt(user.getUpdatedAt())
+                        .isBanned(user.getIsBanned())
+                        .updatedAt(user.getUpdatedAt())
+                        .phoneNumber(user.getPhoneNumber())
                         .build())
                 .build();
     }
@@ -93,13 +104,28 @@ public class AuthServiceImpl implements AuthService {
 
         userRepository.save(user);
 
-        // TODO: Send verification email
+        String verifyToken = generateVerifyToken();
+        redisAuthService.saveOtp(user.getEmail(), verifyToken);
+        mailService.sendVerifyEmailAsync(user, EmailTemplate.VERIFY_ACCOUNT, verifyToken);
 
         return AuthResponse.builder()
                 .accessToken(null)
                 .tokenType("Bearer")
                 .userInfo(null)
                 .build();
+    }
+
+    @Override
+    public void sendVerifyEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("User not found"));
+        String verifyToken = generateVerifyToken();
+        redisAuthService.saveOtp(user.getEmail(), verifyToken);
+        mailService.sendVerifyEmailAsync(user, EmailTemplate.VERIFY_ACCOUNT, verifyToken);
+    }
+
+    private String generateVerifyToken() {
+        return String.valueOf(new Random().nextInt(100000, 999999));
     }
 
     @Override
@@ -135,7 +161,19 @@ public class AuthServiceImpl implements AuthService {
                 .isActive(true)
                 .createdAt(LocalDateTime.now())
                 .build();
-        mailService.sendVerifyEmailAsync(u, EmailTemplate.VERIFY_ACCOUNT);
+        mailService.sendVerifyEmailAsync(u, EmailTemplate.VERIFY_ACCOUNT, generateVerifyToken());
+    }
+
+    public void verifyOtp(String email, String otp) {
+        boolean res = redisAuthService.verifyOtp(email, otp);
+        if (res) {
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new BadRequestException("User not found"));
+            user.setIsActive(true);
+            userRepository.save(user);
+        } else {
+            throw new BadRequestException("Invalid OTP");
+        }
     }
 
     private AuthResponse getAuthResponse(User user, Authentication authentication) {

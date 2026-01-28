@@ -10,4 +10,6 @@ public interface AuthService {
     AuthResponse googleLogin(String idToken);
 
     void sendTestEmail();
+    void verifyOtp(String email, String otp);
+    void sendVerifyEmail(String email);
 }
