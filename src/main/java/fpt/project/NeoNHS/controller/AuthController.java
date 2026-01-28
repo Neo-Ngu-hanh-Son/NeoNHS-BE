@@ -1,16 +1,19 @@
 package fpt.project.NeoNHS.controller;
 
+import fpt.project.NeoNHS.dto.request.ChangePasswordRequest;
 import fpt.project.NeoNHS.dto.request.LoginRequest;
 import fpt.project.NeoNHS.dto.request.RegisterRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.AuthResponse;
 import fpt.project.NeoNHS.service.AuthService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.security.Principal;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -47,5 +50,19 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<String>> logout() {
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Logout successful", "Logged out"));
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse<String>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            Principal principal
+    ) {
+        authService.changePassword(principal.getName(), request);
+
+        return ResponseEntity.ok(ApiResponse.success(
+                HttpStatus.OK,
+                "Password updated successfully",
+                "Password updated successfully"
+        ));
     }
 }
