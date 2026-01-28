@@ -63,7 +63,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         if (!user.getIsActive()) {
-            throw new BadRequestException("Account is not activated, please check your email.");
+            throw new BadRequestException("not activated");
         }
 
         return AuthResponse.builder()

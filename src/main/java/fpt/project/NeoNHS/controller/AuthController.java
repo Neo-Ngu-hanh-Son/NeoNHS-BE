@@ -2,6 +2,7 @@ package fpt.project.NeoNHS.controller;
 
 import fpt.project.NeoNHS.dto.request.auth.LoginRequest;
 import fpt.project.NeoNHS.dto.request.auth.RegisterRequest;
+import fpt.project.NeoNHS.dto.request.auth.VerifyOtpRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.AuthResponse;
 import fpt.project.NeoNHS.entity.User;
@@ -49,8 +50,8 @@ public class AuthController {
     }
 
     @PostMapping("/verify")
-    public ResponseEntity<ApiResponse<String>> verify(@RequestParam String email, @RequestParam String otp) {
-        authService.verifyOtp(email, otp);
+    public ResponseEntity<ApiResponse<String>> verify(@RequestBody VerifyOtpRequest request) {
+        authService.verifyOtp(request.getEmail(), request.getOtp());
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Verification successful", "Verification successful"));
     }
 
