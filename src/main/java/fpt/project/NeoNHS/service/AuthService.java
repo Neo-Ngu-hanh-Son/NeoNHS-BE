@@ -7,6 +7,6 @@ import fpt.project.NeoNHS.dto.response.AuthResponse;
 public interface AuthService {
 
     AuthResponse login(LoginRequest request);
-
     AuthResponse register(RegisterRequest request);
+    AuthResponse googleLogin(String idToken) throws Exception;
 }

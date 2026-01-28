@@ -25,3 +25,7 @@ app:
   jwt:
     secret: dGhpc2lzYXZlcnlsb25nc2VjcmV0a2V5Zm9yand0c2lnbmluZ3B1cnBvc2Vz
     expiration-ms: 86400000  # 24 hours
+
+google-auth:
+  client-id: ${GOOGLE_AUTH_CLIENT_ID}
+  client-secret: ${GOOGLE_AUTH_CLIENT_SECRET}
