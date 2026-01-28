@@ -1,14 +1,19 @@
 package fpt.project.NeoNHS.dto.response.auth;
 
-import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
+import lombok.experimental.SuperBuilder;
 
-@Data
-@Builder
-public class VendorProfileResponse extends UserInfoResponse {
+@Getter
+@SuperBuilder
+public class VendorProfileResponse extends UserProfileResponse {
     private String businessName;
     private String description;
     private String address;
+    private String latitude;
+    private String longitude;
     private String taxCode;
-    private boolean isVerifiedVendor;
+    private String bankName;
+    private String bankAccountNumber;
+    private String bankAccountName;
+    private Boolean isVerifiedVendor;
 }

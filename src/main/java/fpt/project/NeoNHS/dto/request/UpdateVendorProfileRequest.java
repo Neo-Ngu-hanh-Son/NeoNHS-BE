@@ -1,10 +1,12 @@
 package fpt.project.NeoNHS.dto.request;
 
 import lombok.Data;
-import java.util.UUID;
 
 @Data
 public class UpdateVendorProfileRequest {
+    private String fullname;
+    private String phoneNumber;
+    private String avatarUrl;
     private String businessName;
     private String description;
     private String address;
