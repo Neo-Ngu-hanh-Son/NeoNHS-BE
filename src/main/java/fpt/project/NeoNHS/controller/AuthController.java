@@ -1,15 +1,16 @@
 package fpt.project.NeoNHS.controller;
 
 import fpt.project.NeoNHS.dto.request.ChangePasswordRequest;
-import fpt.project.NeoNHS.dto.request.LoginRequest;
-import fpt.project.NeoNHS.dto.request.RegisterRequest;
+import fpt.project.NeoNHS.dto.request.auth.LoginRequest;
+import fpt.project.NeoNHS.dto.request.auth.RegisterRequest;
+import fpt.project.NeoNHS.dto.request.auth.ForgotPasswordRequest;
+import fpt.project.NeoNHS.dto.request.auth.ResetPasswordRequest;
+import fpt.project.NeoNHS.dto.request.auth.VerifyOtpRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.AuthResponse;
 import fpt.project.NeoNHS.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.apache.coyote.Response;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,7 +32,8 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> register(@RequestBody RegisterRequest request) {
         AuthResponse data = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(HttpStatus.CREATED, "Registration successful", data));
+                .body(ApiResponse.success(HttpStatus.CREATED,
+                        "Registration successful, please check your email for verification", data));
     }
 
     @PostMapping("/google-login")
@@ -42,7 +44,6 @@ public class AuthController {
 
     @GetMapping("/ping")
     public ResponseEntity<ApiResponse<String>> ping() {
-        System.out.println("Ping received");
         return ResponseEntity.status(HttpStatus.OK)
                 .body(ApiResponse.success(HttpStatus.OK, "pong", "pong"));
     }
@@ -65,4 +66,36 @@ public class AuthController {
                 "Password updated successfully"
         ));
     }
+
+    @PostMapping("/verify")
+    public ResponseEntity<ApiResponse<String>> verify(@RequestBody VerifyOtpRequest request) {
+        authService.verifyOtp(request.getEmail(), request.getOtp());
+        return ResponseEntity
+                .ok(ApiResponse.success(HttpStatus.OK, "Verification successful", "Verification successful"));
+    }
+
+    @GetMapping("/resend-verify-email")
+    public ResponseEntity<ApiResponse<String>> resendVerifyEmail(@RequestParam String email) {
+        authService.sendVerifyEmail(email);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Verification email resent", "Email resent"));
+    }
+
+    @GetMapping("/test-email")
+    public ResponseEntity<ApiResponse<String>> testEmail() {
+        authService.sendTestEmail();
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Test email sent", "Email sent"));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<String>> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        authService.sendResetPasswordOtp(request.getEmail());
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "OTP sent to email if exists", "OTP sent"));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<String>> resetPassword(@RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request.getEmail(), request.getNewPassword(), request.getConfirmPassword());
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Password reset successful", "Password reset"));
+    }
+
 }
