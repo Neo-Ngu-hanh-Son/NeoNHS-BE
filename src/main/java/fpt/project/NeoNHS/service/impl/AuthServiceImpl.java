@@ -91,6 +91,8 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Email already exists");
         }
 
+        validatePassword(request.getPassword());
+
         User user = User.builder()
                 .fullname(request.getFullname())
                 .email(request.getEmail())
@@ -215,9 +217,24 @@ public class AuthServiceImpl implements AuthService {
         if (!newPassword.equals(confirmPassword)) {
             throw new BadRequestException("Passwords do not match");
         }
+        validatePassword(newPassword);
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BadRequestException("User not found"));
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
     }
+
+    private void validatePassword(String password) {
+        if (password == null || password.length() < 8) {
+            throw new BadRequestException("Password must be at least 8 characters long");
+        }
+        if (!password.matches(".*\\d.*")) {
+            throw new BadRequestException("Password must contain at least one number");
+        }
+        if (!password.matches(".*[a-zA-Z].*")) {
+            throw new BadRequestException("Password must contain at least one letter");
+        }
+    }
 }
+
+
