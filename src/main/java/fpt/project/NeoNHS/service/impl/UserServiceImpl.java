@@ -49,19 +49,41 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserProfileResponse updateProfile(String email, UpdateUserProfileRequest request) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+    public UserProfileResponse updateProfile(String currentEmail, UpdateUserProfileRequest request) {
+        if (!isValidPhoneNumber(request.getPhoneNumber())) {
+            throw new IllegalArgumentException("Invalid phone number format");
+        }
 
-        // Cập nhật thông tin cơ bản
+        if (!request.getEmail().contains("@gmail.com")) {
+            throw new IllegalArgumentException("Invalid email format");
+        }
+
+        User user = userRepository.findByEmail(currentEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", currentEmail));
+
+        if (!user.getEmail().equalsIgnoreCase(request.getEmail())) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new RuntimeException("Email '" + request.getEmail() + "' is already taken!");
+            }
+            user.setEmail(request.getEmail());
+        }
+
+        if (!user.getPhoneNumber().equals(request.getPhoneNumber())) {
+            if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+                throw new RuntimeException("Phone number '" + request.getPhoneNumber() + "' is already in use!");
+            }
+            user.setPhoneNumber(request.getPhoneNumber());
+        }
+
         user.setFullname(request.getFullname());
-        user.setPhoneNumber(request.getPhoneNumber());
         user.setAvatarUrl(request.getAvatarUrl());
-        user.setEmail(request.getEmail()
-        );
 
         userRepository.save(user);
         return mapToUserResponse(user);
+    }
+
+    private boolean isValidPhoneNumber(String phone) {
+        return phone != null && phone.matches("^0[0-9]{9}$");
     }
 
     private UserProfileResponse mapToUserResponse(User user) {
