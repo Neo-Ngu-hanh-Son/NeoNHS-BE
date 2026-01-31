@@ -52,9 +52,7 @@ public class AuthServiceImpl implements AuthService {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
-                        request.getPassword()
-                )
-        );
+                        request.getPassword()));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String token = jwtTokenProvider.generateToken(authentication);
@@ -97,6 +95,8 @@ public class AuthServiceImpl implements AuthService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BadRequestException("Email already exists");
         }
+
+        validatePassword(request.getPassword());
 
         User user = User.builder()
                 .fullname(request.getFullname())
@@ -141,12 +141,10 @@ public class AuthServiceImpl implements AuthService {
                     .orElseGet(() -> createUserFromGooglePayload(result));
             // Generate JWT token
             UserPrincipal userPrincipal = UserPrincipal.create(user);
-            Authentication authentication =
-                    new UsernamePasswordAuthenticationToken(
-                            userPrincipal,
-                            null,
-                            userPrincipal.getAuthorities()
-                    );
+            Authentication authentication = new UsernamePasswordAuthenticationToken(
+                    userPrincipal,
+                    null,
+                    userPrincipal.getAuthorities());
 
             return getAuthResponse(user, authentication);
         } catch (Exception e) {
@@ -208,4 +206,39 @@ public class AuthServiceImpl implements AuthService {
                 .build();
         return userRepository.save(u);
     }
+
+    @Override
+    public void sendResetPasswordOtp(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("User not found"));
+        String otp = generateVerifyToken();
+        redisAuthService.saveOtp(user.getEmail(), otp);
+        mailService.sendVerifyEmailAsync(user, EmailTemplate.RESET_PASSWORD, otp);
+    }
+
+    @Override
+    public void resetPassword(String email, String newPassword, String confirmPassword) {
+        if (!newPassword.equals(confirmPassword)) {
+            throw new BadRequestException("Passwords do not match");
+        }
+        validatePassword(newPassword);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("User not found"));
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
+    private void validatePassword(String password) {
+        if (password == null || password.length() < 8) {
+            throw new BadRequestException("Password must be at least 8 characters long");
+        }
+        if (!password.matches(".*\\d.*")) {
+            throw new BadRequestException("Password must contain at least one number");
+        }
+        if (!password.matches(".*[a-zA-Z].*")) {
+            throw new BadRequestException("Password must contain at least one letter");
+        }
+    }
 }
+
+

@@ -2,6 +2,8 @@ package fpt.project.NeoNHS.controller;
 
 import fpt.project.NeoNHS.dto.request.auth.LoginRequest;
 import fpt.project.NeoNHS.dto.request.auth.RegisterRequest;
+import fpt.project.NeoNHS.dto.request.auth.ForgotPasswordRequest;
+import fpt.project.NeoNHS.dto.request.auth.ResetPasswordRequest;
 import fpt.project.NeoNHS.dto.request.auth.VerifyOtpRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.AuthResponse;
@@ -57,7 +59,8 @@ public class AuthController {
     @PostMapping("/verify")
     public ResponseEntity<ApiResponse<String>> verify(@RequestBody VerifyOtpRequest request) {
         authService.verifyOtp(request.getEmail(), request.getOtp());
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Verification successful", "Verification successful"));
+        return ResponseEntity
+                .ok(ApiResponse.success(HttpStatus.OK, "Verification successful", "Verification successful"));
     }
 
     @GetMapping("/verify-link")
@@ -77,6 +80,18 @@ public class AuthController {
     public ResponseEntity<ApiResponse<String>> testEmail() {
         authService.sendTestEmail();
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Test email sent", "Email sent"));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<String>> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        authService.sendResetPasswordOtp(request.getEmail());
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "OTP sent to email if exists", "OTP sent"));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<String>> resetPassword(@RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request.getEmail(), request.getNewPassword(), request.getConfirmPassword());
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Password reset successful", "Password reset"));
     }
 
 }
