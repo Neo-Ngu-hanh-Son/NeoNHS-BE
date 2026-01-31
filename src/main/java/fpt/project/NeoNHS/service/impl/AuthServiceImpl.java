@@ -213,7 +213,7 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new BadRequestException("User not found"));
         String otp = generateVerifyToken();
         redisAuthService.saveOtp(user.getEmail(), otp);
-        mailService.sendVerifyEmailAsync(user, EmailTemplate.RESET_PASSWORD, otp);
+        mailService.sendVerifyEmailAsync(user, EmailTemplate.RESET_PASSWORD, otp, appUrl);
     }
 
     @Override
