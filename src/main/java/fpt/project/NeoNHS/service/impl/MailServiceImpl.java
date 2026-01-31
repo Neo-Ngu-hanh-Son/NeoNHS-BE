@@ -23,7 +23,7 @@ public class MailServiceImpl implements MailService {
 
     @Override
     @Async
-    public void sendVerifyEmailAsync(User user, EmailTemplate template, String code) {
+    public void sendVerifyEmailAsync(User user, EmailTemplate template, String code, String appUrl) {
         MimeMessage message = emailSender.createMimeMessage();
         MimeMessageHelper helper;
         try {
@@ -31,7 +31,8 @@ public class MailServiceImpl implements MailService {
 
         helper.setTo(user.getEmail());
         helper.setSubject(template.getSubject());
-        helper.setText(mailTemplateHelper.generateVerificationEmail(user.getFullname(), code, template.getTemplateFile()), true);
+        helper.setText(mailTemplateHelper
+            .generateVerificationEmail(user.getFullname(), code, template.getTemplateFile(), appUrl), true);
         } catch (MessagingException e) {
             throw new EmailException("Failed to send email: " + e.getMessage());
         }
