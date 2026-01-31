@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.service.impl;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import fpt.project.NeoNHS.dto.request.ChangePasswordRequest;
 import fpt.project.NeoNHS.constants.EmailTemplate;
 import fpt.project.NeoNHS.dto.request.auth.LoginRequest;
 import fpt.project.NeoNHS.dto.request.auth.RegisterRequest;
@@ -205,6 +206,28 @@ public class AuthServiceImpl implements AuthService {
                 .createdAt(LocalDateTime.now())
                 .build();
         return userRepository.save(u);
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(String email, ChangePasswordRequest request) {
+        if (!request.getNewPassword().equals(request.getConfirmNewPassword())) {
+            throw new BadRequestException("Confirm password does not match the new password");
+        }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("User not found"));
+
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
+            throw new BadRequestException("Current password is incorrect");
+        }
+
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
+            throw new BadRequestException("New password cannot be the same as the current password");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 
     @Override
