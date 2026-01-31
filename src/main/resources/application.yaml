@@ -16,6 +16,18 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: 16079
+      username: ${REDIS_USERNAME}
+      password: ${REDIS_PASSWORD}
+      ssl:
+        enabled: false
+      timeout: 60000
+  mail:
+    username: phamminhkiet24@gmail.com
+    password: ${GOOGLE_MAIL_PASSWORD}
 
 server:
   port: 8080
