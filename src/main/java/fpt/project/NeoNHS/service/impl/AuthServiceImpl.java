@@ -97,6 +97,10 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Email already exists");
         }
 
+        if (request.getPhoneNumber() != null && !isValidPhoneNumber(request.getPhoneNumber())) {
+            throw new BadRequestException("Invalid phone number format");
+        }
+
         validatePassword(request.getPassword());
 
         User user = User.builder()
@@ -118,6 +122,11 @@ public class AuthServiceImpl implements AuthService {
                 .tokenType("Bearer")
                 .userInfo(null)
                 .build();
+    }
+
+
+    private boolean isValidPhoneNumber(String phone) {
+        return phone != null && phone.matches("^0[0-9]{9}$");
     }
 
     @Override

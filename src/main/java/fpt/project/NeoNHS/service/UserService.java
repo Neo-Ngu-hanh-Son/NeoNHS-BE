@@ -18,5 +18,5 @@ public interface UserService {
     Optional<User> findById(UUID id);
     UserProfileResponse getMyProfile(String email);
 
-    UserProfileResponse updateProfile(String email, UpdateUserProfileRequest request);
+    UserProfileResponse updateProfile(String email, UpdateUserProfileRequest request, UUID id);
 }

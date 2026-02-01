@@ -3,6 +3,8 @@ package fpt.project.NeoNHS.service.impl;
 import fpt.project.NeoNHS.dto.request.UpdateUserProfileRequest;
 import fpt.project.NeoNHS.dto.response.auth.UserProfileResponse;
 import fpt.project.NeoNHS.entity.User;
+import fpt.project.NeoNHS.exception.BadRequestException;
+import fpt.project.NeoNHS.exception.DuplicatePhonenumberException;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.service.UserService;
@@ -49,28 +51,26 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserProfileResponse updateProfile(String currentEmail, UpdateUserProfileRequest request) {
-        if (!isValidPhoneNumber(request.getPhoneNumber())) {
-            throw new IllegalArgumentException("Invalid phone number format");
-        }
-
-        if (!request.getEmail().contains("@gmail.com")) {
-            throw new IllegalArgumentException("Invalid email format");
-        }
-
+    public UserProfileResponse updateProfile(String currentEmail, UpdateUserProfileRequest request, UUID id) {
         User user = userRepository.findByEmail(currentEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "email", currentEmail));
 
         if (!user.getEmail().equalsIgnoreCase(request.getEmail())) {
             if (userRepository.existsByEmail(request.getEmail())) {
-                throw new RuntimeException("Email '" + request.getEmail() + "' is already taken!");
+                throw new BadRequestException("Email '" + request.getEmail() + "' is already taken!");
             }
             user.setEmail(request.getEmail());
         }
 
-        if (user.getPhoneNumber() != null && !user.getPhoneNumber().equals(request.getPhoneNumber())) {
-            if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
-                throw new RuntimeException("Phone number '" + request.getPhoneNumber() + "' is already in use!");
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().isEmpty()) {
+            if (!isValidPhoneNumber(request.getPhoneNumber())) {
+                throw new IllegalArgumentException("Invalid phone number format");
+            }
+            var existingUser = userRepository.findByPhoneNumber(request.getPhoneNumber())
+                    .orElse(null);
+            // If the phone number belongs to another user
+            if (existingUser != null && !existingUser.getId().equals(id)) {
+                throw new DuplicatePhonenumberException("Phone number '" + request.getPhoneNumber() + "' is already in use!");
             }
             user.setPhoneNumber(request.getPhoneNumber());
         }
