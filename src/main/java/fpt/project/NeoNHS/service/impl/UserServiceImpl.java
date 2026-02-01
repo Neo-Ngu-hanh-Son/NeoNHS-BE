@@ -68,7 +68,7 @@ public class UserServiceImpl implements UserService {
             user.setEmail(request.getEmail());
         }
 
-        if (!user.getPhoneNumber().equals(request.getPhoneNumber())) {
+        if (user.getPhoneNumber() != null && !user.getPhoneNumber().equals(request.getPhoneNumber())) {
             if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
                 throw new RuntimeException("Phone number '" + request.getPhoneNumber() + "' is already in use!");
             }
