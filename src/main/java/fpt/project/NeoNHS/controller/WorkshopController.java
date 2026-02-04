@@ -18,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.security.Principal;
 import java.util.List;
 import java.util.UUID;
@@ -76,6 +77,30 @@ public class WorkshopController {
     public ResponseEntity<ApiResponse<List<WorkshopTemplateResponse>>> getMyWorkshopTemplates(Principal principal) {
         List<WorkshopTemplateResponse> response = workshopTemplateService.getMyWorkshopTemplates(principal.getName());
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Your workshop templates retrieved successfully", response));
+    }
+
+    // ==================== SEARCH & FILTER ====================
+
+    @GetMapping("/templates/search")
+    public ResponseEntity<ApiResponse<Page<WorkshopTemplateResponse>>> searchWorkshopTemplates(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) WorkshopStatus status,
+            @RequestParam(required = false) UUID vendorId,
+            @RequestParam(required = false) UUID tagId,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) Integer minDuration,
+            @RequestParam(required = false) Integer maxDuration,
+            @RequestParam(required = false) BigDecimal minRating,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        Page<WorkshopTemplateResponse> response = workshopTemplateService.searchWorkshopTemplates(
+                keyword, name, status, vendorId, tagId,
+                minPrice, maxPrice, minDuration, maxDuration, minRating,
+                pageable
+        );
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Workshop templates search results", response));
     }
 
     // ==================== UPDATE ====================

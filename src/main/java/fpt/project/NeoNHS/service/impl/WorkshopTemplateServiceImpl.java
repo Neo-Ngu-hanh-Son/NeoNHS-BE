@@ -15,12 +15,15 @@ import fpt.project.NeoNHS.repository.WorkshopImageRepository;
 import fpt.project.NeoNHS.repository.WorkshopTagRepository;
 import fpt.project.NeoNHS.repository.WorkshopTemplateRepository;
 import fpt.project.NeoNHS.service.WorkshopTemplateService;
+import fpt.project.NeoNHS.specification.WorkshopTemplateSpecification;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -144,6 +147,53 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
         return templates.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+
+    // ==================== SEARCH & FILTER ====================
+
+    @Override
+    public Page<WorkshopTemplateResponse> searchWorkshopTemplates(
+            String keyword,
+            String name,
+            WorkshopStatus status,
+            UUID vendorId,
+            UUID tagId,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            Integer minDuration,
+            Integer maxDuration,
+            BigDecimal minRating,
+            Pageable pageable
+    ) {
+        Specification<WorkshopTemplate> spec = Specification.where((root, query, cb) -> cb.conjunction());
+
+        if (keyword != null && !keyword.isEmpty()) {
+            spec = spec.and(WorkshopTemplateSpecification.searchByKeyword(keyword));
+        }
+        if (name != null && !name.isEmpty()) {
+            spec = spec.and(WorkshopTemplateSpecification.hasName(name));
+        }
+        if (status != null) {
+            spec = spec.and(WorkshopTemplateSpecification.hasStatus(status));
+        }
+        if (vendorId != null) {
+            spec = spec.and(WorkshopTemplateSpecification.hasVendorId(vendorId));
+        }
+        if (tagId != null) {
+            spec = spec.and(WorkshopTemplateSpecification.hasTagId(tagId));
+        }
+        if (minPrice != null || maxPrice != null) {
+            spec = spec.and(WorkshopTemplateSpecification.hasPriceBetween(minPrice, maxPrice));
+        }
+        if (minDuration != null || maxDuration != null) {
+            spec = spec.and(WorkshopTemplateSpecification.hasDurationBetween(minDuration, maxDuration));
+        }
+        if (minRating != null) {
+            spec = spec.and(WorkshopTemplateSpecification.hasMinRating(minRating));
+        }
+
+        return workshopTemplateRepository.findAll(spec, pageable)
+                .map(this::mapToResponse);
     }
 
     // ==================== UPDATE ====================
