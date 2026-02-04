@@ -184,7 +184,7 @@ public class AuthServiceImpl implements AuthService {
             user.setIsActive(true);
             userRepository.save(user);
         } else {
-            throw new BadRequestException("Invalid OTP");
+            throw new BadRequestException("Invalid OTP, please try again");
         }
     }
 
@@ -258,6 +258,11 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new BadRequestException("User not found"));
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+    }
+
+    @Override
+    public AuthResponse refreshToken(String refreshToken) {
+        return null;
     }
 
     private void validatePassword(String password) {

@@ -32,6 +32,10 @@ public class RedisAuthServiceImpl implements RedisAuthService {
 
         if (stored == null) return false;
 
+        if (isBlocked(email)) {
+            return false;
+        }
+
         if (stored.equals(otp)) {
             redis.delete(key);               // one-time use
             redis.delete(RedisKeys.otpAttempts(email));
