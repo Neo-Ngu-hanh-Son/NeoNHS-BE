@@ -61,7 +61,7 @@ public class WorkshopTemplate {
     @Builder.Default
     private Integer totalReview = 0;
 
-    private UUID transactionId;
+//    private UUID  transactionId;
 
     @CreationTimestamp
     private LocalDateTime createdAt;
