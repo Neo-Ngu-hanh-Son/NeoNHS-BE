@@ -1,8 +1,8 @@
 package fpt.project.NeoNHS.controller;
 
-import fpt.project.NeoNHS.dto.request.attraction.CreateAttractionRequest;
-import fpt.project.NeoNHS.entity.Attraction;
-import fpt.project.NeoNHS.entity.Point;
+import fpt.project.NeoNHS.dto.request.attraction.AttractionRequest;
+import fpt.project.NeoNHS.dto.response.ApiResponse;
+import fpt.project.NeoNHS.dto.response.attraction.AttractionResponse;
 import fpt.project.NeoNHS.service.AttractionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,20 +22,34 @@ public class AttractionController {
 
     @PostMapping("/create")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> createAttraction(@RequestBody CreateAttractionRequest request) {
-        attractionService.createAttraction(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body("Attraction created successfully!");
+    public ApiResponse<AttractionResponse> createAttraction(@RequestBody AttractionRequest request) {
+        AttractionResponse data = attractionService.createAttraction(request);
+        return ApiResponse.success(HttpStatus.CREATED, "Attraction created successfully!", data);
     }
 
-    @GetMapping("/get-all-attraction")
-    public ResponseEntity<List<Attraction>> getAllAttractions() {
-        List<Attraction> attractions = attractionService.getAllAttractions();
-        return ResponseEntity.ok(attractions);
+    @GetMapping("/get-all")
+    public ApiResponse<List<AttractionResponse>> getAllAttractions() {
+        List<AttractionResponse> data = attractionService.getAllAttractions();
+        return ApiResponse.success("Get all attractions successfully!", data);
     }
 
-    @GetMapping("/{attractionId}/points")
-    public ResponseEntity<List<Point>> getPointsByAttraction(@PathVariable UUID attractionId) {
-        List<Point> points = attractionService.getPointsByAttraction(attractionId);
-        return ResponseEntity.ok(points);
+    @GetMapping("/{id}")
+    public ApiResponse<AttractionResponse> getAttractionById(@PathVariable UUID id) {
+        AttractionResponse data = attractionService.getAttractionById(id);
+        return ApiResponse.success(data);
+    }
+
+    @PutMapping("/update/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<AttractionResponse> updateAttraction(@PathVariable UUID id, @RequestBody AttractionRequest request) {
+        AttractionResponse data = attractionService.updateAttraction(id, request);
+        return ApiResponse.success("Attraction updated successfully!", data);
+    }
+
+    @DeleteMapping("/delete/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> deleteAttraction(@PathVariable UUID id) {
+        attractionService.deleteAttraction(id);
+        return ApiResponse.success("Attraction deleted successfully!", null);
     }
 }

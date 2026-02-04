@@ -61,10 +61,8 @@ public class Attraction {
 
     // Relationships
     @OneToMany(mappedBy = "attraction", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonIgnore
     private List<Point> points;
 
     @OneToMany(mappedBy = "attraction", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonIgnore
     private List<TicketCatalog> ticketCatalogs;
 }

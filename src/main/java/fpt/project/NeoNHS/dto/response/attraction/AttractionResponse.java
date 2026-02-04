@@ -1,14 +1,16 @@
-package fpt.project.NeoNHS.dto.request.attraction;
+package fpt.project.NeoNHS.dto.response.attraction;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Builder;
+import lombok.Data;
+
 import java.math.BigDecimal;
 import java.time.LocalTime;
+import java.util.UUID;
 
-@Getter
-@Setter
-public class CreateAttractionRequest {
+@Data
+@Builder
+public class AttractionResponse {
+    private UUID id;
     private String name;
     private String description;
     private String mapImageUrl;
@@ -17,10 +19,6 @@ public class CreateAttractionRequest {
     private BigDecimal longitude;
     private String status;
     private String thumbnailUrl;
-
-    @JsonFormat(pattern = "HH:mm:ss")
     private LocalTime openHour;
-
-    @JsonFormat(pattern = "HH:mm:ss")
     private LocalTime closeHour;
 }
