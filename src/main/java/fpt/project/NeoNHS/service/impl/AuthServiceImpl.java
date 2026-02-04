@@ -56,7 +56,6 @@ public class AuthServiceImpl implements AuthService {
                         request.getPassword()));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        String token = jwtTokenProvider.generateToken(authentication);
 
         UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
         User user = userRepository.findById(userPrincipal.getId()).orElseThrow();
@@ -70,24 +69,7 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("not activated");
         }
 
-        return AuthResponse.builder()
-                .accessToken(token)
-                .tokenType("Bearer")
-                .userInfo(UserInfoResponse.builder()
-                        .id(user.getId())
-                        .email(user.getEmail())
-                        .fullname(user.getFullname())
-                        .role(user.getRole())
-                        .avatarUrl(user.getAvatarUrl())
-                        .isActive(user.getIsActive())
-                        .isVerified(user.getIsVerified())
-                        .createdAt(user.getCreatedAt())
-                        .updatedAt(user.getUpdatedAt())
-                        .isBanned(user.getIsBanned())
-                        .updatedAt(user.getUpdatedAt())
-                        .phoneNumber(user.getPhoneNumber())
-                        .build())
-                .build();
+        return getAuthResponse(user, authentication);
     }
 
     @Override
@@ -177,22 +159,27 @@ public class AuthServiceImpl implements AuthService {
     }
 
     public void verifyOtp(String email, String otp) {
-        boolean res = redisAuthService.verifyOtp(email, otp);
-        if (res) {
-            User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new BadRequestException("User not found"));
-            user.setIsActive(true);
-            userRepository.save(user);
-        } else {
-            throw new BadRequestException("Invalid OTP, please try again");
-        }
+        redisAuthService.verifyOtp(email, otp);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("User not found"));
+        user.setIsActive(true);
+        userRepository.save(user);
     }
 
+    /**
+     * Generate AuthResponse containing JWT token, refresh token and user info
+     * @param user
+     * @param authentication
+     * @return
+     */
     private AuthResponse getAuthResponse(User user, Authentication authentication) {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String token = jwtTokenProvider.generateToken(authentication);
+        String refreshToken = jwtTokenProvider.generateRefreshToken();
+        redisAuthService.saveRefreshToken(refreshToken, user.getId().toString(), UUID.randomUUID().toString());
         return AuthResponse.builder()
                 .accessToken(token)
+                .refreshToken(refreshToken)
                 .tokenType("Bearer")
                 .userInfo(UserInfoResponse.builder()
                         .id(user.getId())
@@ -200,6 +187,13 @@ public class AuthServiceImpl implements AuthService {
                         .fullname(user.getFullname())
                         .role(user.getRole())
                         .avatarUrl(user.getAvatarUrl())
+                        .isActive(user.getIsActive())
+                        .isVerified(user.getIsVerified())
+                        .createdAt(user.getCreatedAt())
+                        .updatedAt(user.getUpdatedAt())
+                        .isBanned(user.getIsBanned())
+                        .updatedAt(user.getUpdatedAt())
+                        .phoneNumber(user.getPhoneNumber())
                         .build())
                 .build();
     }
@@ -262,7 +256,22 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse refreshToken(String refreshToken) {
-        return null;
+        redisAuthService.verifyRefreshToken(refreshToken);
+        String userId = redisAuthService.getUserIdFromRefreshToken(refreshToken);
+        redisAuthService.deleteRefreshToken(refreshToken);
+        User user = userRepository.findById(UUID.fromString(userId))
+                .orElseThrow(() -> new BadRequestException("User not found"));
+        UserPrincipal userPrincipal = UserPrincipal.create(user);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                userPrincipal,
+                null,
+                userPrincipal.getAuthorities());
+        return getAuthResponse(user, authentication);
+    }
+
+    @Override
+    public void logout(String refreshToken) {
+        redisAuthService.deleteRefreshToken(refreshToken);
     }
 
     private void validatePassword(String password) {

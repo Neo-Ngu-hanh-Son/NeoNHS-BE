@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.catalina.connector.Response;
+import org.springframework.context.annotation.Role;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -32,12 +33,6 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> login(@RequestBody LoginRequest request) {
         AuthResponse data = authService.login(request);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Login successful", data));
-    }
-
-    @PostMapping("/refresh-token")
-    public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(@RequestParam String refreshToken) {
-        AuthResponse data = authService.refreshToken(refreshToken);
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Token refreshed successfully", data));
     }
 
     @PostMapping("/register")
@@ -61,7 +56,8 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<String>> logout() {
+    public ResponseEntity<ApiResponse<String>> logout(@RequestBody String refreshToken) {
+        authService.logout(refreshToken);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Logout successful", "Logged out"));
     }
 
@@ -117,4 +113,9 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Password reset successful", "Password reset"));
     }
 
+    @PostMapping("/refresh-token")
+    public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(@RequestBody String refreshToken) {
+        AuthResponse data = authService.refreshToken(refreshToken);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Token refreshed successfully", data));
+    }
 }
