@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/users")
@@ -25,10 +26,10 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Profile retrieved successfully", data));
     }
 
-    @PutMapping("/update-profile")
+    @PutMapping("/update-profile/{id}")
     public ResponseEntity<ApiResponse<UserProfileResponse>> updateBasicProfile(
-            Principal principal, @RequestBody UpdateUserProfileRequest request) {
-        UserProfileResponse data = userService.updateProfile(principal.getName(), request);
+            Principal principal, @PathVariable UUID id, @RequestBody UpdateUserProfileRequest request) {
+        UserProfileResponse data = userService.updateProfile(principal.getName(), request, id);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Basic info updated", data));
     }
 }

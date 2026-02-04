@@ -11,14 +11,20 @@ import fpt.project.NeoNHS.dto.response.AuthResponse;
 import fpt.project.NeoNHS.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.apache.catalina.connector.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
 import java.security.Principal;
 
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@CrossOrigin
 public class AuthController {
     private final AuthService authService;
 
@@ -73,6 +79,13 @@ public class AuthController {
         return ResponseEntity
                 .ok(ApiResponse.success(HttpStatus.OK, "Verification successful", "Verification successful"));
     }
+
+    @GetMapping("/verify-link")
+    public ResponseEntity<String> verifyLink(@RequestParam String email, @RequestParam String otp) {
+        authService.verifyOtp(email, otp);
+        return ResponseEntity.ok("Email verified successfully");
+    }
+    
 
     @GetMapping("/resend-verify-email")
     public ResponseEntity<ApiResponse<String>> resendVerifyEmail(@RequestParam String email) {

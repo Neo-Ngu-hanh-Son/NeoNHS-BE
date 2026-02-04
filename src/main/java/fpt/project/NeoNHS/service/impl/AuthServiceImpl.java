@@ -19,6 +19,8 @@ import fpt.project.NeoNHS.service.AuthService;
 import fpt.project.NeoNHS.service.MailService;
 import fpt.project.NeoNHS.service.RedisAuthService;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -42,6 +44,9 @@ public class AuthServiceImpl implements AuthService {
     private final GoogleTokenVerifier googleTokenVerifier;
     private final MailService mailService;
     private final RedisAuthService redisAuthService;
+
+    @Value("${app.fe-url}")
+    private String appUrl;
 
     @Override
     public AuthResponse login(LoginRequest request) {
@@ -92,6 +97,10 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Email already exists");
         }
 
+        if (request.getPhoneNumber() != null && !isValidPhoneNumber(request.getPhoneNumber())) {
+            throw new BadRequestException("Invalid phone number format");
+        }
+
         validatePassword(request.getPassword());
 
         User user = User.builder()
@@ -107,13 +116,17 @@ public class AuthServiceImpl implements AuthService {
 
         String verifyToken = generateVerifyToken();
         redisAuthService.saveOtp(user.getEmail(), verifyToken);
-        mailService.sendVerifyEmailAsync(user, EmailTemplate.VERIFY_ACCOUNT, verifyToken);
-
+        mailService.sendVerifyEmailAsync(user, EmailTemplate.VERIFY_ACCOUNT, verifyToken, appUrl);
         return AuthResponse.builder()
                 .accessToken(null)
                 .tokenType("Bearer")
                 .userInfo(null)
                 .build();
+    }
+
+
+    private boolean isValidPhoneNumber(String phone) {
+        return phone != null && phone.matches("^0[0-9]{9}$");
     }
 
     @Override
@@ -122,7 +135,7 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new BadRequestException("User not found"));
         String verifyToken = generateVerifyToken();
         redisAuthService.saveOtp(user.getEmail(), verifyToken);
-        mailService.sendVerifyEmailAsync(user, EmailTemplate.VERIFY_ACCOUNT, verifyToken);
+        mailService.sendVerifyEmailAsync(user, EmailTemplate.VERIFY_ACCOUNT, verifyToken, appUrl);
     }
 
     private String generateVerifyToken() {
@@ -160,7 +173,7 @@ public class AuthServiceImpl implements AuthService {
                 .isActive(true)
                 .createdAt(LocalDateTime.now())
                 .build();
-        mailService.sendVerifyEmailAsync(u, EmailTemplate.VERIFY_ACCOUNT, generateVerifyToken());
+        mailService.sendVerifyEmailAsync(u, EmailTemplate.VERIFY_ACCOUNT, generateVerifyToken(), appUrl);
     }
 
     public void verifyOtp(String email, String otp) {
@@ -232,7 +245,7 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new BadRequestException("User not found"));
         String otp = generateVerifyToken();
         redisAuthService.saveOtp(user.getEmail(), otp);
-        mailService.sendVerifyEmailAsync(user, EmailTemplate.RESET_PASSWORD, otp);
+        mailService.sendVerifyEmailAsync(user, EmailTemplate.RESET_PASSWORD, otp, appUrl);
     }
 
     @Override
