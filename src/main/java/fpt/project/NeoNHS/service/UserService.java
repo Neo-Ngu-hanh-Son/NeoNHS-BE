@@ -1,6 +1,6 @@
 package fpt.project.NeoNHS.service;
 
-import fpt.project.NeoNHS.dto.request.UpdateUserProfileRequest;
+import fpt.project.NeoNHS.dto.request.auth.UpdateUserProfileRequest;
 import fpt.project.NeoNHS.dto.response.auth.UserProfileResponse;
 import fpt.project.NeoNHS.entity.User;
 
