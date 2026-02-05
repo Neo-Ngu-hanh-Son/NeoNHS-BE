@@ -2,10 +2,8 @@ package fpt.project.NeoNHS.service;
 
 import fpt.project.NeoNHS.dto.request.workshop.CreateWorkshopTemplateRequest;
 import fpt.project.NeoNHS.dto.request.workshop.UpdateWorkshopTemplateRequest;
+
 import fpt.project.NeoNHS.dto.response.workshop.WorkshopTemplateResponse;
-import fpt.project.NeoNHS.enums.WorkshopStatus;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.UUID;
@@ -18,9 +16,10 @@ public interface WorkshopTemplateService {
     // Read
     WorkshopTemplateResponse getWorkshopTemplateById(UUID id);
 
-    Page<WorkshopTemplateResponse> getAllWorkshopTemplates(Pageable pageable);
+    List<WorkshopTemplateResponse> getAllWorkshopTemplates();
 
-    Page<WorkshopTemplateResponse> getWorkshopTemplatesByStatus(WorkshopStatus status, Pageable pageable);
+    // List<WorkshopTemplateResponse> getWorkshopTemplatesByStatus(WorkshopStatus
+    // status);
 
     List<WorkshopTemplateResponse> getMyWorkshopTemplates(String email);
 

@@ -2,6 +2,7 @@ package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.dto.request.workshop.CreateWorkshopTemplateRequest;
 import fpt.project.NeoNHS.dto.request.workshop.UpdateWorkshopTemplateRequest;
+
 import fpt.project.NeoNHS.dto.response.workshop.WTagResponse;
 import fpt.project.NeoNHS.dto.response.workshop.WorkshopImageResponse;
 import fpt.project.NeoNHS.dto.response.workshop.WorkshopTemplateResponse;
@@ -14,11 +15,12 @@ import fpt.project.NeoNHS.repository.WTagRepository;
 import fpt.project.NeoNHS.repository.WorkshopImageRepository;
 import fpt.project.NeoNHS.repository.WorkshopTagRepository;
 import fpt.project.NeoNHS.repository.WorkshopTemplateRepository;
+
 import fpt.project.NeoNHS.service.WorkshopTemplateService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -127,16 +129,21 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
     }
 
     @Override
-    public Page<WorkshopTemplateResponse> getAllWorkshopTemplates(Pageable pageable) {
-        return workshopTemplateRepository.findAll(pageable)
-                .map(this::mapToResponse);
+    public List<WorkshopTemplateResponse> getAllWorkshopTemplates() {
+        return workshopTemplateRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 
-    @Override
-    public Page<WorkshopTemplateResponse> getWorkshopTemplatesByStatus(WorkshopStatus status, Pageable pageable) {
-        return workshopTemplateRepository.findByStatus(status, pageable)
-                .map(this::mapToResponse);
-    }
+    // @Override
+    // public List<WorkshopTemplateResponse>
+    // getWorkshopTemplatesByStatus(WorkshopStatus status) {
+    // return workshopTemplateRepository.findByStatus(status)
+    // .stream()
+    // .map(this::mapToResponse)
+    // .collect(Collectors.toList());
+    // }
 
     @Override
     public List<WorkshopTemplateResponse> getMyWorkshopTemplates(String email) {
@@ -150,7 +157,8 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
 
     @Override
     @Transactional
-    public WorkshopTemplateResponse updateWorkshopTemplate(String email, UUID id, UpdateWorkshopTemplateRequest request) {
+    public WorkshopTemplateResponse updateWorkshopTemplate(String email, UUID id,
+            UpdateWorkshopTemplateRequest request) {
         // 1. Find the workshop template
         WorkshopTemplate template = workshopTemplateRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("WorkshopTemplate", "id", id));
