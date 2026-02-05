@@ -83,6 +83,28 @@ public class WorkshopController {
                                                 response));
         }
 
+        // ==================== SEARCH & FILTER ====================
+
+        @GetMapping("/templates/filter")
+        public ResponseEntity<ApiResponse<List<WorkshopTemplateResponse>>> filterWorkshopTemplates(
+                        @RequestParam(required = false) String keyword,
+                        @RequestParam(required = false) String name,
+                        @RequestParam(required = false) WorkshopStatus status,
+                        @RequestParam(required = false) UUID vendorId,
+                        @RequestParam(required = false) UUID tagId,
+                        @RequestParam(required = false) BigDecimal minPrice,
+                        @RequestParam(required = false) BigDecimal maxPrice,
+                        @RequestParam(required = false) Integer minDuration,
+                        @RequestParam(required = false) Integer maxDuration,
+                        @RequestParam(required = false) BigDecimal minRating) {
+                List<WorkshopTemplateResponse> response = workshopTemplateService.searchWorkshopTemplates(
+                                keyword, name, status, vendorId, tagId,
+                                minPrice, maxPrice, minDuration, maxDuration, minRating);
+                return ResponseEntity
+                                .ok(ApiResponse.success(HttpStatus.OK, "Workshop templates filtered successfully",
+                                                response));
+        }
+
         // ==================== UPDATE ====================
 
         @PutMapping("/templates/{id}")
