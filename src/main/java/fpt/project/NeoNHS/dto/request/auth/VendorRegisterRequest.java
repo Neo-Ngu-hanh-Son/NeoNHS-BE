@@ -1,12 +1,16 @@
-package fpt.project.NeoNHS.dto.request;
+package fpt.project.NeoNHS.dto.request.auth;
 
 import lombok.Data;
 
 @Data
-public class UpdateVendorProfileRequest {
-    private String fullname;
+public class VendorRegisterRequest {
+    // User info
+    private String email;
+    private String password;
+    private String fullName;
     private String phoneNumber;
-    private String avatarUrl;
+
+    // Vendor profile info
     private String businessName;
     private String description;
     private String address;

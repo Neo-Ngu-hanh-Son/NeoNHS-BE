@@ -1,6 +1,6 @@
 package fpt.project.NeoNHS.service;
 
-import fpt.project.NeoNHS.dto.request.ChangePasswordRequest;
+import fpt.project.NeoNHS.dto.request.auth.ChangePasswordRequest;
 import fpt.project.NeoNHS.dto.request.auth.LoginRequest;
 import fpt.project.NeoNHS.dto.request.auth.RegisterRequest;
 import fpt.project.NeoNHS.dto.response.AuthResponse;

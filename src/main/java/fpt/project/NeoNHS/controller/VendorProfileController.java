@@ -1,7 +1,7 @@
 package fpt.project.NeoNHS.controller;
 
-import fpt.project.NeoNHS.dto.request.UpdateVendorProfileRequest;
-import fpt.project.NeoNHS.dto.request.VendorRegisterRequest;
+import fpt.project.NeoNHS.dto.request.auth.UpdateVendorProfileRequest;
+import fpt.project.NeoNHS.dto.request.auth.VendorRegisterRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.auth.VendorProfileResponse;
 import fpt.project.NeoNHS.service.VendorProfileService;
