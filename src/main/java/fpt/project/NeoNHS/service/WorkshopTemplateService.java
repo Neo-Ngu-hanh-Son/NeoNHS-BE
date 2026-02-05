@@ -19,25 +19,7 @@ public interface WorkshopTemplateService {
 
     List<WorkshopTemplateResponse> getAllWorkshopTemplates();
 
-    // List<WorkshopTemplateResponse> getWorkshopTemplatesByStatus(WorkshopStatus
-    // status);
-
     List<WorkshopTemplateResponse> getMyWorkshopTemplates(String email);
-
-    // Search & Filter with Pagination
-    Page<WorkshopTemplateResponse> searchWorkshopTemplates(
-            String keyword,
-            String name,
-            WorkshopStatus status,
-            UUID vendorId,
-            UUID tagId,
-            BigDecimal minPrice,
-            BigDecimal maxPrice,
-            Integer minDuration,
-            Integer maxDuration,
-            BigDecimal minRating,
-            Pageable pageable
-    );
 
     // Update
     WorkshopTemplateResponse updateWorkshopTemplate(String email, UUID id, UpdateWorkshopTemplateRequest request);

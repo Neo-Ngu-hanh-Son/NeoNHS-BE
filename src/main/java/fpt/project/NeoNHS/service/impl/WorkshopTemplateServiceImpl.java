@@ -154,53 +154,6 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
-
-    // ==================== SEARCH & FILTER ====================
-
-    @Override
-    public Page<WorkshopTemplateResponse> searchWorkshopTemplates(
-            String keyword,
-            String name,
-            WorkshopStatus status,
-            UUID vendorId,
-            UUID tagId,
-            BigDecimal minPrice,
-            BigDecimal maxPrice,
-            Integer minDuration,
-            Integer maxDuration,
-            BigDecimal minRating,
-            Pageable pageable) {
-        Specification<WorkshopTemplate> spec = Specification.where((root, query, cb) -> cb.conjunction());
-
-        if (keyword != null && !keyword.isEmpty()) {
-            spec = spec.and(WorkshopTemplateSpecification.searchByKeyword(keyword));
-        }
-        if (name != null && !name.isEmpty()) {
-            spec = spec.and(WorkshopTemplateSpecification.hasName(name));
-        }
-        if (status != null) {
-            spec = spec.and(WorkshopTemplateSpecification.hasStatus(status));
-        }
-        if (vendorId != null) {
-            spec = spec.and(WorkshopTemplateSpecification.hasVendorId(vendorId));
-        }
-        if (tagId != null) {
-            spec = spec.and(WorkshopTemplateSpecification.hasTagId(tagId));
-        }
-        if (minPrice != null || maxPrice != null) {
-            spec = spec.and(WorkshopTemplateSpecification.hasPriceBetween(minPrice, maxPrice));
-        }
-        if (minDuration != null || maxDuration != null) {
-            spec = spec.and(WorkshopTemplateSpecification.hasDurationBetween(minDuration, maxDuration));
-        }
-        if (minRating != null) {
-            spec = spec.and(WorkshopTemplateSpecification.hasMinRating(minRating));
-        }
-
-        return workshopTemplateRepository.findAll(spec, pageable)
-                .map(this::mapToResponse);
-    }
-
     // ==================== UPDATE ====================
 
     @Override
