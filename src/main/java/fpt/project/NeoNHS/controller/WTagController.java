@@ -7,10 +7,7 @@ import fpt.project.NeoNHS.dto.response.workshop.WTagResponse;
 import fpt.project.NeoNHS.service.WTagService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -45,23 +42,6 @@ public class WTagController {
     public ResponseEntity<ApiResponse<List<WTagResponse>>> getAllWTags() {
         List<WTagResponse> response = wTagService.getAllWTags();
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Workshop tags retrieved successfully", response));
-    }
-
-    @GetMapping("/page")
-    public ResponseEntity<ApiResponse<Page<WTagResponse>>> getAllWTagsPaginated(
-            @PageableDefault(size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
-        Page<WTagResponse> response = wTagService.getAllWTags(pageable);
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Workshop tags retrieved successfully", response));
-    }
-
-    @GetMapping("/search")
-    public ResponseEntity<ApiResponse<Page<WTagResponse>>> searchWTags(
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String name,
-            @RequestParam(required = false) String tagColor,
-            @PageableDefault(size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
-        Page<WTagResponse> response = wTagService.searchWTags(keyword, name, tagColor, pageable);
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Workshop tags search results", response));
     }
 
     @PutMapping("/{id}")
