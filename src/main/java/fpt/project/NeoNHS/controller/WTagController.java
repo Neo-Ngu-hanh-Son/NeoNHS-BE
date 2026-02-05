@@ -29,8 +29,7 @@ public class WTagController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<WTagResponse>> createWTag(
-            @Valid @RequestBody CreateWTagRequest request
-    ) {
+            @Valid @RequestBody CreateWTagRequest request) {
         WTagResponse response = wTagService.createWTag(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(HttpStatus.CREATED, "Workshop tag created successfully", response));
@@ -48,12 +47,28 @@ public class WTagController {
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Workshop tags retrieved successfully", response));
     }
 
+    @GetMapping("/page")
+    public ResponseEntity<ApiResponse<Page<WTagResponse>>> getAllWTagsPaginated(
+            @PageableDefault(size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
+        Page<WTagResponse> response = wTagService.getAllWTags(pageable);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Workshop tags retrieved successfully", response));
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<Page<WTagResponse>>> searchWTags(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String tagColor,
+            @PageableDefault(size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
+        Page<WTagResponse> response = wTagService.searchWTags(keyword, name, tagColor, pageable);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Workshop tags search results", response));
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<WTagResponse>> updateWTag(
             @PathVariable UUID id,
-            @Valid @RequestBody UpdateWTagRequest request
-    ) {
+            @Valid @RequestBody UpdateWTagRequest request) {
         WTagResponse response = wTagService.updateWTag(id, request);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Workshop tag updated successfully", response));
     }

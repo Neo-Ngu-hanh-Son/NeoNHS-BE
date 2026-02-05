@@ -5,6 +5,7 @@ import fpt.project.NeoNHS.dto.request.workshop.UpdateWorkshopTemplateRequest;
 
 import fpt.project.NeoNHS.dto.response.workshop.WorkshopTemplateResponse;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,6 +23,21 @@ public interface WorkshopTemplateService {
     // status);
 
     List<WorkshopTemplateResponse> getMyWorkshopTemplates(String email);
+
+    // Search & Filter with Pagination
+    Page<WorkshopTemplateResponse> searchWorkshopTemplates(
+            String keyword,
+            String name,
+            WorkshopStatus status,
+            UUID vendorId,
+            UUID tagId,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            Integer minDuration,
+            Integer maxDuration,
+            BigDecimal minRating,
+            Pageable pageable
+    );
 
     // Update
     WorkshopTemplateResponse updateWorkshopTemplate(String email, UUID id, UpdateWorkshopTemplateRequest request);
