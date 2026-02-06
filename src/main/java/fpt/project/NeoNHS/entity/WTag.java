@@ -16,7 +16,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class WTag {
+public class  WTag {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
