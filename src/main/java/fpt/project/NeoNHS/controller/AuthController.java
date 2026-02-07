@@ -1,6 +1,6 @@
 package fpt.project.NeoNHS.controller;
 
-import fpt.project.NeoNHS.dto.request.ChangePasswordRequest;
+import fpt.project.NeoNHS.dto.request.auth.ChangePasswordRequest;
 import fpt.project.NeoNHS.dto.request.auth.LoginRequest;
 import fpt.project.NeoNHS.dto.request.auth.RegisterRequest;
 import fpt.project.NeoNHS.dto.request.auth.ForgotPasswordRequest;
@@ -13,7 +13,6 @@ import fpt.project.NeoNHS.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-import org.apache.catalina.connector.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
