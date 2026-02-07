@@ -16,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 public class VendorProfileServiceImpl implements VendorProfileService {
@@ -78,33 +80,48 @@ public class VendorProfileServiceImpl implements VendorProfileService {
 
     @Override
     @Transactional
-    public VendorProfileResponse updateVendorProfile(String email, UpdateVendorProfileRequest request) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+    public VendorProfileResponse updateVendorProfile(UUID id, String currentEmail, UpdateVendorProfileRequest request) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
+
+        if (!user.getEmail().equalsIgnoreCase(currentEmail)) {
+            throw new BadRequestException("Bạn không có quyền chỉnh sửa tài khoản này!");
+        }
 
         VendorProfile profile = user.getVendorProfile();
         if (profile == null) {
-            throw new BadRequestException("Vendor profile not initialized for this account");
+            throw new BadRequestException("Hồ sơ Vendor chưa được khởi tạo");
         }
 
         if (request.getFullname() != null) user.setFullname(request.getFullname());
-        if (request.getPhoneNumber() != null) user.setPhoneNumber(request.getPhoneNumber());
+
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().equals(user.getPhoneNumber())) {
+            if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+                throw new BadRequestException("Số điện thoại này đã được sử dụng!");
+            }
+            user.setPhoneNumber(request.getPhoneNumber());
+        }
+
         if (request.getAvatarUrl() != null) user.setAvatarUrl(request.getAvatarUrl());
+
+        updateVendorFields(profile, request);
+
         userRepository.save(user);
 
-        if (request.getBusinessName() != null) profile.setBusinessName(request.getBusinessName());
-        if (request.getDescription() != null) profile.setDescription(request.getDescription());
-        if (request.getAddress() != null) profile.setAddress(request.getAddress());
-        if (request.getLatitude() != null) profile.setLatitude(request.getLatitude());
-        if (request.getLongitude() != null) profile.setLongitude(request.getLongitude());
-        if (request.getTaxCode() != null) profile.setTaxCode(request.getTaxCode());
-        if (request.getBankName() != null) profile.setBankName(request.getBankName());
-        if (request.getBankAccountNumber() != null) profile.setBankAccountNumber(request.getBankAccountNumber());
-        if (request.getBankAccountName() != null) profile.setBankAccountName(request.getBankAccountName());
-
-        vendorProfileRepository.save(profile);
-
         return mapToVendorResponse(user, profile);
+    }
+
+    // Hàm phụ để code sạch hơn
+    private void updateVendorFields(VendorProfile profile, UpdateVendorProfileRequest req) {
+        if (req.getBusinessName() != null) profile.setBusinessName(req.getBusinessName());
+        if (req.getTaxCode() != null) profile.setTaxCode(req.getTaxCode());
+        if (req.getBankName() != null) profile.setBankName(req.getBankName());
+        if (req.getBankAccountNumber() != null) profile.setBankAccountNumber(req.getBankAccountNumber());
+        if (req.getBankAccountName() != null) profile.setBankAccountName(req.getBankAccountName());
+        if (req.getAddress() != null) profile.setAddress(req.getAddress());
+        if (req.getLatitude() != null) profile.setLatitude(req.getLatitude());
+        if (req.getLongitude() != null) profile.setLongitude(req.getLongitude());
+        if (req.getDescription() != null) profile.setDescription(req.getDescription());
     }
 
     private VendorProfileResponse mapToVendorResponse(User user, VendorProfile vp) {
