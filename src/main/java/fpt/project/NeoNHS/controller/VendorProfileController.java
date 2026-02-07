@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/vendors")
@@ -31,12 +32,13 @@ public class VendorProfileController {
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Vendor profile retrieved", data));
     }
 
-    @PutMapping("/update-profile")
-    public ResponseEntity<ApiResponse<VendorProfileResponse>> updateMyBusinessProfile(
-            Principal principal,
-            @RequestBody UpdateVendorProfileRequest request) {
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<VendorProfileResponse>> updateVendorProfile(
+            @PathVariable UUID id,
+            @RequestBody UpdateVendorProfileRequest request,
+            Principal principal) {
 
-        VendorProfileResponse data = vendorProfileService.updateVendorProfile(principal.getName(), request);
+        VendorProfileResponse data = vendorProfileService.updateVendorProfile(id, principal.getName(), request);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Vendor profile updated successfully", data));
     }
 }
