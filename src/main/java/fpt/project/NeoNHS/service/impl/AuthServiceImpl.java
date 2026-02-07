@@ -131,7 +131,6 @@ public class AuthServiceImpl implements AuthService {
             System.out.println("[AuthServiceImpl] Google ID Token payload email: " + result.getEmail());
             User user = userRepository.findByEmail(result.getEmail())
                     .orElseGet(() -> createUserFromGooglePayload(result));
-            // Generate JWT token
             UserPrincipal userPrincipal = UserPrincipal.create(user);
             Authentication authentication = new UsernamePasswordAuthenticationToken(
                     userPrincipal,

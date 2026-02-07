@@ -1,19 +1,13 @@
 package fpt.project.NeoNHS.controller;
 
 import fpt.project.NeoNHS.dto.request.ChangePasswordRequest;
-import fpt.project.NeoNHS.dto.request.auth.LoginRequest;
-import fpt.project.NeoNHS.dto.request.auth.RegisterRequest;
-import fpt.project.NeoNHS.dto.request.auth.ForgotPasswordRequest;
-import fpt.project.NeoNHS.dto.request.auth.ResetPasswordRequest;
-import fpt.project.NeoNHS.dto.request.auth.VerifyOtpRequest;
+import fpt.project.NeoNHS.dto.request.auth.*;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.AuthResponse;
 import fpt.project.NeoNHS.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-import org.apache.catalina.connector.Response;
-import org.springframework.context.annotation.Role;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -56,8 +50,8 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<String>> logout(@RequestBody String refreshToken) {
-        authService.logout(refreshToken);
+    public ResponseEntity<ApiResponse<String>> logout(@RequestBody RefreshTokenRequest request) {
+        authService.logout(request.getRefreshToken());
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Logout successful", "Logged out"));
     }
 
@@ -114,8 +108,14 @@ public class AuthController {
     }
 
     @PostMapping("/refresh-token")
-    public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(@RequestBody String refreshToken) {
-        AuthResponse data = authService.refreshToken(refreshToken);
+    public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(@RequestBody RefreshTokenRequest request) {
+        AuthResponse data = authService.refreshToken(request.getRefreshToken());
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Token refreshed successfully", data));
+    }
+
+
+    @GetMapping("/test-protected")
+    public ResponseEntity<ApiResponse<String>> testProtected() {
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Protected endpoint accessed", "Success"));
     }
 }
