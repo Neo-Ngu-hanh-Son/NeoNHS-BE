@@ -20,6 +20,8 @@ import fpt.project.NeoNHS.service.WorkshopTemplateService;
 import fpt.project.NeoNHS.specification.WorkshopTemplateSpecification;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -138,14 +140,12 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
                 .collect(Collectors.toList());
     }
 
-    // @Override
-    // public List<WorkshopTemplateResponse>
-    // getWorkshopTemplatesByStatus(WorkshopStatus status) {
-    // return workshopTemplateRepository.findByStatus(status)
-    // .stream()
-    // .map(this::mapToResponse)
-    // .collect(Collectors.toList());
-    // }
+    @Override
+    public Page<WorkshopTemplateResponse> getAllWorkshopTemplates(Pageable pageable) {
+        Page<WorkshopTemplate> templates = workshopTemplateRepository.findAll(pageable);
+        return templates.map(this::mapToResponse);
+    }
+
 
     @Override
     public List<WorkshopTemplateResponse> getMyWorkshopTemplates(String email) {
@@ -153,6 +153,16 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
         return templates.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public Page<WorkshopTemplateResponse> getMyWorkshopTemplates(String email, Pageable pageable) {
+        // Find vendor first to validate email
+        VendorProfile vendor = vendorProfileRepository.findByUserEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("VendorProfile", "email", email));
+
+        Page<WorkshopTemplate> templates = workshopTemplateRepository.findByVendorId(vendor.getId(), pageable);
+        return templates.map(this::mapToResponse);
     }
 
     // ==================== SEARCH & FILTER ====================

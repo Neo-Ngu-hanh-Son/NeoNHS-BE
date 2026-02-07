@@ -9,6 +9,8 @@ import fpt.project.NeoNHS.repository.WTagRepository;
 import fpt.project.NeoNHS.service.WTagService;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -46,6 +48,12 @@ public class WTagServiceImpl implements WTagService {
         return wTagRepository.findAll().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public Page<WTagResponse> getAllWTags(Pageable pageable) {
+        Page<WTag> wTagPage = wTagRepository.findAll(pageable);
+        return wTagPage.map(this::mapToResponse);
     }
 
     @Override

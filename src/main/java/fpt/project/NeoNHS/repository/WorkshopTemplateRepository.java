@@ -2,6 +2,8 @@ package fpt.project.NeoNHS.repository;
 
 import fpt.project.NeoNHS.entity.WorkshopTemplate;
 import fpt.project.NeoNHS.enums.WorkshopStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
@@ -15,9 +17,7 @@ public interface WorkshopTemplateRepository
 
     List<WorkshopTemplate> findByVendorId(UUID vendorId);
 
-    List<WorkshopTemplate> findByStatus(WorkshopStatus status);
-
-    List<WorkshopTemplate> findByVendorIdAndStatus(UUID vendorId, WorkshopStatus status);
+    Page<WorkshopTemplate> findByVendorId(UUID vendorId, Pageable pageable);
 
     List<WorkshopTemplate> findByVendorUserEmail(String email);
 }

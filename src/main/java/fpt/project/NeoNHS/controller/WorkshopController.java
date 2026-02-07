@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.controller;
 
+import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.request.workshop.CreateWorkshopTemplateRequest;
 import fpt.project.NeoNHS.dto.request.workshop.UpdateWorkshopTemplateRequest;
 
@@ -11,6 +12,10 @@ import fpt.project.NeoNHS.service.WorkshopTemplateService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -55,33 +60,63 @@ public class WorkshopController {
         }
 
         @GetMapping("/templates")
-        public ResponseEntity<ApiResponse<List<WorkshopTemplateResponse>>> getAllWorkshopTemplates() {
-                List<WorkshopTemplateResponse> response = workshopTemplateService.getAllWorkshopTemplates();
+        @PreAuthorize("hasRole('ADMIN')")
+        public ResponseEntity<ApiResponse<Page<WorkshopTemplateResponse>>> getAllWorkshopTemplates(
+                        @RequestParam(defaultValue = PaginationConstants.DEFAULT_PAGE) int page,
+                        @RequestParam(defaultValue = PaginationConstants.DEFAULT_SIZE) int size,
+                        @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_BY) String sortBy,
+                        @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_DIR) String sortDir) {
+
+                Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
+                                ? Sort.by(sortBy).ascending()
+                                : Sort.by(sortBy).descending();
+
+                Pageable pageable = PageRequest.of(page, size, sort);
+                Page<WorkshopTemplateResponse> response = workshopTemplateService.getAllWorkshopTemplates(pageable);
                 return ResponseEntity
                                 .ok(ApiResponse.success(HttpStatus.OK, "Workshop templates retrieved successfully",
                                                 response));
         }
+//        @GetMapping("/templates/all")
+//        public ResponseEntity<ApiResponse<List<WorkshopTemplateResponse>>> getAllWorkshopTemplatesWithoutPagination() {
+//                List<WorkshopTemplateResponse> response = workshopTemplateService.getAllWorkshopTemplates();
+//                return ResponseEntity
+//                                .ok(ApiResponse.success(HttpStatus.OK, "Workshop templates retrieved successfully",
+//                                                response));
+//        }
 
-        // @GetMapping("/templates/status/{status}")
-        // public ResponseEntity<ApiResponse<List<WorkshopTemplateResponse>>>
-        // getWorkshopTemplatesByStatus(
-        // @PathVariable WorkshopStatus status) {
-        // List<WorkshopTemplateResponse> response =
-        // workshopTemplateService.getWorkshopTemplatesByStatus(status);
-        // return ResponseEntity
-        // .ok(ApiResponse.success(HttpStatus.OK, "Workshop templates retrieved
-        // successfully", response));
-        // }
 
         @GetMapping("/templates/my")
         @PreAuthorize("hasRole('VENDOR')")
-        public ResponseEntity<ApiResponse<List<WorkshopTemplateResponse>>> getMyWorkshopTemplates(Principal principal) {
-                List<WorkshopTemplateResponse> response = workshopTemplateService
-                                .getMyWorkshopTemplates(principal.getName());
+        public ResponseEntity<ApiResponse<Page<WorkshopTemplateResponse>>> getMyWorkshopTemplates(
+                        Principal principal,
+                        @RequestParam(defaultValue = PaginationConstants.DEFAULT_PAGE) int page,
+                        @RequestParam(defaultValue = PaginationConstants.DEFAULT_SIZE) int size,
+                        @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_BY) String sortBy,
+                        @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_DIR) String sortDir) {
+
+                Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
+                                ? Sort.by(sortBy).ascending()
+                                : Sort.by(sortBy).descending();
+
+                Pageable pageable = PageRequest.of(page, size, sort);
+                Page<WorkshopTemplateResponse> response = workshopTemplateService
+                                .getMyWorkshopTemplates(principal.getName(), pageable);
                 return ResponseEntity
                                 .ok(ApiResponse.success(HttpStatus.OK, "Your workshop templates retrieved successfully",
                                                 response));
         }
+
+//        @GetMapping("/templates/my/all")
+//        @PreAuthorize("hasRole('VENDOR')")
+//        public ResponseEntity<ApiResponse<List<WorkshopTemplateResponse>>> getMyWorkshopTemplatesWithoutPagination(
+//                        Principal principal) {
+//                List<WorkshopTemplateResponse> response = workshopTemplateService
+//                                .getMyWorkshopTemplates(principal.getName());
+//                return ResponseEntity
+//                                .ok(ApiResponse.success(HttpStatus.OK, "Your workshop templates retrieved successfully",
+//                                                response));
+//        }
 
         // ==================== SEARCH & FILTER ====================
 

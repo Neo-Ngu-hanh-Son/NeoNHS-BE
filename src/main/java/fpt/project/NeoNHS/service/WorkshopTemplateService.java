@@ -4,6 +4,8 @@ import fpt.project.NeoNHS.dto.request.workshop.CreateWorkshopTemplateRequest;
 import fpt.project.NeoNHS.dto.request.workshop.UpdateWorkshopTemplateRequest;
 import fpt.project.NeoNHS.dto.response.workshop.WorkshopTemplateResponse;
 import fpt.project.NeoNHS.enums.WorkshopStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -19,7 +21,11 @@ public interface WorkshopTemplateService {
 
     List<WorkshopTemplateResponse> getAllWorkshopTemplates();
 
+    Page<WorkshopTemplateResponse> getAllWorkshopTemplates(Pageable pageable);
+
     List<WorkshopTemplateResponse> getMyWorkshopTemplates(String email);
+
+    Page<WorkshopTemplateResponse> getMyWorkshopTemplates(String email, Pageable pageable);
 
     // Search & Filter
     List<WorkshopTemplateResponse> searchWorkshopTemplates(
