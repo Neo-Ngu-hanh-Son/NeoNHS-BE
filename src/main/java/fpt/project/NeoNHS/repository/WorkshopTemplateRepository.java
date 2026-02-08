@@ -12,13 +12,12 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface WorkshopTemplateRepository extends JpaRepository<WorkshopTemplate, UUID>, JpaSpecificationExecutor<WorkshopTemplate> {
+public interface WorkshopTemplateRepository
+        extends JpaRepository<WorkshopTemplate, UUID>, JpaSpecificationExecutor<WorkshopTemplate> {
+
+    List<WorkshopTemplate> findByVendorId(UUID vendorId);
 
     Page<WorkshopTemplate> findByVendorId(UUID vendorId, Pageable pageable);
-
-    Page<WorkshopTemplate> findByStatus(WorkshopStatus status, Pageable pageable);
-
-    Page<WorkshopTemplate> findByVendorIdAndStatus(UUID vendorId, WorkshopStatus status, Pageable pageable);
 
     List<WorkshopTemplate> findByVendorUserEmail(String email);
 }
