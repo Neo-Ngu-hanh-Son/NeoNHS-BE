@@ -44,6 +44,14 @@ public interface WorkshopTemplateService {
     // Update
     WorkshopTemplateResponse updateWorkshopTemplate(String email, UUID id, UpdateWorkshopTemplateRequest request);
 
+    // Register/Submit for Approval
+    WorkshopTemplateResponse registerWorkshopTemplate(String email, UUID id);
+
+    // Approve/Reject (Admin only)
+    WorkshopTemplateResponse approveWorkshopTemplate(String adminEmail, UUID id);
+
+    WorkshopTemplateResponse rejectWorkshopTemplate(String adminEmail, UUID id, String rejectReason);
+
     // Delete
     void deleteWorkshopTemplate(String email, UUID id);
 }

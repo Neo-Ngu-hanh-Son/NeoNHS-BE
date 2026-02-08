@@ -10,6 +10,7 @@ import fpt.project.NeoNHS.entity.*;
 import fpt.project.NeoNHS.enums.WorkshopStatus;
 import fpt.project.NeoNHS.exception.BadRequestException;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
+import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.repository.VendorProfileRepository;
 import fpt.project.NeoNHS.repository.WTagRepository;
 import fpt.project.NeoNHS.repository.WorkshopImageRepository;
@@ -27,6 +28,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -41,6 +43,7 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
     private final WTagRepository wTagRepository;
     private final WorkshopImageRepository workshopImageRepository;
     private final WorkshopTagRepository workshopTagRepository;
+    private final UserRepository userRepository;
 
     // ==================== CREATE ====================
 
@@ -227,7 +230,10 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
             throw new BadRequestException("You do not have permission to update this workshop template");
         }
 
-        // 3. Only allow update if status is PENDING or REJECTED
+        // 3. Only allow update if status is DRAFT or REJECTED
+        if (template.getStatus() == WorkshopStatus.PENDING) {
+            throw new BadRequestException("Cannot update a template that is pending approval. Please wait for admin review.");
+        }
         if (template.getStatus() == WorkshopStatus.ACTIVE) {
             throw new BadRequestException("Cannot update an active workshop template");
         }
@@ -315,13 +321,7 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
             template.setWorkshopTags(newTags);
         }
 
-        // 8. Reset status to PENDING if it was REJECTED (resubmission)
-        if (template.getStatus() == WorkshopStatus.REJECTED) {
-            template.setStatus(WorkshopStatus.PENDING);
-            template.setRejectReason(null);
-        }
-
-        // 9. Save and return
+        // 8. Save and return
         WorkshopTemplate updatedTemplate = workshopTemplateRepository.save(template);
         return mapToResponse(updatedTemplate);
     }
@@ -340,13 +340,154 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
             throw new BadRequestException("You do not have permission to delete this workshop template");
         }
 
-        // 3. Only allow delete if status is PENDING or REJECTED (no active sessions)
+        // 3. Only allow delete if status is DRAFT, PENDING or REJECTED (no active sessions)
         if (template.getStatus() == WorkshopStatus.ACTIVE) {
             throw new BadRequestException("Cannot delete an active workshop template. Please deactivate it first.");
         }
 
         // 4. Delete the template (cascades to images and tags)
         workshopTemplateRepository.delete(template);
+    }
+
+    // ==================== REGISTER/SUBMIT FOR APPROVAL ====================
+
+    @Override
+    @Transactional
+    public WorkshopTemplateResponse registerWorkshopTemplate(String email, UUID id) {
+        // 1. Find the workshop template
+        WorkshopTemplate template = workshopTemplateRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("WorkshopTemplate", "id", id));
+
+        // 2. Verify ownership
+        if (!template.getVendor().getUser().getEmail().equals(email)) {
+            throw new BadRequestException("You do not have permission to submit this workshop template");
+        }
+
+        // 3. Check if template status allows submission (only DRAFT or REJECTED)
+        if (template.getStatus() != WorkshopStatus.DRAFT && template.getStatus() != WorkshopStatus.REJECTED) {
+            throw new BadRequestException("Only templates with 'Draft' or 'Rejected' status can be submitted for approval");
+        }
+
+        // 4. Validate mandatory fields for submission
+        validateTemplateCompleteness(template);
+
+        // 5. Update status to PENDING and clear rejection reason if exists
+        template.setStatus(WorkshopStatus.PENDING);
+        if (template.getRejectReason() != null) {
+            template.setRejectReason(null);
+        }
+
+        // 6. Save and return
+        WorkshopTemplate submittedTemplate = workshopTemplateRepository.save(template);
+        return mapToResponse(submittedTemplate);
+    }
+
+    /**
+     * Validates that all mandatory fields are present before submission
+     */
+    private void validateTemplateCompleteness(WorkshopTemplate template) {
+        List<String> missingFields = new ArrayList<>();
+
+        // Check mandatory fields
+        if (template.getName() == null || template.getName().trim().isEmpty()) {
+            missingFields.add("Title/Name");
+        }
+        if (template.getShortDescription() == null || template.getShortDescription().trim().isEmpty()) {
+            missingFields.add("Short Description");
+        }
+        if (template.getFullDescription() == null || template.getFullDescription().trim().isEmpty()) {
+            missingFields.add("Full Description");
+        }
+        if (template.getDefaultPrice() == null) {
+            missingFields.add("Price");
+        }
+        if (template.getEstimatedDuration() == null || template.getEstimatedDuration() <= 0) {
+            missingFields.add("Duration");
+        }
+        if (template.getMinParticipants() == null || template.getMinParticipants() <= 0) {
+            missingFields.add("Minimum Participants");
+        }
+        if (template.getMaxParticipants() == null || template.getMaxParticipants() <= 0) {
+            missingFields.add("Maximum Participants");
+        }
+
+        // Check if at least one image exists
+        if (template.getWorkshopImages() == null || template.getWorkshopImages().isEmpty()) {
+            missingFields.add("Image (at least one required)");
+        }
+
+        // Check if at least one tag exists
+        if (template.getWorkshopTags() == null || template.getWorkshopTags().isEmpty()) {
+            missingFields.add("Category/Tag (at least one required)");
+        }
+
+        // If there are missing fields, throw exception with list
+        if (!missingFields.isEmpty()) {
+            String errorMessage = "Cannot submit incomplete template. Missing required fields: "
+                + String.join(", ", missingFields);
+            throw new BadRequestException(errorMessage);
+        }
+    }
+
+    // ==================== APPROVE/REJECT (ADMIN ONLY) ====================
+
+    @Override
+    @Transactional
+    public WorkshopTemplateResponse approveWorkshopTemplate(String adminEmail, UUID id) {
+        // 1. Find the admin user
+        User admin = userRepository.findByEmail(adminEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", adminEmail));
+
+        // 2. Find the workshop template
+        WorkshopTemplate template = workshopTemplateRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("WorkshopTemplate", "id", id));
+
+        // 3. Check if template is in PENDING status
+        if (template.getStatus() != WorkshopStatus.PENDING) {
+            throw new BadRequestException("Only templates with 'Pending' status can be approved. Current status: " + template.getStatus());
+        }
+
+        // 4. Update status to ACTIVE and set approval details
+        template.setStatus(WorkshopStatus.ACTIVE);
+        template.setApprovedBy(admin.getId());
+        template.setApprovedAt(LocalDateTime.now());
+        template.setRejectReason(null); // Clear any previous rejection reason
+
+        // 5. Save and return
+        WorkshopTemplate approvedTemplate = workshopTemplateRepository.save(template);
+        return mapToResponse(approvedTemplate);
+    }
+
+    @Override
+    @Transactional
+    public WorkshopTemplateResponse rejectWorkshopTemplate(String adminEmail, UUID id, String rejectReason) {
+        // 1. Find the admin user
+        User admin = userRepository.findByEmail(adminEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", adminEmail));
+
+        // 2. Find the workshop template
+        WorkshopTemplate template = workshopTemplateRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("WorkshopTemplate", "id", id));
+
+        // 3. Check if template is in PENDING status
+        if (template.getStatus() != WorkshopStatus.PENDING) {
+            throw new BadRequestException("Only templates with 'Pending' status can be rejected. Current status: " + template.getStatus());
+        }
+
+        // 4. Validate reject reason
+        if (rejectReason == null || rejectReason.trim().isEmpty()) {
+            throw new BadRequestException("Reject reason is required");
+        }
+
+        // 5. Update status to REJECTED and set rejection details
+        template.setStatus(WorkshopStatus.REJECTED);
+        template.setRejectReason(rejectReason);
+        template.setApprovedBy(null); // Clear approval details
+        template.setApprovedAt(null);
+
+        // 6. Save and return
+        WorkshopTemplate rejectedTemplate = workshopTemplateRepository.save(template);
+        return mapToResponse(rejectedTemplate);
     }
 
     // ==================== MAPPERS ====================
@@ -401,6 +542,9 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
                 .vendorName(template.getVendor().getBusinessName())
                 .createdAt(template.getCreatedAt())
                 .updatedAt(template.getUpdatedAt())
+                .rejectReason(template.getRejectReason())
+                .approvedBy(template.getApprovedBy())
+                .approvedAt(template.getApprovedAt())
                 .images(imageResponses)
                 .tags(tagResponses)
                 .build();
