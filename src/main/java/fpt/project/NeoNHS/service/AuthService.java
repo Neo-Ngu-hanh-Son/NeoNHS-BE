@@ -10,6 +10,7 @@ public interface AuthService {
     AuthResponse login(LoginRequest request);
 
     AuthResponse register(RegisterRequest request);
+
     void changePassword(String email, ChangePasswordRequest request);
 
     AuthResponse googleLogin(String idToken);

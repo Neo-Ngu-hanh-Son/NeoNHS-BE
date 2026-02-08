@@ -223,6 +223,8 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Confirm password does not match the new password");
         }
 
+        validatePassword(request.getNewPassword());
+
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BadRequestException("User not found"));
 
