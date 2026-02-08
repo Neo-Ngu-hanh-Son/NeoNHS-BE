@@ -75,8 +75,13 @@ public class UserServiceImpl implements UserService {
             user.setPhoneNumber(request.getPhoneNumber());
         }
 
-        user.setFullname(request.getFullname());
-        user.setAvatarUrl(request.getAvatarUrl());
+        if (request.getFullname() != null) {
+            user.setFullname(request.getFullname());
+        }
+
+        if (request.getAvatarUrl() != null) {
+            user.setAvatarUrl(request.getAvatarUrl());
+        }
 
         userRepository.save(user);
         return mapToUserResponse(user);
