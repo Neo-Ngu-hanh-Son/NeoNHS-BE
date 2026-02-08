@@ -222,6 +222,8 @@ public class AuthServiceImpl implements AuthService {
         if (!request.getNewPassword().equals(request.getConfirmNewPassword())) {
             throw new BadRequestException("Confirm password does not match the new password");
         }
+        System.out.println("New: '" + request.getNewPassword() + "'");
+        System.out.println("Confirm: '" + request.getConfirmNewPassword() + "'");
 
         validatePassword(request.getNewPassword());
 
