@@ -4,10 +4,14 @@ import fpt.project.NeoNHS.dto.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.stream.Collectors;
 
 /**
  * Global exception handler for the application.
@@ -26,6 +30,47 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(HttpStatus.BAD_REQUEST, ex.getMessage()));
+    }
+
+    /**
+     * Handles HttpMessageNotReadableException (400 Bad Request)
+     * Thrown when JSON parsing fails (e.g., invalid UUID format)
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
+        log.warn("JSON parse error: {}", ex.getMessage());
+
+        String message = "Invalid request body";
+        Throwable cause = ex.getCause();
+        if (cause != null && cause.getMessage() != null) {
+            String causeMessage = cause.getMessage();
+            // Extract user-friendly message for common errors
+            if (causeMessage.contains("UUID")) {
+                message = "Invalid UUID format. UUID must be in standard 36-character format (e.g., 550e8400-e29b-41d4-a716-446655440000)";
+            } else if (causeMessage.contains("Cannot deserialize")) {
+                message = "Invalid data format in request body";
+            }
+        }
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(HttpStatus.BAD_REQUEST, message));
+    }
+
+    /**
+     * Handles MethodArgumentNotValidException (400 Bad Request)
+     * Thrown when @Valid validation fails
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex) {
+        String errors = ex.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .collect(Collectors.joining(", "));
+
+        log.warn("Validation failed: {}", errors);
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(HttpStatus.BAD_REQUEST, errors));
     }
 
     /**

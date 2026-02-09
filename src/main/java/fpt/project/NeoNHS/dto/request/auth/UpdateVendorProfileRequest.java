@@ -1,4 +1,4 @@
-package fpt.project.NeoNHS.dto.request;
+package fpt.project.NeoNHS.dto.request.auth;
 
 import lombok.Data;
 

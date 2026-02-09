@@ -1,107 +1,127 @@
 package fpt.project.NeoNHS.service.impl;
 
-import fpt.project.NeoNHS.dto.response.AttractionResponse;
-import fpt.project.NeoNHS.dto.response.PagedResponse;
+import fpt.project.NeoNHS.constants.PaginationConstants;
+import fpt.project.NeoNHS.dto.request.attraction.AttractionFilterRequest;
+import fpt.project.NeoNHS.dto.request.attraction.AttractionRequest;
+import fpt.project.NeoNHS.dto.response.attraction.AttractionResponse;
 import fpt.project.NeoNHS.entity.Attraction;
-import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.repository.AttractionRepository;
 import fpt.project.NeoNHS.service.AttractionService;
+import fpt.project.NeoNHS.specification.AttractionSpecification;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/**
- * Implementation of AttractionService for handling attraction operations
- */
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class AttractionServiceImpl implements AttractionService {
 
     private final AttractionRepository attractionRepository;
 
-    /**
-     * Get all active attractions with pagination and optional search.
-     *
-     * @param keyword Optional search keyword for attraction name
-     * @param page    Page number
-     * @param size    Page size
-     * @param sortBy  Field to sort by
-     * @param sortDir Sort direction - asc or desc
-     * @return Paged response of attractions
-     */
     @Override
-    public PagedResponse<AttractionResponse> getAllActiveAttractions(
-            String keyword, int page, int size, String sortBy, String sortDir) {
-        
-        Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
-                ? Sort.by(sortBy).ascending()
-                : Sort.by(sortBy).descending();
+    public AttractionResponse createAttraction(AttractionRequest request) {
+        if (request.getCloseHour().isBefore(request.getOpenHour()))
+            throw new IllegalArgumentException("Close hour must be after open hour");
 
-        Pageable pageable = PageRequest.of(page, size, sort);
+        Attraction attraction = Attraction.builder()
+                .name(request.getName()).description(request.getDescription())
+                .address(request.getAddress()).latitude(request.getLatitude())
+                .longitude(request.getLongitude()).status(request.getStatus())
+                .thumbnailUrl(request.getThumbnailUrl()).mapImageUrl(request.getMapImageUrl())
+                .openHour(request.getOpenHour()).closeHour(request.getCloseHour())
+                .isActive(true).build();
 
-        Page<Attraction> attractionPage = attractionRepository.findActiveAttractions(keyword, pageable);
-
-        List<AttractionResponse> content = attractionPage.getContent()
-                .stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-
-        return PagedResponse.<AttractionResponse>builder()
-                .content(content)
-                .page(attractionPage.getNumber())
-                .size(attractionPage.getSize())
-                .totalElements(attractionPage.getTotalElements())
-                .totalPages(attractionPage.getTotalPages())
-                .first(attractionPage.isFirst())
-                .last(attractionPage.isLast())
-                .empty(attractionPage.isEmpty())
-                .build();
+        return mapToResponse(attractionRepository.save(attraction));
     }
 
     @Override
-    public AttractionResponse getActiveAttractionById(UUID id) {
-        Attraction attraction = attractionRepository.findByIdAndIsActiveTrue(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Attraction", "id", id.toString()));
+    public List<AttractionResponse> getAllAttractions() {
+        return attractionRepository.findAll()
+                .stream()
+                .filter(Attraction::getIsActive)
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Override
+    public Page<AttractionResponse> getAllAttractionsWithPagination(int page, int size, String sortBy,
+                                                                    String sortDir, String search) {
+        Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        int actualSize = Math.min(size, PaginationConstants.MAX_PAGE_SIZE);
+        Pageable pageable = PageRequest.of(page, actualSize, sort);
+
+        var filters = AttractionFilterRequest.builder()
+                .name(search)
+                .description(search)
+                .address(search)
+                .build();
+
+        return attractionRepository.findAll(AttractionSpecification.withFilters(filters), pageable)
+                .map(this::mapToResponse);
+    }
+
+    @Override
+    public AttractionResponse getAttractionById(UUID id) {
+        Attraction attraction = attractionRepository.findById(id)
+                .filter(Attraction::getIsActive)
+                .orElseThrow(() -> new RuntimeException("Attraction not found"));
         return mapToResponse(attraction);
     }
 
     @Override
-    public long countActiveAttractions() {
-        return attractionRepository.countByIsActiveTrue();
+    @Transactional
+    public AttractionResponse updateAttraction(UUID id, AttractionRequest request) {
+        Attraction attraction = attractionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Attraction not found with id: " + id));
+
+        if (request.getName() != null) attraction.setName(request.getName());
+        if (request.getDescription() != null) attraction.setDescription(request.getDescription());
+        if (request.getMapImageUrl() != null) attraction.setMapImageUrl(request.getMapImageUrl());
+        if (request.getAddress() != null) attraction.setAddress(request.getAddress());
+        if (request.getLatitude() != null) attraction.setLatitude(request.getLatitude());
+        if (request.getLongitude() != null) attraction.setLongitude(request.getLongitude());
+        if (request.getStatus() != null) attraction.setStatus(request.getStatus());
+        if (request.getThumbnailUrl() != null) attraction.setThumbnailUrl(request.getThumbnailUrl());
+        if (request.getOpenHour() != null) attraction.setOpenHour(request.getOpenHour());
+        if (request.getCloseHour() != null) attraction.setCloseHour(request.getCloseHour());
+
+        if (attraction.getOpenHour() != null && attraction.getCloseHour() != null) {
+            if (attraction.getCloseHour().isBefore(attraction.getOpenHour())) {
+                throw new IllegalArgumentException("Close hour must be after open hour!");
+            }
+        }
+
+        return mapToResponse(attractionRepository.save(attraction));
     }
 
-    /**
-     * Maps an Attraction entity to AttractionResponse DTO
-     *
-     * @param attraction The attraction entity
-     * @return The mapped DTO
-     */
-    private AttractionResponse mapToResponse(Attraction attraction) {
+    @Override
+    @Transactional
+    public void deleteAttraction(UUID id) {
+        Attraction attraction = attractionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Attraction not found with id: " + id));
+
+        //not really delete just set is active = false
+        attraction.setIsActive(false);
+        attractionRepository.save(attraction);
+    }
+
+    private AttractionResponse mapToResponse(Attraction entity) {
         return AttractionResponse.builder()
-                .id(attraction.getId())
-                .name(attraction.getName())
-                .description(attraction.getDescription())
-                .mapImageUrl(attraction.getMapImageUrl())
-                .address(attraction.getAddress())
-                .latitude(attraction.getLatitude())
-                .longitude(attraction.getLongitude())
-                .status(attraction.getStatus())
-                .thumbnailUrl(attraction.getThumbnailUrl())
-                .openHour(attraction.getOpenHour())
-                .closeHour(attraction.getCloseHour())
-                .pointCount(attraction.getPoints() != null ? attraction.getPoints().size() : 0)
-                .createdAt(attraction.getCreatedAt())
-                .updatedAt(attraction.getUpdatedAt())
+                .id(entity.getId()).name(entity.getName()).description(entity.getDescription())
+                .address(entity.getAddress()).latitude(entity.getLatitude()).longitude(entity.getLongitude())
+                .status(entity.getStatus()).thumbnailUrl(entity.getThumbnailUrl())
+                .openHour(entity.getOpenHour()).closeHour(entity.getCloseHour())
                 .build();
     }
 }
-

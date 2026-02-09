@@ -1,9 +1,9 @@
 package fpt.project.NeoNHS.controller;
 
-import fpt.project.NeoNHS.dto.request.ChangePasswordRequest;
 import fpt.project.NeoNHS.dto.request.auth.*;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.AuthResponse;
+import fpt.project.NeoNHS.dto.response.auth.UserInfoResponse;
 import fpt.project.NeoNHS.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -107,6 +107,15 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Password reset successful", "Password reset"));
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<UserInfoResponse>> getCurrentUser(Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Unauthorized"));
+        }
+        UserInfoResponse userInfo = authService.getCurrentUser(principal.getName());
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "User retrieved successfully", userInfo));
+    }
     @PostMapping("/refresh-token")
     public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(@RequestBody RefreshTokenRequest request) {
         AuthResponse data = authService.refreshToken(request.getRefreshToken());

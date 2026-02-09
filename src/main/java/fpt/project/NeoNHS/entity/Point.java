@@ -46,6 +46,8 @@ public class Point {
 
     private Integer estTimeSpent;
 
+    private String type;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

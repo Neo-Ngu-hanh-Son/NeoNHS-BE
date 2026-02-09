@@ -1,41 +1,22 @@
 package fpt.project.NeoNHS.service;
 
-import fpt.project.NeoNHS.dto.response.AttractionResponse;
-import fpt.project.NeoNHS.dto.response.PagedResponse;
+import fpt.project.NeoNHS.dto.request.attraction.AttractionRequest;
+import fpt.project.NeoNHS.dto.response.attraction.AttractionResponse;
+import org.springframework.data.domain.Page;
 
+import java.util.List;
 import java.util.UUID;
 
-/**
- * Service interface for Attraction operations
- */
 public interface AttractionService {
+    AttractionResponse createAttraction(AttractionRequest request);
 
-    /**
-     * Get all active attractions with pagination and optional search
-     *
-     * @param keyword  Optional search keyword for attraction name
-     * @param page     Page number (0-indexed)
-     * @param size     Page size
-     * @param sortBy   Field to sort by
-     * @param sortDir  Sort direction (asc/desc)
-     * @return Paged response of attractions
-     */
-    PagedResponse<AttractionResponse> getAllActiveAttractions(
-            String keyword, int page, int size, String sortBy, String sortDir);
+    List<AttractionResponse> getAllAttractions();
 
-    /**
-     * Get a single active attraction by ID
-     *
-     * @param id Attraction UUID
-     * @return Attraction response
-     */
-    AttractionResponse getActiveAttractionById(UUID id);
+    AttractionResponse getAttractionById(UUID id);
 
-    /**
-     * Count all active attractions
-     *
-     * @return Count of active attractions
-     */
-    long countActiveAttractions();
+    AttractionResponse updateAttraction(UUID id, AttractionRequest request);
+
+    void deleteAttraction(UUID id);
+
+    Page<AttractionResponse> getAllAttractionsWithPagination(int page, int size, String sortBy, String sortDir, String search);
 }
-
