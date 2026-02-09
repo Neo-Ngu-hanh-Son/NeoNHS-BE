@@ -32,4 +32,18 @@ public class EventFilterRequest {
     private BigDecimal maxPrice;
 
     private List<UUID> tagIds;
+
+    /**
+     * Filter by soft delete status (Admin only):
+     * - null or false: show only active (non-deleted) events
+     * - true: show only deleted events
+     */
+    private Boolean deleted;
+
+    /**
+     * Include all events regardless of deleted status (Admin only).
+     * If true, ignores the 'deleted' field and shows all events.
+     */
+    @Builder.Default
+    private Boolean includeDeleted = false;
 }
