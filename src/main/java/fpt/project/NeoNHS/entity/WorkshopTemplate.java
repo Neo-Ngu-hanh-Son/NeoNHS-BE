@@ -45,7 +45,7 @@ public class WorkshopTemplate {
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private WorkshopStatus status = WorkshopStatus.PENDING;
+    private WorkshopStatus status = WorkshopStatus.DRAFT;
 
     @Column(columnDefinition = "TEXT")
     private String rejectReason;
