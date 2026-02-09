@@ -1,6 +1,6 @@
 package fpt.project.NeoNHS.service;
 
-import fpt.project.NeoNHS.dto.request.ChangePasswordRequest;
+import fpt.project.NeoNHS.dto.request.auth.ChangePasswordRequest;
 import fpt.project.NeoNHS.dto.request.auth.LoginRequest;
 import fpt.project.NeoNHS.dto.request.auth.RegisterRequest;
 import fpt.project.NeoNHS.dto.response.AuthResponse;
@@ -10,6 +10,7 @@ public interface AuthService {
     AuthResponse login(LoginRequest request);
 
     AuthResponse register(RegisterRequest request);
+
     void changePassword(String email, ChangePasswordRequest request);
 
     AuthResponse googleLogin(String idToken);

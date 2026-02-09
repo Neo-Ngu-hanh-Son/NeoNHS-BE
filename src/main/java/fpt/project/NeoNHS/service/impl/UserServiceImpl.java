@@ -1,6 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
-import fpt.project.NeoNHS.dto.request.UpdateUserProfileRequest;
+import fpt.project.NeoNHS.dto.request.auth.UpdateUserProfileRequest;
 import fpt.project.NeoNHS.dto.response.auth.UserProfileResponse;
 import fpt.project.NeoNHS.entity.User;
 import fpt.project.NeoNHS.exception.BadRequestException;
@@ -75,8 +75,13 @@ public class UserServiceImpl implements UserService {
             user.setPhoneNumber(request.getPhoneNumber());
         }
 
-        user.setFullname(request.getFullname());
-        user.setAvatarUrl(request.getAvatarUrl());
+        if (request.getFullname() != null) {
+            user.setFullname(request.getFullname());
+        }
+
+        if (request.getAvatarUrl() != null) {
+            user.setAvatarUrl(request.getAvatarUrl());
+        }
 
         userRepository.save(user);
         return mapToUserResponse(user);

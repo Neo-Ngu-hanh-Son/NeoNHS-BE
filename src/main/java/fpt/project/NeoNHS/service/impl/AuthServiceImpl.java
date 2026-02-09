@@ -1,7 +1,7 @@
 package fpt.project.NeoNHS.service.impl;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
-import fpt.project.NeoNHS.dto.request.ChangePasswordRequest;
+import fpt.project.NeoNHS.dto.request.auth.ChangePasswordRequest;
 import fpt.project.NeoNHS.constants.EmailTemplate;
 import fpt.project.NeoNHS.dto.request.auth.LoginRequest;
 import fpt.project.NeoNHS.dto.request.auth.RegisterRequest;
@@ -197,6 +197,7 @@ public class AuthServiceImpl implements AuthService {
                         .id(user.getId())
                         .email(user.getEmail())
                         .fullname(user.getFullname())
+                        .phoneNumber(user.getPhoneNumber())
                         .role(user.getRole())
                         .avatarUrl(user.getAvatarUrl())
                         .build())
@@ -222,6 +223,10 @@ public class AuthServiceImpl implements AuthService {
         if (!request.getNewPassword().equals(request.getConfirmNewPassword())) {
             throw new BadRequestException("Confirm password does not match the new password");
         }
+        System.out.println("New: '" + request.getNewPassword() + "'");
+        System.out.println("Confirm: '" + request.getConfirmNewPassword() + "'");
+
+        validatePassword(request.getNewPassword());
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BadRequestException("User not found"));

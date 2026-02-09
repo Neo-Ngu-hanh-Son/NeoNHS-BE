@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.request.attraction.AttractionRequest;
 import fpt.project.NeoNHS.dto.response.attraction.AttractionResponse;
 import fpt.project.NeoNHS.entity.Attraction;
@@ -7,6 +8,10 @@ import fpt.project.NeoNHS.repository.AttractionRepository;
 import fpt.project.NeoNHS.service.AttractionService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -41,6 +46,19 @@ public class AttractionServiceImpl implements AttractionService {
                 .filter(Attraction::getIsActive)
                 .map(this::mapToResponse)
                 .toList();
+    }
+
+    @Override
+    public Page<AttractionResponse> getAllAttractionsWithPagination(int page, int size, String sortBy, String sortDir, String search) {
+        Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        int actualSize = Math.min(size, PaginationConstants.MAX_PAGE_SIZE);
+        Pageable pageable = PageRequest.of(page, actualSize, sort);
+
+        return attractionRepository.findAllActive(search, pageable)
+                .map(this::mapToResponse);
     }
 
     @Override

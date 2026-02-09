@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.request.point.PointRequest;
 import fpt.project.NeoNHS.dto.response.point.PointResponse;
 import fpt.project.NeoNHS.entity.Attraction;
@@ -9,6 +10,10 @@ import fpt.project.NeoNHS.repository.PointRepository;
 import fpt.project.NeoNHS.service.PointService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -96,6 +101,22 @@ public class PointServiceImpl implements PointService {
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
+    }
+
+    @Override
+    public Page<PointResponse> getAllPointsWithPagination(UUID attractionId, int page, int size, String sortBy, String sortDir, String search) {
+        if (!attractionRepository.existsById(attractionId)) {
+            throw new RuntimeException("Attraction not found");
+        }
+
+        Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        Pageable pageable = PageRequest.of(page, Math.min(size, PaginationConstants.MAX_PAGE_SIZE), sort);
+
+        return pointRepository.findByAttractionIdWithSearch(attractionId, search, pageable)
+                .map(this::mapToResponse);
     }
 
     private PointResponse mapToResponse(Point entity) {

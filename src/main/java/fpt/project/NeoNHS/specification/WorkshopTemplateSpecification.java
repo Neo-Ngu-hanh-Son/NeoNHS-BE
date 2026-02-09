@@ -95,8 +95,7 @@ public class WorkshopTemplateSpecification {
             return cb.or(
                     cb.like(cb.lower(root.get("name")), pattern),
                     cb.like(cb.lower(root.get("shortDescription")), pattern),
-                    cb.like(cb.lower(root.get("fullDescription")), pattern)
-            );
+                    cb.like(cb.lower(root.get("fullDescription")), pattern));
         };
     }
 }
