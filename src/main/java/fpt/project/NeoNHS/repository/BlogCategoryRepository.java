@@ -9,5 +9,6 @@ import java.util.UUID;
 
 @Repository
 public interface BlogCategoryRepository
-    extends JpaRepository<BlogCategory, UUID>, JpaSpecificationExecutor<BlogCategory> {
+        extends JpaRepository<BlogCategory, UUID>, JpaSpecificationExecutor<BlogCategory> {
+    boolean existsBySlug(String slug);
 }

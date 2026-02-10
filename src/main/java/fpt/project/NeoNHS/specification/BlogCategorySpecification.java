@@ -15,7 +15,11 @@ public class BlogCategorySpecification {
       List<Predicate> predicates = new ArrayList<>();
 
       if (status != null) {
-        predicates.add(criteriaBuilder.equal(root.get("status"), status));
+        if (status == BlogCategoryStatus.ACTIVE) {
+          predicates.add(criteriaBuilder.isNull(root.get("deletedAt")));
+        } else if (status == BlogCategoryStatus.ARCHIVED) {
+          predicates.add(criteriaBuilder.isNotNull(root.get("deletedAt")));
+        }
       }
 
       if (search != null && !search.isBlank()) {
