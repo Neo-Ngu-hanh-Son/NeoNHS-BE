@@ -46,6 +46,9 @@ public class TicketCatalog extends BaseEntity {
     private Integer totalQuota;
 
     @Builder.Default
+    private Integer soldQuantity = 0;
+
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TicketCatalogStatus status = TicketCatalogStatus.ACTIVE;

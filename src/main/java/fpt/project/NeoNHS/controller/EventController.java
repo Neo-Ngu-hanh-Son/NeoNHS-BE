@@ -4,8 +4,10 @@ import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.request.event.EventFilterRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.event.EventResponse;
+import fpt.project.NeoNHS.dto.response.ticketcatalog.TicketCatalogResponse;
 import fpt.project.NeoNHS.enums.EventStatus;
 import fpt.project.NeoNHS.service.EventService;
+import fpt.project.NeoNHS.service.TicketCatalogService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,6 +36,7 @@ import java.util.UUID;
 public class EventController {
 
     private final EventService eventService;
+    private final TicketCatalogService ticketCatalogService;
 
     @Operation(
             summary = "Get all events",
@@ -118,5 +121,16 @@ public class EventController {
             @Parameter(description = "Event ID") @PathVariable UUID id) {
         EventResponse event = eventService.getEventById(id);
         return ResponseEntity.ok(ApiResponse.success("Event retrieved successfully", event));
+    }
+
+    @Operation(
+            summary = "Get ticket catalogs for event",
+            description = "Retrieve all active (non-deleted) ticket catalogs for a specific event. Shows remaining quantity for availability check."
+    )
+    @GetMapping("/{id}/ticket-catalogs")
+    public ResponseEntity<ApiResponse<List<TicketCatalogResponse>>> getTicketCatalogsByEvent(
+            @Parameter(description = "Event ID") @PathVariable UUID id) {
+        List<TicketCatalogResponse> ticketCatalogs = ticketCatalogService.getTicketCatalogsByEventForPublic(id);
+        return ResponseEntity.ok(ApiResponse.success("Ticket catalogs retrieved successfully", ticketCatalogs));
     }
 }

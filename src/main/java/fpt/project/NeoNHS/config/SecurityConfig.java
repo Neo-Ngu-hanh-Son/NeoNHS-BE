@@ -31,6 +31,28 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService customUserDetailsService;
+    private static final String[] AUTH_APIS = {
+            "/api/auth/**"
+    };
+
+    // Public business APIs
+    private static final String[] PUBLIC_APIS = {
+            "/api/public/**",
+            "/api/points/**"
+    };
+
+    // Swagger / docs
+    private static final String[] SWAGGER_APIS = {
+            "/swagger-ui/**",
+            "/swagger-ui.html",
+            "/v3/api-docs/**"
+    };
+
+    // Admin only
+    private static final String[] ADMIN_APIS = {
+            "/api/admin/**",
+            "/api/attractions/**"
+    };
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -41,17 +63,12 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/auth/test-protected").authenticated()
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/public/**").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/attractions/**").hasRole("ADMIN")
-                        .requestMatchers("/api/points/**").permitAll()
-                        .requestMatchers("/swagger-ui/**").permitAll()
-                        .requestMatchers("/swagger-ui.html").permitAll()
-                        .requestMatchers("/v3/api-docs/**").permitAll()
-                // Careful as unknown endpoints will be blocked (returning forbidden instead of
-                // 404)
+                        .requestMatchers(AUTH_APIS).permitAll()
+                        .requestMatchers(PUBLIC_APIS).permitAll()
+                        .requestMatchers(SWAGGER_APIS).permitAll()
+                        .requestMatchers(ADMIN_APIS).hasRole("ADMIN")
+                        .anyRequest().authenticated()
+                // Careful as unknown endpoints will be blocked (returning forbidden instead of 404)
                 // .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
