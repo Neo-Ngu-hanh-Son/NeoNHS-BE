@@ -8,6 +8,13 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import fpt.project.NeoNHS.enums.PointType;
+
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "points")
 @Getter
@@ -43,6 +50,17 @@ public class Point extends BaseEntity {
     private Integer orderIndex;
 
     private Integer estTimeSpent;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PointType type = PointType.DEFAULT;
+
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)

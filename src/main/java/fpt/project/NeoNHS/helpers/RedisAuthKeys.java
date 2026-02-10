@@ -1,7 +1,7 @@
 package fpt.project.NeoNHS.helpers;
 
-public final class RedisKeys {
-    private RedisKeys() {}
+public final class RedisAuthKeys {
+    private RedisAuthKeys() {}
 
     public static String otp(String email) {
         return "auth:otp:" + email;
@@ -17,5 +17,9 @@ public final class RedisKeys {
 
     public static String resetPasswordToken(String token) {
         return "auth:reset:" + token;
+    }
+
+    public static String refreshToken(String token) {
+        return "auth:refresh_token:" + token;
     }
 }

@@ -129,6 +129,22 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(HttpStatus.BAD_REQUEST, ex.getMessage()));
     }
 
+    @ExceptionHandler(OTPException.class)
+    public ResponseEntity<ApiResponse<Void>> handleOTPException(OTPException ex) {
+        log.warn("OTP error: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(HttpStatus.BAD_REQUEST, ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidTokenException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidTokenException(InvalidTokenException ex) {
+        log.warn("Invalid token: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, ex.getMessage()));
+    }
+
     /**
      * Handles all other unhandled exceptions (500 Internal Server Error)
      */

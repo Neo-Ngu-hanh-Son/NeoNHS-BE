@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.dto.request.attraction;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
@@ -8,6 +9,7 @@ import java.time.LocalTime;
 
 @Getter
 @Setter
+@Builder
 public class AttractionRequest {
     private String name;
     private String description;
