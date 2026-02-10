@@ -4,7 +4,7 @@ import fpt.project.NeoNHS.enums.TicketStatus;
 import fpt.project.NeoNHS.enums.TicketType;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -15,8 +15,8 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class Ticket {
+@SuperBuilder
+public class Ticket extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -37,7 +37,6 @@ public class Ticket {
     @Column(nullable = false)
     private TicketStatus status = TicketStatus.ACTIVE;
 
-    @CreationTimestamp
     private LocalDateTime issueDate;
 
     private LocalDateTime expiryDate;
