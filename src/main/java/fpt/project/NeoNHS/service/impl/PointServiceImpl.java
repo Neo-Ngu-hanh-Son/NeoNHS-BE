@@ -43,7 +43,7 @@ public class PointServiceImpl implements PointService {
                 .longitude(request.getLongitude())
                 .orderIndex(request.getOrderIndex())
                 .estTimeSpent(request.getEstTimeSpent())
-                .type(request.getType().toLowerCase(Locale.ROOT))
+                .type(request.getType())
                 .attraction(attraction)
                 .build();
 
@@ -56,16 +56,26 @@ public class PointServiceImpl implements PointService {
         Point point = pointRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Point not found with id: " + id));
 
-        if (request.getName() != null) point.setName(request.getName());
-        if (request.getDescription() != null) point.setDescription(request.getDescription());
-        if (request.getThumbnailUrl() != null) point.setThumbnailUrl(request.getThumbnailUrl());
-        if (request.getHistory() != null) point.setHistory(request.getHistory());
-        if (request.getHistoryAudioUrl() != null) point.setHistoryAudioUrl(request.getHistoryAudioUrl());
-        if (request.getLatitude() != null) point.setLatitude(request.getLatitude());
-        if (request.getLongitude() != null) point.setLongitude(request.getLongitude());
-        if (request.getOrderIndex() != null) point.setOrderIndex(request.getOrderIndex());
-        if (request.getEstTimeSpent() != null) point.setEstTimeSpent(request.getEstTimeSpent());
-        if (request.getType() != null) point.setType(request.getType().toLowerCase(Locale.ROOT));
+        if (request.getName() != null)
+            point.setName(request.getName());
+        if (request.getDescription() != null)
+            point.setDescription(request.getDescription());
+        if (request.getThumbnailUrl() != null)
+            point.setThumbnailUrl(request.getThumbnailUrl());
+        if (request.getHistory() != null)
+            point.setHistory(request.getHistory());
+        if (request.getHistoryAudioUrl() != null)
+            point.setHistoryAudioUrl(request.getHistoryAudioUrl());
+        if (request.getLatitude() != null)
+            point.setLatitude(request.getLatitude());
+        if (request.getLongitude() != null)
+            point.setLongitude(request.getLongitude());
+        if (request.getOrderIndex() != null)
+            point.setOrderIndex(request.getOrderIndex());
+        if (request.getEstTimeSpent() != null)
+            point.setEstTimeSpent(request.getEstTimeSpent());
+        if (request.getType() != null)
+            point.setType(request.getType());
 
         if (request.getAttractionId() != null) {
             Attraction attraction = attractionRepository.findById(request.getAttractionId())
@@ -107,7 +117,7 @@ public class PointServiceImpl implements PointService {
 
     @Override
     public Page<PointResponse> getAllPointsWithPagination(UUID attractionId, int page, int size, String sortBy,
-                                                          String sortDir, String search) {
+            String sortDir, String search) {
         if (!attractionRepository.existsById(attractionId)) {
             throw new RuntimeException("Attraction not found");
         }

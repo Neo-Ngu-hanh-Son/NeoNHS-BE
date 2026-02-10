@@ -1,9 +1,9 @@
 package fpt.project.NeoNHS.dto.request.point;
 
 import lombok.Data;
-
 import java.math.BigDecimal;
 import java.util.UUID;
+import fpt.project.NeoNHS.enums.PointType;
 
 @Data
 public class PointRequest {
@@ -16,6 +16,6 @@ public class PointRequest {
     private BigDecimal longitude;
     private Integer orderIndex;
     private Integer estTimeSpent;
-    private String type;
+    private PointType type;
     private UUID attractionId;
 }

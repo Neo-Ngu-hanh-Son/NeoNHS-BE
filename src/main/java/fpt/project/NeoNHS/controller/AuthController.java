@@ -5,14 +5,13 @@ import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.AuthResponse;
 import fpt.project.NeoNHS.dto.response.auth.UserInfoResponse;
 import fpt.project.NeoNHS.service.AuthService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.security.Principal;
 
@@ -20,6 +19,7 @@ import java.security.Principal;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @CrossOrigin
+@Tag(name = "Auth", description = "Authentication APIs")
 public class AuthController {
     private final AuthService authService;
 
@@ -58,15 +58,13 @@ public class AuthController {
     @PostMapping("/change-password")
     public ResponseEntity<ApiResponse<String>> changePassword(
             @Valid @RequestBody ChangePasswordRequest request,
-            Principal principal
-    ) {
+            Principal principal) {
         authService.changePassword(principal.getName(), request);
 
         return ResponseEntity.ok(ApiResponse.success(
                 HttpStatus.OK,
                 "Password updated successfully",
-                "Password updated successfully"
-        ));
+                "Password updated successfully"));
     }
 
     @PostMapping("/verify")
@@ -81,7 +79,6 @@ public class AuthController {
         authService.verifyOtp(email, otp);
         return ResponseEntity.ok("Email verified successfully");
     }
-    
 
     @GetMapping("/resend-verify-email")
     public ResponseEntity<ApiResponse<String>> resendVerifyEmail(@RequestParam String email) {
@@ -116,12 +113,12 @@ public class AuthController {
         UserInfoResponse userInfo = authService.getCurrentUser(principal.getName());
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "User retrieved successfully", userInfo));
     }
+
     @PostMapping("/refresh-token")
     public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(@RequestBody RefreshTokenRequest request) {
         AuthResponse data = authService.refreshToken(request.getRefreshToken());
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Token refreshed successfully", data));
     }
-
 
     @GetMapping("/test-protected")
     public ResponseEntity<ApiResponse<String>> testProtected() {
