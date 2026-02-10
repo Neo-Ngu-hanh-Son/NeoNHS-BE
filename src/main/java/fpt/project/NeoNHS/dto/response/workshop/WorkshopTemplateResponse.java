@@ -33,6 +33,11 @@ public class WorkshopTemplateResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // Approval tracking fields
+    private String rejectReason;
+    private UUID approvedBy;
+    private LocalDateTime approvedAt;
+
     private List<WorkshopImageResponse> images;
     private List<WTagResponse> tags;
 }

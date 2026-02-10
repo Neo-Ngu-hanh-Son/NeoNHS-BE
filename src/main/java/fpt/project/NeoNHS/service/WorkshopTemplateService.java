@@ -19,14 +19,16 @@ public interface WorkshopTemplateService {
     // Read
     WorkshopTemplateResponse getWorkshopTemplateById(UUID id);
 
-    Page<WorkshopTemplateResponse> getAllWorkshopTemplates(Pageable pageable);
+    List<WorkshopTemplateResponse> getAllWorkshopTemplates();
 
-    Page<WorkshopTemplateResponse> getWorkshopTemplatesByStatus(WorkshopStatus status, Pageable pageable);
+    Page<WorkshopTemplateResponse> getAllWorkshopTemplates(Pageable pageable);
 
     List<WorkshopTemplateResponse> getMyWorkshopTemplates(String email);
 
-    // Search & Filter with Pagination
-    Page<WorkshopTemplateResponse> searchWorkshopTemplates(
+    Page<WorkshopTemplateResponse> getMyWorkshopTemplates(String email, Pageable pageable);
+
+    // Search & Filter
+    List<WorkshopTemplateResponse> searchWorkshopTemplates(
             String keyword,
             String name,
             WorkshopStatus status,
@@ -36,12 +38,19 @@ public interface WorkshopTemplateService {
             BigDecimal maxPrice,
             Integer minDuration,
             Integer maxDuration,
-            BigDecimal minRating,
-            Pageable pageable
+            BigDecimal minRating
     );
 
     // Update
     WorkshopTemplateResponse updateWorkshopTemplate(String email, UUID id, UpdateWorkshopTemplateRequest request);
+
+    // Register/Submit for Approval
+    WorkshopTemplateResponse registerWorkshopTemplate(String email, UUID id);
+
+    // Approve/Reject (Admin only)
+    WorkshopTemplateResponse approveWorkshopTemplate(String adminEmail, UUID id);
+
+    WorkshopTemplateResponse rejectWorkshopTemplate(String adminEmail, UUID id, String rejectReason);
 
     // Delete
     void deleteWorkshopTemplate(String email, UUID id);

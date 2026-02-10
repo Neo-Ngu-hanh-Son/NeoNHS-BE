@@ -7,11 +7,10 @@ import fpt.project.NeoNHS.entity.WTag;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.repository.WTagRepository;
 import fpt.project.NeoNHS.service.WTagService;
-import fpt.project.NeoNHS.specification.WTagSpecification;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -53,26 +52,8 @@ public class WTagServiceImpl implements WTagService {
 
     @Override
     public Page<WTagResponse> getAllWTags(Pageable pageable) {
-        return wTagRepository.findAll(pageable)
-                .map(this::mapToResponse);
-    }
-
-    @Override
-    public Page<WTagResponse> searchWTags(String keyword, String name, String tagColor, Pageable pageable) {
-        Specification<WTag> spec = Specification.where((root, query, cb) -> cb.conjunction());
-
-        if (keyword != null && !keyword.isEmpty()) {
-            spec = spec.and(WTagSpecification.searchByKeyword(keyword));
-        }
-        if (name != null && !name.isEmpty()) {
-            spec = spec.and(WTagSpecification.hasName(name));
-        }
-        if (tagColor != null && !tagColor.isEmpty()) {
-            spec = spec.and(WTagSpecification.hasTagColor(tagColor));
-        }
-
-        return wTagRepository.findAll(spec, pageable)
-                .map(this::mapToResponse);
+        Page<WTag> wTagPage = wTagRepository.findAll(pageable);
+        return wTagPage.map(this::mapToResponse);
     }
 
     @Override

@@ -21,6 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -149,7 +150,52 @@ public class EventServiceImpl implements EventService {
     public EventResponse getEventById(UUID id) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
+        
+        // Public access: only return non-deleted events
+        if (event.getDeletedAt() != null) {
+            throw new ResourceNotFoundException("Event not found with id: " + id);
+        }
+        
         return EventResponse.fromEntity(event);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public EventResponse getEventByIdForAdmin(UUID id) {
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
+        return EventResponse.fromEntity(event);
+    }
+
+    @Override
+    @Transactional
+    public void softDeleteEvent(UUID id, UUID deletedBy) {
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
+        
+        if (event.getDeletedAt() != null) {
+            throw new BadRequestException("Event is already deleted");
+        }
+        
+        event.setDeletedAt(LocalDateTime.now());
+        event.setDeletedBy(deletedBy);
+        eventRepository.save(event);
+    }
+
+    @Override
+    @Transactional
+    public EventResponse restoreEvent(UUID id) {
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
+        
+        if (event.getDeletedAt() == null) {
+            throw new BadRequestException("Event is not deleted");
+        }
+        
+        event.setDeletedAt(null);
+        event.setDeletedBy(null);
+        Event restoredEvent = eventRepository.save(event);
+        return EventResponse.fromEntity(restoredEvent);
     }
 
     private List<EventTag> createEventTags(Event event, List<UUID> tagIds) {

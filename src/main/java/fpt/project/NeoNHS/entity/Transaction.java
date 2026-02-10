@@ -3,7 +3,7 @@ package fpt.project.NeoNHS.entity;
 import fpt.project.NeoNHS.enums.TransactionStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -15,8 +15,8 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class Transaction {
+@SuperBuilder
+public class Transaction extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -30,7 +30,6 @@ public class Transaction {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @CreationTimestamp
     private LocalDateTime transactionDate;
 
     @Builder.Default

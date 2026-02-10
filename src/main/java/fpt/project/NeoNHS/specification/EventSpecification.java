@@ -16,6 +16,18 @@ public class EventSpecification {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
+            // Soft delete filter logic:
+            // - If includeDeleted = true: show all events (ignore deleted filter)
+            // - If deleted = true: show only deleted events (deletedAt IS NOT NULL)
+            // - If deleted = false or null: show only active events (deletedAt IS NULL) - default behavior
+            if (!Boolean.TRUE.equals(filter.getIncludeDeleted())) {
+                if (Boolean.TRUE.equals(filter.getDeleted())) {
+                    predicates.add(criteriaBuilder.isNotNull(root.get("deletedAt")));
+                } else {
+                    predicates.add(criteriaBuilder.isNull(root.get("deletedAt")));
+                }
+            }
+
             if (filter.getStatus() != null) {
                 predicates.add(criteriaBuilder.equal(root.get("status"), filter.getStatus()));
             }

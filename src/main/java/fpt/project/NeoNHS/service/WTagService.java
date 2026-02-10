@@ -19,8 +19,6 @@ public interface WTagService {
 
     Page<WTagResponse> getAllWTags(Pageable pageable);
 
-    Page<WTagResponse> searchWTags(String keyword, String name, String tagColor, Pageable pageable);
-
     WTagResponse updateWTag(UUID id, UpdateWTagRequest request);
 
     void deleteWTag(UUID id);
