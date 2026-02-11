@@ -115,7 +115,7 @@ public class DataInitializer implements CommandLineRunner {
                 .longitude(new BigDecimal("108.2636"))
                 .openHour(LocalTime.of(7, 0))
                 .closeHour(LocalTime.of(17, 30))
-                .status(AttractionStatus.OPEN.name())
+                .status(AttractionStatus.valueOf(AttractionStatus.OPEN.name()))
                 .thumbnailUrl("https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=800")
                 .isActive(true)
                 .build();
@@ -136,7 +136,7 @@ public class DataInitializer implements CommandLineRunner {
                 .longitude(new BigDecimal("108.2628"))
                 .openHour(LocalTime.of(7, 0))
                 .closeHour(LocalTime.of(17, 30))
-                .status(AttractionStatus.OPEN.name())
+                .status(AttractionStatus.valueOf(AttractionStatus.OPEN.name()))
                 .thumbnailUrl("https://images.unsplash.com/photo-1528127269322-539801943592?w=800")
                 .isActive(true)
                 .build();
@@ -157,7 +157,7 @@ public class DataInitializer implements CommandLineRunner {
                 .longitude(new BigDecimal("108.2620"))
                 .openHour(LocalTime.of(7, 0))
                 .closeHour(LocalTime.of(17, 30))
-                .status(AttractionStatus.OPEN.name())
+                .status(AttractionStatus.valueOf(AttractionStatus.OPEN.name()))
                 .thumbnailUrl("https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800")
                 .isActive(true)
                 .build();
@@ -178,7 +178,7 @@ public class DataInitializer implements CommandLineRunner {
                 .longitude(new BigDecimal("108.2642"))
                 .openHour(LocalTime.of(7, 0))
                 .closeHour(LocalTime.of(17, 30))
-                .status(AttractionStatus.OPEN.name())
+                .status(AttractionStatus.valueOf(AttractionStatus.OPEN.name()))
                 .thumbnailUrl("https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800")
                 .isActive(true)
                 .build();
@@ -200,7 +200,7 @@ public class DataInitializer implements CommandLineRunner {
                 .longitude(new BigDecimal("108.2650"))
                 .openHour(LocalTime.of(7, 0))
                 .closeHour(LocalTime.of(17, 30))
-                .status(AttractionStatus.CLOSED.name())
+                .status(AttractionStatus.valueOf(AttractionStatus.CLOSED.name()))
                 .thumbnailUrl("https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=800")
                 .isActive(false)
                 .build();
