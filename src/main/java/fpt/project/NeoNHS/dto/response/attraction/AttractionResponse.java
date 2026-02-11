@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.dto.response.attraction;
 
+import fpt.project.NeoNHS.enums.AttractionStatus;
 import lombok.Builder;
 import lombok.Data;
 
@@ -17,7 +18,7 @@ public class AttractionResponse {
     private String address;
     private BigDecimal latitude;
     private BigDecimal longitude;
-    private String status;
+    private AttractionStatus status;
     private String thumbnailUrl;
     private LocalTime openHour;
     private LocalTime closeHour;

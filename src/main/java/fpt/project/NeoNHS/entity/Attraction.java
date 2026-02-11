@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.entity;
 
+import fpt.project.NeoNHS.enums.AttractionStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -38,7 +39,9 @@ public class Attraction extends BaseEntity {
     @Column(precision = 10, scale = 7)
     private BigDecimal longitude;
 
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private AttractionStatus status;
 
     private String thumbnailUrl;
 

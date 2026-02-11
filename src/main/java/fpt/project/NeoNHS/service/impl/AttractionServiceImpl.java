@@ -5,6 +5,7 @@ import fpt.project.NeoNHS.dto.request.attraction.AttractionFilterRequest;
 import fpt.project.NeoNHS.dto.request.attraction.AttractionRequest;
 import fpt.project.NeoNHS.dto.response.attraction.AttractionResponse;
 import fpt.project.NeoNHS.entity.Attraction;
+import fpt.project.NeoNHS.enums.AttractionStatus;
 import fpt.project.NeoNHS.repository.AttractionRepository;
 import fpt.project.NeoNHS.service.AttractionService;
 import fpt.project.NeoNHS.specification.AttractionSpecification;
@@ -18,7 +19,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,7 +34,7 @@ public class AttractionServiceImpl implements AttractionService {
         Attraction attraction = Attraction.builder()
                 .name(request.getName()).description(request.getDescription())
                 .address(request.getAddress()).latitude(request.getLatitude())
-                .longitude(request.getLongitude()).status(request.getStatus())
+                .longitude(request.getLongitude()).status(AttractionStatus.valueOf(String.valueOf(request.getStatus())))
                 .thumbnailUrl(request.getThumbnailUrl()).mapImageUrl(request.getMapImageUrl())
                 .openHour(request.getOpenHour()).closeHour(request.getCloseHour())
                 .isActive(true).build();
@@ -91,7 +91,7 @@ public class AttractionServiceImpl implements AttractionService {
         if (request.getAddress() != null) attraction.setAddress(request.getAddress());
         if (request.getLatitude() != null) attraction.setLatitude(request.getLatitude());
         if (request.getLongitude() != null) attraction.setLongitude(request.getLongitude());
-        if (request.getStatus() != null) attraction.setStatus(request.getStatus());
+        if (request.getStatus() != null) attraction.setStatus(AttractionStatus.valueOf(String.valueOf(request.getStatus())));
         if (request.getThumbnailUrl() != null) attraction.setThumbnailUrl(request.getThumbnailUrl());
         if (request.getOpenHour() != null) attraction.setOpenHour(request.getOpenHour());
         if (request.getCloseHour() != null) attraction.setCloseHour(request.getCloseHour());
@@ -120,7 +120,7 @@ public class AttractionServiceImpl implements AttractionService {
         return AttractionResponse.builder()
                 .id(entity.getId()).name(entity.getName()).description(entity.getDescription())
                 .address(entity.getAddress()).latitude(entity.getLatitude()).longitude(entity.getLongitude())
-                .status(entity.getStatus()).thumbnailUrl(entity.getThumbnailUrl())
+                .status(AttractionStatus.valueOf(String.valueOf(entity.getStatus()))).thumbnailUrl(entity.getThumbnailUrl())
                 .openHour(entity.getOpenHour()).closeHour(entity.getCloseHour())
                 .build();
     }
