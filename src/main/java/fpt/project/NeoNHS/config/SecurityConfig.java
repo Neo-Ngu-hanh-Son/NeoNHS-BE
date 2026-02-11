@@ -51,7 +51,7 @@ public class SecurityConfig {
     // Admin only
     private static final String[] ADMIN_APIS = {
             "/api/admin/**",
-            "/api/attractions/**"
+//            "/api/attractions/**"
     };
 
     @Bean
