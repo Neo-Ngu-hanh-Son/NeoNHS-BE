@@ -15,6 +15,7 @@ import fpt.project.NeoNHS.repository.ETagRepository;
 import fpt.project.NeoNHS.repository.EventImageRepository;
 import fpt.project.NeoNHS.repository.EventRepository;
 import fpt.project.NeoNHS.repository.EventTagRepository;
+import fpt.project.NeoNHS.repository.OrderDetailRepository;
 import fpt.project.NeoNHS.service.EventService;
 import fpt.project.NeoNHS.specification.EventSpecification;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ public class EventServiceImpl implements EventService {
     private final ETagRepository eTagRepository;
     private final EventTagRepository eventTagRepository;
     private final EventImageRepository eventImageRepository;
+    private final OrderDetailRepository orderDetailRepository;
 
     @Override
     @Transactional
@@ -225,6 +227,19 @@ public class EventServiceImpl implements EventService {
         event.setDeletedBy(null);
         Event restoredEvent = eventRepository.save(event);
         return EventResponse.fromEntity(restoredEvent);
+    }
+
+    @Override
+    @Transactional
+    public void hardDeleteEvent(UUID id) {
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
+
+        if (orderDetailRepository.existsByTicketCatalog_EventId(id)) {
+            throw new BadRequestException("Cannot permanently delete event that has been ordered");
+        }
+
+        eventRepository.delete(event);
     }
 
     private List<EventTag> createEventTags(Event event, List<UUID> tagIds) {
