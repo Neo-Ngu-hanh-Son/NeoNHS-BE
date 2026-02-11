@@ -10,5 +10,9 @@ import java.util.UUID;
 @Repository
 public interface BlogCategoryRepository
         extends JpaRepository<BlogCategory, UUID>, JpaSpecificationExecutor<BlogCategory> {
+    boolean existsBySlugAndIdNot(String slug, UUID id);
+
     boolean existsBySlug(String slug);
+
+    boolean existsByNameContaining(String name);
 }
