@@ -1,11 +1,14 @@
 package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.constants.PaginationConstants;
+import fpt.project.NeoNHS.dto.request.attraction.AttractionFilterRequest;
 import fpt.project.NeoNHS.dto.request.attraction.AttractionRequest;
 import fpt.project.NeoNHS.dto.response.attraction.AttractionResponse;
 import fpt.project.NeoNHS.entity.Attraction;
+import fpt.project.NeoNHS.enums.AttractionStatus;
 import fpt.project.NeoNHS.repository.AttractionRepository;
 import fpt.project.NeoNHS.service.AttractionService;
+import fpt.project.NeoNHS.specification.AttractionSpecification;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -31,7 +34,7 @@ public class AttractionServiceImpl implements AttractionService {
         Attraction attraction = Attraction.builder()
                 .name(request.getName()).description(request.getDescription())
                 .address(request.getAddress()).latitude(request.getLatitude())
-                .longitude(request.getLongitude()).status(request.getStatus())
+                .longitude(request.getLongitude()).status(AttractionStatus.valueOf(String.valueOf(request.getStatus())))
                 .thumbnailUrl(request.getThumbnailUrl()).mapImageUrl(request.getMapImageUrl())
                 .openHour(request.getOpenHour()).closeHour(request.getCloseHour())
                 .isActive(true).build();
@@ -49,7 +52,8 @@ public class AttractionServiceImpl implements AttractionService {
     }
 
     @Override
-    public Page<AttractionResponse> getAllAttractionsWithPagination(int page, int size, String sortBy, String sortDir, String search) {
+    public Page<AttractionResponse> getAllAttractionsWithPagination(int page, int size, String sortBy,
+                                                                    String sortDir, String search) {
         Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
                 ? Sort.by(sortBy).ascending()
                 : Sort.by(sortBy).descending();
@@ -57,7 +61,13 @@ public class AttractionServiceImpl implements AttractionService {
         int actualSize = Math.min(size, PaginationConstants.MAX_PAGE_SIZE);
         Pageable pageable = PageRequest.of(page, actualSize, sort);
 
-        return attractionRepository.findAllActive(search, pageable)
+        var filters = AttractionFilterRequest.builder()
+                .name(search)
+                .description(search)
+                .address(search)
+                .build();
+
+        return attractionRepository.findAll(AttractionSpecification.withFilters(filters), pageable)
                 .map(this::mapToResponse);
     }
 
@@ -81,7 +91,7 @@ public class AttractionServiceImpl implements AttractionService {
         if (request.getAddress() != null) attraction.setAddress(request.getAddress());
         if (request.getLatitude() != null) attraction.setLatitude(request.getLatitude());
         if (request.getLongitude() != null) attraction.setLongitude(request.getLongitude());
-        if (request.getStatus() != null) attraction.setStatus(request.getStatus());
+        if (request.getStatus() != null) attraction.setStatus(AttractionStatus.valueOf(String.valueOf(request.getStatus())));
         if (request.getThumbnailUrl() != null) attraction.setThumbnailUrl(request.getThumbnailUrl());
         if (request.getOpenHour() != null) attraction.setOpenHour(request.getOpenHour());
         if (request.getCloseHour() != null) attraction.setCloseHour(request.getCloseHour());
@@ -110,7 +120,7 @@ public class AttractionServiceImpl implements AttractionService {
         return AttractionResponse.builder()
                 .id(entity.getId()).name(entity.getName()).description(entity.getDescription())
                 .address(entity.getAddress()).latitude(entity.getLatitude()).longitude(entity.getLongitude())
-                .status(entity.getStatus()).thumbnailUrl(entity.getThumbnailUrl())
+                .status(AttractionStatus.valueOf(String.valueOf(entity.getStatus()))).thumbnailUrl(entity.getThumbnailUrl())
                 .openHour(entity.getOpenHour()).closeHour(entity.getCloseHour())
                 .build();
     }

@@ -1,13 +1,16 @@
 package fpt.project.NeoNHS.dto.request.attraction;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.Getter;
-import lombok.Setter;
+import fpt.project.NeoNHS.enums.AttractionStatus;
+import lombok.*;
+
 import java.math.BigDecimal;
 import java.time.LocalTime;
 
-@Getter
-@Setter
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class AttractionRequest {
     private String name;
     private String description;
@@ -15,7 +18,7 @@ public class AttractionRequest {
     private String address;
     private BigDecimal latitude;
     private BigDecimal longitude;
-    private String status;
+    private AttractionStatus status;
     private String thumbnailUrl;
 
     @JsonFormat(pattern = "HH:mm")

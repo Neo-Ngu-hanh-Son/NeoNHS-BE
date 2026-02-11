@@ -1,22 +1,22 @@
 package fpt.project.NeoNHS.controller;
 
 import fpt.project.NeoNHS.constants.PaginationConstants;
-import fpt.project.NeoNHS.dto.request.event.CreateEventRequest;
 import fpt.project.NeoNHS.dto.request.event.EventFilterRequest;
-import fpt.project.NeoNHS.dto.request.event.UpdateEventRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.event.EventResponse;
+import fpt.project.NeoNHS.dto.response.ticketcatalog.TicketCatalogResponse;
 import fpt.project.NeoNHS.enums.EventStatus;
 import fpt.project.NeoNHS.service.EventService;
-import jakarta.validation.Valid;
+import fpt.project.NeoNHS.service.TicketCatalogService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -24,31 +24,24 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Public controller for Event.
+ * All endpoints are accessible without authentication.
+ * Only shows non-deleted events.
+ */
 @RestController
 @RequestMapping("/api/events")
 @RequiredArgsConstructor
+@Tag(name = "Events", description = "Public APIs for browsing events")
 public class EventController {
 
     private final EventService eventService;
+    private final TicketCatalogService ticketCatalogService;
 
-    @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<EventResponse>> createEvent(
-            @Valid @RequestBody CreateEventRequest request) {
-        EventResponse event = eventService.createEvent(request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(HttpStatus.CREATED, "Event created successfully", event));
-    }
-
-    @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<EventResponse>> updateEvent(
-            @PathVariable UUID id,
-            @Valid @RequestBody UpdateEventRequest request) {
-        EventResponse event = eventService.updateEvent(id, request);
-        return ResponseEntity.ok(ApiResponse.success("Event updated successfully", event));
-    }
-
+    @Operation(
+            summary = "Get all events",
+            description = "Retrieve a paginated list of events with optional filters. Only returns active (non-deleted) events."
+    )
     @GetMapping
     public ResponseEntity<ApiResponse<Page<EventResponse>>> getAllEvents(
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_PAGE) int page,
@@ -73,6 +66,8 @@ public class EventController {
                 .minPrice(minPrice)
                 .maxPrice(maxPrice)
                 .tagIds(tagIds)
+                .deleted(false)
+                .includeDeleted(false)
                 .build();
 
         Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
@@ -85,6 +80,10 @@ public class EventController {
         return ResponseEntity.ok(ApiResponse.success("Events retrieved successfully", events));
     }
 
+    @Operation(
+            summary = "Get all events without pagination",
+            description = "Retrieve all events without pagination. Only returns active (non-deleted) events."
+    )
     @GetMapping("/all")
     public ResponseEntity<ApiResponse<List<EventResponse>>> getAllEventsWithoutPagination(
             @RequestParam(required = false) EventStatus status,
@@ -105,15 +104,33 @@ public class EventController {
                 .minPrice(minPrice)
                 .maxPrice(maxPrice)
                 .tagIds(tagIds)
+                .deleted(false)
+                .includeDeleted(false)
                 .build();
 
         List<EventResponse> events = eventService.getAllEvents(filter);
         return ResponseEntity.ok(ApiResponse.success("Events retrieved successfully", events));
     }
 
+    @Operation(
+            summary = "Get event by ID",
+            description = "Retrieve detailed information of a specific event. Only returns if the event is not deleted."
+    )
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<EventResponse>> getEventById(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<EventResponse>> getEventById(
+            @Parameter(description = "Event ID") @PathVariable UUID id) {
         EventResponse event = eventService.getEventById(id);
         return ResponseEntity.ok(ApiResponse.success("Event retrieved successfully", event));
+    }
+
+    @Operation(
+            summary = "Get ticket catalogs for event",
+            description = "Retrieve all active (non-deleted) ticket catalogs for a specific event. Shows remaining quantity for availability check."
+    )
+    @GetMapping("/{id}/ticket-catalogs")
+    public ResponseEntity<ApiResponse<List<TicketCatalogResponse>>> getTicketCatalogsByEvent(
+            @Parameter(description = "Event ID") @PathVariable UUID id) {
+        List<TicketCatalogResponse> ticketCatalogs = ticketCatalogService.getTicketCatalogsByEventForPublic(id);
+        return ResponseEntity.ok(ApiResponse.success("Ticket catalogs retrieved successfully", ticketCatalogs));
     }
 }

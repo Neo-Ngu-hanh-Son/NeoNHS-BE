@@ -2,13 +2,18 @@ package fpt.project.NeoNHS.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.UUID;
+
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.math.BigDecimal;
+import fpt.project.NeoNHS.enums.PointType;
+
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
 
 @Entity
 @Table(name = "points")
@@ -16,8 +21,8 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class Point {
+@SuperBuilder
+public class Point extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -45,6 +50,11 @@ public class Point {
     private Integer orderIndex;
 
     private Integer estTimeSpent;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PointType type = PointType.DEFAULT;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

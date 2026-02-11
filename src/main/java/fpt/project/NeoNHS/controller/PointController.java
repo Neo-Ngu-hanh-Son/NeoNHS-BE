@@ -34,6 +34,7 @@ public class PointController {
         return ApiResponse.success(data);
     }
 
+    @PreAuthorize("permitAll()")
     @GetMapping("/all/{attractionId}")
     public ApiResponse<List<PointResponse>> getPointsByAttraction(@PathVariable UUID attractionId) {
         List<PointResponse> data = pointService.getPointsByAttraction(attractionId);
