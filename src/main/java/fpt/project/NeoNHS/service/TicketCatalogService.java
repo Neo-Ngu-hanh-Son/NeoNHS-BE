@@ -22,4 +22,12 @@ public interface TicketCatalogService {
     void softDeleteTicketCatalog(UUID eventId, UUID ticketCatalogId, UUID deletedBy);
 
     TicketCatalogResponse restoreTicketCatalog(UUID eventId, UUID ticketCatalogId);
+
+    /**
+     * Permanently delete a ticket catalog from the database.
+     * Only allowed if no orders have ever been placed for this ticket catalog.
+     * @param eventId Event ID the ticket catalog belongs to
+     * @param ticketCatalogId Ticket Catalog ID to delete permanently
+     */
+    void hardDeleteTicketCatalog(UUID eventId, UUID ticketCatalogId);
 }

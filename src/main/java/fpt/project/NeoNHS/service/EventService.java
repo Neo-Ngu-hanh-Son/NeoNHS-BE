@@ -40,4 +40,11 @@ public interface EventService {
      * @return Restored event
      */
     EventResponse restoreEvent(UUID id);
+
+    /**
+     * Permanently delete an event from the database.
+     * Only allowed if no tickets have ever been ordered for this event.
+     * @param id Event ID to delete permanently
+     */
+    void hardDeleteEvent(UUID id);
 }
