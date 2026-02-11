@@ -28,50 +28,56 @@ import java.util.UUID;
 @Tag(name = "Admin - Blog Categories", description = "Admin APIs for managing blog categories (requires ADMIN role)")
 public class AdminBlogCategoryController {
 
-  private final BlogCategoryService blogCategoryService;
+    private final BlogCategoryService blogCategoryService;
 
-  @Operation(summary = "Get all blog categories", description = "Retrieve a paginated list of blog categories with optional search and status filter")
-  @GetMapping
-  public ResponseEntity<ApiResponse<Page<BlogCategoryResponse>>> getBlogCategories(
-      @RequestParam(defaultValue = PaginationConstants.DEFAULT_PAGE) int page,
-      @RequestParam(defaultValue = PaginationConstants.DEFAULT_SIZE) int size,
-      @RequestParam(required = false) String search,
-      @RequestParam(required = false) BlogCategoryStatus status,
-      @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_BY) String sortBy,
-      @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_DIR) String sortDir) {
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<BlogCategoryResponse>> getBlogCategoryById(@PathVariable UUID id) {
+        BlogCategoryResponse cat = blogCategoryService.getBlogCategoryById(id);
+        return ResponseEntity.ok(ApiResponse.success("Blog category retrieved successfully", cat));
+    }
 
-    Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
-        ? Sort.by(sortBy).ascending()
-        : Sort.by(sortBy).descending();
+    @Operation(summary = "Get all blog categories", description = "Retrieve a paginated list of blog categories with optional search and status filter")
+    @GetMapping
+    public ResponseEntity<ApiResponse<Page<BlogCategoryResponse>>> getBlogCategories(
+            @RequestParam(defaultValue = PaginationConstants.DEFAULT_PAGE) int page,
+            @RequestParam(defaultValue = PaginationConstants.DEFAULT_SIZE) int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) BlogCategoryStatus status,
+            @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_BY) String sortBy,
+            @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_DIR) String sortDir) {
 
-    Pageable pageable = PageRequest.of(page, size, sort);
+        Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
 
-    Page<BlogCategoryResponse> categories = blogCategoryService.getBlogCategories(search, status, pageable);
-    return ResponseEntity.ok(ApiResponse.success("Blog categories retrieved successfully", categories));
-  }
+        Pageable pageable = PageRequest.of(page, size, sort);
 
-  @Operation(summary = "Delete blog category", description = "Soft delete a blog category. Cannot delete if category is being used by existing blog posts.")
-  @DeleteMapping("/{id}")
-  public ResponseEntity<ApiResponse<Void>> deleteBlogCategory(
-      @Parameter(description = "Blog Category ID") @PathVariable UUID id) {
-    blogCategoryService.deleteBlogCategory(id);
-    return ResponseEntity.ok(ApiResponse.success("Blog category deleted successfully", null));
-  }
+        Page<BlogCategoryResponse> categories = blogCategoryService.getBlogCategories(search, status, pageable);
+        return ResponseEntity.ok(ApiResponse.success("Blog categories retrieved successfully", categories));
+    }
 
-  @Operation(summary = "Create blog category", description = "Create a new blog category.")
-  @PostMapping
-  public ResponseEntity<ApiResponse<BlogCategoryResponse>> createBlogCategory(
-      @Valid @RequestBody BlogCategoryRequest request) {
-    blogCategoryService.createBlogCategory(request);
-    return ResponseEntity.ok(ApiResponse.success("Blog category created successfully", null));
-  }
+    @Operation(summary = "Delete blog category", description = "Soft delete a blog category. Cannot delete if category is being used by existing blog posts.")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteBlogCategory(
+            @Parameter(description = "Blog Category ID") @PathVariable UUID id) {
+        blogCategoryService.deleteBlogCategory(id);
+        return ResponseEntity.ok(ApiResponse.success("Blog category deleted successfully", null));
+    }
 
-  @Operation(summary = "Update blog category", description = "Update an existing blog category.")
-  @PutMapping("/{id}")
-  public ResponseEntity<ApiResponse<BlogCategoryResponse>> updateBlogCategory(
-      @Parameter(description = "Blog Category ID") @PathVariable UUID id,
-      @Valid @RequestBody BlogCategoryRequest request) {
-    blogCategoryService.updateBlogCategory(id, request);
-    return ResponseEntity.ok(ApiResponse.success("Blog category updated successfully", null));
-  }
+    @Operation(summary = "Create blog category", description = "Create a new blog category.")
+    @PostMapping
+    public ResponseEntity<ApiResponse<BlogCategoryResponse>> createBlogCategory(
+            @Valid @RequestBody BlogCategoryRequest request) {
+        blogCategoryService.createBlogCategory(request);
+        return ResponseEntity.ok(ApiResponse.success("Blog category created successfully", null));
+    }
+
+    @Operation(summary = "Update blog category", description = "Update an existing blog category.")
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<BlogCategoryResponse>> updateBlogCategory(
+            @Parameter(description = "Blog Category ID") @PathVariable UUID id,
+            @Valid @RequestBody BlogCategoryRequest request) {
+        blogCategoryService.updateBlogCategory(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Blog category updated successfully", null));
+    }
 }

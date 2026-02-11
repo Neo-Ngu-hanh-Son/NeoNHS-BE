@@ -59,6 +59,7 @@ public class BlogCategoryServiceImpl implements BlogCategoryService {
         category.setDeletedAt(LocalDateTime.now());
         category.setDeletedBy(admin.getId());
         category.setUpdatedBy(admin.getId());
+        category.setStatus(BlogCategoryStatus.ARCHIVED);
         blogCategoryRepository.save(category);
     }
 
@@ -78,6 +79,9 @@ public class BlogCategoryServiceImpl implements BlogCategoryService {
     @Override
     public void createBlogCategory(BlogCategoryRequest request) {
         UserPrincipal admin = getCurrentUserPrincipal();
+        if (blogCategoryRepository.existsByNameContaining(request.getName())) {
+            throw new BadRequestException("Category name already exists");
+        }
         String slug = SlugGenerator.generateSlug(request.getName());
         if (blogCategoryRepository.existsBySlug(slug)) {
             throw new BadRequestException("Category slug already exists");
@@ -100,15 +104,11 @@ public class BlogCategoryServiceImpl implements BlogCategoryService {
         // if category is deleted, only allow to update status to active, otherwise
         // throw exception
         if (category.getDeletedAt() != null) {
-            if (request.getStatus() != BlogCategoryStatus.ACTIVE) {
-                throw new BadRequestException("Blog category is already deleted, please restore it first");
-            } else {
-                category.setDeletedAt(null);
-                category.setDeletedBy(null);
-            }
+            throw new BadRequestException("Blog category is already deleted, cannot update");
         }
+
         String slug = SlugGenerator.generateSlug(request.getName());
-        if (blogCategoryRepository.existsBySlug(slug)) {
+        if (blogCategoryRepository.existsBySlugAndIdNot(slug, categoryId)) {
             throw new BadRequestException("Category slug already exists");
         }
         category.setName(request.getName());
@@ -117,6 +117,13 @@ public class BlogCategoryServiceImpl implements BlogCategoryService {
         category.setStatus(request.getStatus());
         category.setUpdatedBy(admin.getId());
         blogCategoryRepository.save(category);
+    }
+
+    @Override
+    public BlogCategoryResponse getBlogCategoryById(UUID id) {
+        BlogCategory category = blogCategoryRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Blog category not found"));
+        return mapToResponse(category);
     }
 
     private UserPrincipal getCurrentUserPrincipal() {

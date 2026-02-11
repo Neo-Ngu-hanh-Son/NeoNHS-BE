@@ -12,11 +12,13 @@ import java.util.UUID;
 
 public interface BlogCategoryService {
 
-  Page<BlogCategoryResponse> getBlogCategories(String search, BlogCategoryStatus status, Pageable pageable);
+    Page<BlogCategoryResponse> getBlogCategories(String search, BlogCategoryStatus status, Pageable pageable);
 
-  void deleteBlogCategory(UUID categoryId);
+    void deleteBlogCategory(UUID categoryId);
 
-  void createBlogCategory(BlogCategoryRequest request);
+    void createBlogCategory(BlogCategoryRequest request);
 
-  void updateBlogCategory(UUID categoryId, BlogCategoryRequest request);
+    void updateBlogCategory(UUID categoryId, BlogCategoryRequest request);
+
+    BlogCategoryResponse getBlogCategoryById(UUID id);
 }
