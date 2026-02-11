@@ -1,11 +1,13 @@
 package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.constants.PaginationConstants;
+import fpt.project.NeoNHS.dto.request.attraction.AttractionFilterRequest;
 import fpt.project.NeoNHS.dto.request.attraction.AttractionRequest;
 import fpt.project.NeoNHS.dto.response.attraction.AttractionResponse;
 import fpt.project.NeoNHS.entity.Attraction;
 import fpt.project.NeoNHS.repository.AttractionRepository;
 import fpt.project.NeoNHS.service.AttractionService;
+import fpt.project.NeoNHS.specification.AttractionSpecification;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -49,7 +52,8 @@ public class AttractionServiceImpl implements AttractionService {
     }
 
     @Override
-    public Page<AttractionResponse> getAllAttractionsWithPagination(int page, int size, String sortBy, String sortDir, String search) {
+    public Page<AttractionResponse> getAllAttractionsWithPagination(int page, int size, String sortBy,
+                                                                    String sortDir, String search) {
         Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
                 ? Sort.by(sortBy).ascending()
                 : Sort.by(sortBy).descending();
@@ -57,7 +61,13 @@ public class AttractionServiceImpl implements AttractionService {
         int actualSize = Math.min(size, PaginationConstants.MAX_PAGE_SIZE);
         Pageable pageable = PageRequest.of(page, actualSize, sort);
 
-        return attractionRepository.findAllActive(search, pageable)
+        var filters = AttractionFilterRequest.builder()
+                .name(search)
+                .description(search)
+                .address(search)
+                .build();
+
+        return attractionRepository.findAll(AttractionSpecification.withFilters(filters), pageable)
                 .map(this::mapToResponse);
     }
 

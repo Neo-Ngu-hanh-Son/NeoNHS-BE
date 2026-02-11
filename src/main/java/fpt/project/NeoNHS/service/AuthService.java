@@ -25,6 +25,9 @@ public interface AuthService {
 
     void resetPassword(String email, String newPassword, String confirmPassword);
 
-
     UserInfoResponse getCurrentUser(String email);
+
+    AuthResponse refreshToken(String refreshToken);
+
+    void logout(String refreshToken);
 }

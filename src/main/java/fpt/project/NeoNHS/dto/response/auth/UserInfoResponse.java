@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.dto.response.auth;
 
+import fpt.project.NeoNHS.entity.User;
 import fpt.project.NeoNHS.enums.UserRole;
 import lombok.Builder;
 import lombok.Data;
@@ -21,4 +22,20 @@ public class UserInfoResponse {
     private Boolean isBanned = false;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    public static UserInfoResponse fromEntity(User user) {
+        return UserInfoResponse.builder()
+                .id(user.getId())
+                .fullname(user.getFullname())
+                .email(user.getEmail())
+                .phoneNumber(user.getPhoneNumber())
+                .avatarUrl(user.getAvatarUrl())
+                .role(user.getRole())
+                .isActive(user.getIsActive())
+                .isVerified(user.getIsVerified())
+                .isBanned(user.getIsBanned())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .build();
+    }
 }
