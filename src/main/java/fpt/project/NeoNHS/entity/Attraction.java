@@ -57,3 +57,4 @@ public class Attraction extends BaseEntity {
     @OneToMany(mappedBy = "attraction", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<TicketCatalog> ticketCatalogs;
 }
+
