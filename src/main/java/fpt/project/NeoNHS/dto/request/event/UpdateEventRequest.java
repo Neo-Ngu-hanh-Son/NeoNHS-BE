@@ -41,5 +41,7 @@ public class UpdateEventRequest {
 
     private EventStatus status;
 
+    private String thumbnailUrl;
+
     private List<UUID> tagIds;
 }

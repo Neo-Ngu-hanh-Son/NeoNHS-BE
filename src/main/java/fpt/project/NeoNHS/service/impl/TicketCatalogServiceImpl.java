@@ -9,6 +9,7 @@ import fpt.project.NeoNHS.enums.TicketCatalogStatus;
 import fpt.project.NeoNHS.exception.BadRequestException;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.repository.EventRepository;
+import fpt.project.NeoNHS.repository.OrderDetailRepository;
 import fpt.project.NeoNHS.repository.TicketCatalogRepository;
 import fpt.project.NeoNHS.service.TicketCatalogService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class TicketCatalogServiceImpl implements TicketCatalogService {
 
     private final TicketCatalogRepository ticketCatalogRepository;
     private final EventRepository eventRepository;
+    private final OrderDetailRepository orderDetailRepository;
 
     @Override
     @Transactional
@@ -173,6 +175,21 @@ public class TicketCatalogServiceImpl implements TicketCatalogService {
         ticketCatalog.setDeletedBy(null);
         TicketCatalog restored = ticketCatalogRepository.save(ticketCatalog);
         return TicketCatalogResponse.fromEntity(restored);
+    }
+
+    @Override
+    @Transactional
+    public void hardDeleteTicketCatalog(UUID eventId, UUID ticketCatalogId) {
+        eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + eventId));
+
+        TicketCatalog ticketCatalog = getTicketCatalogBelongingToEvent(eventId, ticketCatalogId);
+
+        if (orderDetailRepository.existsByTicketCatalogId(ticketCatalogId)) {
+            throw new BadRequestException("Cannot permanently delete ticket catalog that has been ordered");
+        }
+
+        ticketCatalogRepository.delete(ticketCatalog);
     }
 
     // ==================== Private helper methods ====================

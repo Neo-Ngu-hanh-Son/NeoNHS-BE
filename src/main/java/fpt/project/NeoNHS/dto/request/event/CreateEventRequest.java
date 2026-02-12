@@ -43,5 +43,8 @@ public class CreateEventRequest {
 
     private Integer maxParticipants;
 
+    @NotBlank(message = "Thumbnail URL is required")
+    private String thumbnailUrl;
+
     private List<UUID> tagIds;
 }

@@ -6,13 +6,16 @@ import fpt.project.NeoNHS.dto.request.event.UpdateEventRequest;
 import fpt.project.NeoNHS.dto.response.event.EventResponse;
 import fpt.project.NeoNHS.entity.ETag;
 import fpt.project.NeoNHS.entity.Event;
+import fpt.project.NeoNHS.entity.EventImage;
 import fpt.project.NeoNHS.entity.EventTag;
 import fpt.project.NeoNHS.entity.EventTagId;
 import fpt.project.NeoNHS.exception.BadRequestException;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.repository.ETagRepository;
+import fpt.project.NeoNHS.repository.EventImageRepository;
 import fpt.project.NeoNHS.repository.EventRepository;
 import fpt.project.NeoNHS.repository.EventTagRepository;
+import fpt.project.NeoNHS.repository.OrderDetailRepository;
 import fpt.project.NeoNHS.service.EventService;
 import fpt.project.NeoNHS.specification.EventSpecification;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -33,6 +37,8 @@ public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final ETagRepository eTagRepository;
     private final EventTagRepository eventTagRepository;
+    private final EventImageRepository eventImageRepository;
+    private final OrderDetailRepository orderDetailRepository;
 
     @Override
     @Transactional
@@ -56,6 +62,15 @@ public class EventServiceImpl implements EventService {
                 .build();
 
         Event savedEvent = eventRepository.save(event);
+
+        // Create thumbnail image (required)
+        EventImage thumbnail = EventImage.builder()
+                .imageUrl(request.getThumbnailUrl())
+                .isThumbnail(true)
+                .event(savedEvent)
+                .build();
+        eventImageRepository.save(thumbnail);
+        savedEvent.setEventImages(List.of(thumbnail));
 
         // Assign tags if provided
         if (request.getTagIds() != null && !request.getTagIds().isEmpty()) {
@@ -114,6 +129,22 @@ public class EventServiceImpl implements EventService {
             throw new BadRequestException("End time must be after start time");
         }
 
+        // Update thumbnail if provided
+        if (request.getThumbnailUrl() != null) {
+            Optional<EventImage> existingThumbnail = eventImageRepository.findByEventIdAndIsThumbnailTrue(id);
+            if (existingThumbnail.isPresent()) {
+                existingThumbnail.get().setImageUrl(request.getThumbnailUrl());
+                eventImageRepository.save(existingThumbnail.get());
+            } else {
+                EventImage thumbnail = EventImage.builder()
+                        .imageUrl(request.getThumbnailUrl())
+                        .isThumbnail(true)
+                        .event(event)
+                        .build();
+                eventImageRepository.save(thumbnail);
+            }
+        }
+
         // Update tags if provided
         if (request.getTagIds() != null) {
             eventTagRepository.deleteByEventId(id);
@@ -156,7 +187,7 @@ public class EventServiceImpl implements EventService {
             throw new ResourceNotFoundException("Event not found with id: " + id);
         }
         
-        return EventResponse.fromEntity(event);
+        return EventResponse.fromEntityWithImages(event);
     }
 
     @Override
@@ -164,7 +195,7 @@ public class EventServiceImpl implements EventService {
     public EventResponse getEventByIdForAdmin(UUID id) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
-        return EventResponse.fromEntity(event);
+        return EventResponse.fromEntityWithImages(event);
     }
 
     @Override
@@ -196,6 +227,19 @@ public class EventServiceImpl implements EventService {
         event.setDeletedBy(null);
         Event restoredEvent = eventRepository.save(event);
         return EventResponse.fromEntity(restoredEvent);
+    }
+
+    @Override
+    @Transactional
+    public void hardDeleteEvent(UUID id) {
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
+
+        if (orderDetailRepository.existsByTicketCatalog_EventId(id)) {
+            throw new BadRequestException("Cannot permanently delete event that has been ordered");
+        }
+
+        eventRepository.delete(event);
     }
 
     private List<EventTag> createEventTags(Event event, List<UUID> tagIds) {
