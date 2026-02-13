@@ -8,7 +8,6 @@ import fpt.project.NeoNHS.dto.request.workshop.UpdateWorkshopTemplateRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.workshop.WorkshopTemplateResponse;
 import fpt.project.NeoNHS.enums.WorkshopStatus;
-import fpt.project.NeoNHS.service.WorkshopSessionService;
 import fpt.project.NeoNHS.service.WorkshopTemplateService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -36,13 +35,12 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/workshops")
 @RequiredArgsConstructor
-@Tag(name = "Workshop Management", description = "APIs for managing workshop templates and sessions")
-public class WorkshopController {
+@Tag(name = "Workshop Template Management", description = "APIs for managing workshop templates - the blueprints that require admin approval")
+public class WorkshopTemplateController {
 
         private final WorkshopTemplateService workshopTemplateService;
-        private final WorkshopSessionService workshopSessionService;
 
-        // ==================== CREATE ====================
+        // ==================== CREATE WORKSHOP TEMPLATE ====================
 
         @Operation(
                 summary = "Create a new workshop template (Vendor only)",
@@ -111,7 +109,7 @@ public class WorkshopController {
                                                 response));
         }
 
-        // ==================== READ ====================
+        // ==================== READ WORKSHOP TEMPLATE ====================
 
         @Operation(
                 summary = "Get workshop template by ID",
@@ -219,13 +217,6 @@ public class WorkshopController {
                                 .ok(ApiResponse.success(HttpStatus.OK, "Workshop templates retrieved successfully",
                                                 response));
         }
-//        @GetMapping("/templates/all")
-//        public ResponseEntity<ApiResponse<List<WorkshopTemplateResponse>>> getAllWorkshopTemplatesWithoutPagination() {
-//                List<WorkshopTemplateResponse> response = workshopTemplateService.getAllWorkshopTemplates();
-//                return ResponseEntity
-//                                .ok(ApiResponse.success(HttpStatus.OK, "Workshop templates retrieved successfully",
-//                                                response));
-//        }
 
 
         @Operation(
@@ -310,7 +301,7 @@ public class WorkshopController {
 //                                                response));
 //        }
 
-        // ==================== SEARCH & FILTER ====================
+        // ==================== SEARCH & FILTER WORKSHOP TEMPLATE ====================
 
         @Operation(
                 summary = "Filter and search workshop templates",
@@ -397,7 +388,7 @@ public class WorkshopController {
                                                 response));
         }
 
-        // ==================== UPDATE ====================
+        // ==================== UPDATE WORKSHOP TEMPLATE ====================
 
         @Operation(
                 summary = "Update a workshop template (Vendor only)",
@@ -485,7 +476,7 @@ public class WorkshopController {
                                                 response));
         }
 
-        // ==================== REGISTER/SUBMIT FOR APPROVAL ====================
+        // ==================== REGISTER/SUBMIT FOR APPROVAL WORKSHOP TEMPLATE ====================
 
         @Operation(
                 summary = "Submit workshop template for admin approval",
@@ -556,7 +547,7 @@ public class WorkshopController {
                                                 response));
         }
 
-        // ==================== APPROVE/REJECT (ADMIN ONLY) ====================
+        // ==================== APPROVE/REJECT WORKSHOP TEMPLATE (ADMIN ONLY) ====================
 
         @Operation(
                 summary = "Approve a workshop template (Admin only)",
@@ -691,7 +682,7 @@ public class WorkshopController {
                                                 response));
         }
 
-        // ==================== DELETE ====================
+        // ==================== DELETE WORKSHOP TEMPLATE ====================
 
         @Operation(
                 summary = "Delete a workshop template (Vendor only)",

@@ -106,4 +106,16 @@ public class AdminTicketCatalogController {
         TicketCatalogResponse ticketCatalog = ticketCatalogService.restoreTicketCatalog(eventId, ticketCatalogId);
         return ResponseEntity.ok(ApiResponse.success("Ticket catalog restored successfully", ticketCatalog));
     }
+
+    @Operation(
+            summary = "Permanently delete ticket catalog",
+            description = "Permanently delete a ticket catalog from the database. Only allowed if no orders have ever been placed for this ticket catalog. This action cannot be undone."
+    )
+    @DeleteMapping("/{ticketCatalogId}/permanent")
+    public ResponseEntity<ApiResponse<Void>> hardDeleteTicketCatalog(
+            @Parameter(description = "Event ID") @PathVariable UUID eventId,
+            @Parameter(description = "Ticket Catalog ID") @PathVariable UUID ticketCatalogId) {
+        ticketCatalogService.hardDeleteTicketCatalog(eventId, ticketCatalogId);
+        return ResponseEntity.ok(ApiResponse.success("Ticket catalog permanently deleted successfully", null));
+    }
 }
