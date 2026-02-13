@@ -140,7 +140,7 @@ public class OrderServiceImpl implements OrderService {
         orderDetailRepository.saveAll(orderDetails);
         order.setOrderDetails(orderDetails);
 
-        long orderCode = Long.parseLong(System.currentTimeMillis() + "" + (int) (Math.random() * 10));
+        long orderCode = System.currentTimeMillis() / 1000;
 
         // Encode vouchers in description
         String description = "Payment for order " + order.getId();
@@ -154,7 +154,7 @@ public class OrderServiceImpl implements OrderService {
                 .order(order)
                 .amount(finalAmount)
                 .paymentGateway("PAYOS_" + orderCode)
-                // .paymentGatewayTransactionId(orderCode) // Deleted
+                .transactionDate(LocalDateTime.now())
                 .status(TransactionStatus.PENDING)
                 .description(description)
                 .currency("VND")
@@ -179,7 +179,6 @@ public class OrderServiceImpl implements OrderService {
         }
 
         Order order = transaction.getOrder();
-        // order.setStatus(OrderStatus.PAID); // Deleted
         transaction.setStatus(TransactionStatus.SUCCESS);
 
         orderRepository.save(order);
