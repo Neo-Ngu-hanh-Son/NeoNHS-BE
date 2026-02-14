@@ -32,7 +32,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/workshops")
 @RequiredArgsConstructor
-@Tag(name = "Workshop Session Management", description = "APIs for managing workshop sessions - the bookable instances that users see")
+@Tag(name = "Vendor - Workshop Session Management", description = "APIs for managing workshop sessions - the bookable instances that users see")
 public class WorkshopSessionController {
 
     private final WorkshopSessionService workshopSessionService;
