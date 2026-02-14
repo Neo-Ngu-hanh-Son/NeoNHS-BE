@@ -10,4 +10,6 @@ import java.util.UUID;
 @Repository
 public interface UserVoucherRepository extends JpaRepository<UserVoucher, UUID> {
     List<UserVoucher> findByUser_IdAndIsUsedFalse(UUID userId);
+
+    List<UserVoucher> findByUser_IdAndVoucher_Id(UUID userId, UUID voucherId);
 }

@@ -224,8 +224,13 @@ public class CartServiceImpl implements CartService {
         List<UserVoucherRespone> validVouchers = new ArrayList<>();
         List<UserVoucherRespone> invalidVouchers = new ArrayList<>();
 
+        // Final values to return
+        BigDecimal discountValue = BigDecimal.ZERO;
+        UserVoucherRespone appliedVoucherResponse = null;
+
         LocalDateTime now = LocalDateTime.now();
 
+        // 1. First Pass: Identify all valid/invalid vouchers based on BASE total price
         for (UserVoucher uv : userVouchers) {
             Voucher v = uv.getVoucher();
             boolean isValid = true;
@@ -262,11 +267,80 @@ public class CartServiceImpl implements CartService {
             }
         }
 
+        // 2. Second Pass: If a voucher is requested, try to apply it
+        if (request.getVoucherIds() != null && !request.getVoucherIds().isEmpty()) {
+            UUID reqId = request.getVoucherIds().get(0);
+
+            // Check if the requested voucher exists in the USER's vouchers
+            UserVoucher appliedVoucherEntity = userVouchers.stream()
+                    .filter(uv -> uv.getId().equals(reqId))
+                    .findFirst()
+                    .orElseThrow(() -> new BadRequestException("Voucher not found"));
+
+            // Check if it was deemed valid in step 1
+            boolean isValid = validVouchers.stream().anyMatch(v -> v.getUserVoucherId().equals(reqId));
+
+            if (!isValid) {
+                throw new BadRequestException("Selected voucher is not applicable for this order");
+            }
+
+            Voucher v = appliedVoucherEntity.getVoucher();
+            if (v.getDiscountType() == fpt.project.NeoNHS.enums.DiscountType.PERCENT) {
+                discountValue = totalPrice.multiply(v.getDiscountValue().divide(BigDecimal.valueOf(100)));
+                if (v.getMaxDiscountValue() != null && discountValue.compareTo(v.getMaxDiscountValue()) > 0) {
+                    discountValue = v.getMaxDiscountValue();
+                }
+            } else {
+                discountValue = v.getDiscountValue();
+            }
+
+            appliedVoucherResponse = validVouchers.stream()
+                    .filter(r -> r.getUserVoucherId().equals(reqId))
+                    .findFirst().orElse(null);
+        }
+
+        BigDecimal finalTotalPrice = totalPrice.subtract(discountValue).max(BigDecimal.ZERO);
+
         return CheckoutResponse.builder()
                 .cartItems(itemResponses)
                 .totalPrice(totalPrice)
                 .validVouchers(validVouchers)
                 .invalidVouchers(invalidVouchers)
+                .discountValue(discountValue)
+                .finalTotalPrice(finalTotalPrice)
+                .transactionDate(LocalDateTime.now())
+                .appliedVoucher(appliedVoucherResponse)
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserVoucherRespone> getUserVouchers(String userEmail) {
+        User user = getUserByEmail(userEmail);
+        List<UserVoucher> userVouchers = userVoucherRepository.findByUser_IdAndIsUsedFalse(user.getId());
+
+        List<UserVoucherRespone> voucherResponses = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+
+        for (UserVoucher uv : userVouchers) {
+            Voucher v = uv.getVoucher();
+            if ((v.getStartDate() != null && now.isBefore(v.getStartDate())) ||
+                    (v.getEndDate() != null && now.isAfter(v.getEndDate()))) {
+                continue;
+            }
+            if (v.getUsageLimit() != null && v.getUsageCount() >= v.getUsageLimit()) {
+                continue;
+            }
+
+            voucherResponses.add(UserVoucherRespone.builder()
+                    .userVoucherId(uv.getId())
+                    .code(v.getCode())
+                    .description(v.getDescription())
+                    .discountValue(v.getDiscountValue())
+                    .type(v.getDiscountType())
+                    .minOrderValue(v.getMinOrderValue())
+                    .build());
+        }
+        return voucherResponses;
     }
 }
