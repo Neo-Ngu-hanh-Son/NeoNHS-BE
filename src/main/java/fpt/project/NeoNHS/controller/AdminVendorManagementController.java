@@ -34,7 +34,7 @@ import java.util.UUID;
 @RequestMapping("/api/admin/vendors")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
-@Tag(name = "Admin Management", description = "APIs for Admin to manage vendors and workshop templates")
+@Tag(name = "Admin Vendor Management", description = "APIs for Admin to manage vendors and workshop templates")
 public class AdminVendorManagementController {
 
     private final AdminVendorManagementService adminVendorManagementService;
