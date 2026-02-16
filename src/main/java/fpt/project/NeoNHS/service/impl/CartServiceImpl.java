@@ -21,6 +21,9 @@ import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.repository.UserVoucherRepository;
 import fpt.project.NeoNHS.service.CartService;
 import java.time.LocalDateTime;
+import fpt.project.NeoNHS.enums.EventStatus;
+import fpt.project.NeoNHS.enums.TicketCatalogStatus;
+import fpt.project.NeoNHS.entity.Event;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,10 +63,19 @@ public class CartServiceImpl implements CartService {
             cart.setCartItems(new ArrayList<>());
         }
 
+        // Validate basic ticket info and quota for the *new* quantity being requested
+        // Note: For existing items, we add the requested quantity to current.
+        int totalQuantityToCheck = request.getQuantity();
         Optional<CartItem> existingItem = cart.getCartItems().stream()
                 .filter(item -> item.getTicketCatalog() != null
                         && item.getTicketCatalog().getId().equals(ticketCatalog.getId()))
                 .findFirst();
+
+        if (existingItem.isPresent()) {
+            totalQuantityToCheck += existingItem.get().getQuantity();
+        }
+
+        validateTicketAvailability(ticketCatalog, totalQuantityToCheck);
 
         if (existingItem.isPresent()) {
             CartItem item = existingItem.get();
@@ -99,6 +111,8 @@ public class CartServiceImpl implements CartService {
         if (!cartItem.getCart().getId().equals(cart.getId())) {
             throw new BadRequestException("Item does not belong to user's cart");
         }
+
+        validateTicketAvailability(cartItem.getTicketCatalog(), request.getQuantity());
 
         cartItem.setQuantity(request.getQuantity());
         cartItemRepository.save(cartItem);
@@ -204,6 +218,9 @@ public class CartServiceImpl implements CartService {
             if (!item.getCart().getUser().getId().equals(user.getId())) {
                 throw new BadRequestException("Item " + item.getId() + " does not belong to user");
             }
+
+            // Re-validate availability at pre-checkout
+            validateTicketAvailability(item.getTicketCatalog(), item.getQuantity());
 
             BigDecimal itemPrice = item.getTicketCatalog().getPrice();
             BigDecimal subTotal = itemPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
@@ -342,5 +359,46 @@ public class CartServiceImpl implements CartService {
                     .build());
         }
         return voucherResponses;
+    }
+
+    private void validateTicketAvailability(TicketCatalog ticketCatalog, int quantity) {
+        // 1. Check Ticket Status
+        if (ticketCatalog.getStatus() != TicketCatalogStatus.ACTIVE) {
+            throw new BadRequestException("Ticket is not active for sale: " + ticketCatalog.getName());
+        }
+
+        // 2. Check Date Validity
+        LocalDateTime now = LocalDateTime.now();
+        if (ticketCatalog.getValidFromDate() != null && now.isBefore(ticketCatalog.getValidFromDate())) {
+            throw new BadRequestException("Ticket sale has not started yet: " + ticketCatalog.getName());
+        }
+        if (ticketCatalog.getValidToDate() != null && now.isAfter(ticketCatalog.getValidToDate())) {
+            throw new BadRequestException("Ticket sale has ended: " + ticketCatalog.getName());
+        }
+
+        // 3. Check Ticket Quota
+        int currentSold = ticketCatalog.getSoldQuantity() != null ? ticketCatalog.getSoldQuantity() : 0;
+        if (ticketCatalog.getTotalQuota() != null) {
+            if (currentSold + quantity > ticketCatalog.getTotalQuota()) {
+                throw new BadRequestException("Exceeds available tickets! Remaining: "
+                        + (ticketCatalog.getTotalQuota() - currentSold));
+            }
+        }
+
+        // 4. Check Event Status and Capacity
+        Event event = ticketCatalog.getEvent();
+        if (event != null) {
+            if (event.getStatus() == EventStatus.CANCELLED || event.getStatus() == EventStatus.COMPLETED) {
+                throw new BadRequestException("Event is not available for booking: " + event.getName());
+            }
+
+            if (event.getMaxParticipants() != null) {
+                int currentEnrolled = event.getCurrentEnrolled() != null ? event.getCurrentEnrolled() : 0;
+                if (currentEnrolled + quantity > event.getMaxParticipants()) {
+                    throw new BadRequestException("Event is full! Remaining slots: "
+                            + (event.getMaxParticipants() - currentEnrolled));
+                }
+            }
+        }
     }
 }

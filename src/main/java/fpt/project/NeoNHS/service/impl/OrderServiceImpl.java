@@ -30,6 +30,8 @@ public class OrderServiceImpl implements OrderService {
     private final TicketRepository ticketRepository;
     private final OrderDetailRepository orderDetailRepository;
     private final CartRepository cartRepository;
+    private final EventRepository eventRepository;
+    private final TicketCatalogRepository ticketCatalogRepository;
 
     @Override
     @Transactional
@@ -51,6 +53,10 @@ public class OrderServiceImpl implements OrderService {
             if (!item.getCart().getUser().getId().equals(user.getId())) {
                 throw new BadRequestException("Item " + item.getId() + " does not belong to user");
             }
+
+            // Validate Ticket Availability before creating order
+            validateTicketAvailability(item.getTicketCatalog(), item.getQuantity());
+
             BigDecimal price = item.getTicketCatalog().getPrice();
             totalAmount = totalAmount.add(price.multiply(BigDecimal.valueOf(item.getQuantity())));
         }
@@ -222,6 +228,26 @@ public class OrderServiceImpl implements OrderService {
         }
 
         for (OrderDetail detail : order.getOrderDetails()) {
+
+            // 1. Update TicketCatalog Sold Quantity
+            TicketCatalog ticketCatalog = detail.getTicketCatalog();
+            int currentSold = ticketCatalog.getSoldQuantity() != null ? ticketCatalog.getSoldQuantity() : 0;
+            ticketCatalog.setSoldQuantity(currentSold + detail.getQuantity());
+
+            if (ticketCatalog.getTotalQuota() != null
+                    && ticketCatalog.getSoldQuantity() >= ticketCatalog.getTotalQuota()) {
+                ticketCatalog.setStatus(TicketCatalogStatus.SOLD_OUT);
+            }
+            ticketCatalogRepository.save(ticketCatalog);
+
+            // 2. Update Event Current Enrolled
+            Event event = ticketCatalog.getEvent();
+            if (event != null) {
+                int currentEnrolled = event.getCurrentEnrolled() != null ? event.getCurrentEnrolled() : 0;
+                event.setCurrentEnrolled(currentEnrolled + detail.getQuantity());
+                eventRepository.save(event);
+            }
+
             for (int i = 0; i < detail.getQuantity(); i++) {
                 TicketType type = TicketType.ENTRANCE;
                 if (detail.getWorkshopSession() != null) {
@@ -264,5 +290,46 @@ public class OrderServiceImpl implements OrderService {
 
     private String generateTicketCode() {
         return UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+
+    private void validateTicketAvailability(TicketCatalog ticketCatalog, int quantity) {
+        // 1. Check Ticket Status
+        if (ticketCatalog.getStatus() != TicketCatalogStatus.ACTIVE) {
+            throw new BadRequestException("Ticket is not active for sale: " + ticketCatalog.getName());
+        }
+
+        // 2. Check Date Validity
+        LocalDateTime now = LocalDateTime.now();
+        if (ticketCatalog.getValidFromDate() != null && now.isBefore(ticketCatalog.getValidFromDate())) {
+            throw new BadRequestException("Ticket sale has not started yet: " + ticketCatalog.getName());
+        }
+        if (ticketCatalog.getValidToDate() != null && now.isAfter(ticketCatalog.getValidToDate())) {
+            throw new BadRequestException("Ticket sale has ended: " + ticketCatalog.getName());
+        }
+
+        // 3. Check Ticket Quota
+        int currentSold = ticketCatalog.getSoldQuantity() != null ? ticketCatalog.getSoldQuantity() : 0;
+        if (ticketCatalog.getTotalQuota() != null) {
+            if (currentSold + quantity > ticketCatalog.getTotalQuota()) {
+                throw new BadRequestException("Exceeds available tickets! Remaining: "
+                        + (ticketCatalog.getTotalQuota() - currentSold));
+            }
+        }
+
+        // 4. Check Event Status and Capacity
+        Event event = ticketCatalog.getEvent();
+        if (event != null) {
+            if (event.getStatus() == EventStatus.CANCELLED || event.getStatus() == EventStatus.COMPLETED) {
+                throw new BadRequestException("Event is not available for booking: " + event.getName());
+            }
+
+            if (event.getMaxParticipants() != null) {
+                int currentEnrolled = event.getCurrentEnrolled() != null ? event.getCurrentEnrolled() : 0;
+                if (currentEnrolled + quantity > event.getMaxParticipants()) {
+                    throw new BadRequestException("Event is full! Remaining slots: "
+                            + (event.getMaxParticipants() - currentEnrolled));
+                }
+            }
+        }
     }
 }
