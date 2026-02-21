@@ -209,6 +209,75 @@ public class AdminVendorManagementController {
 
     // ==================== WORKSHOP TEMPLATE MANAGEMENT ====================
 
+    @GetMapping("/{id}/workshop-templates")
+    @Operation(
+            summary = "Get all workshop templates for a specific vendor (Admin only)",
+            description = """
+                    Retrieves all workshop templates created by a specific vendor with pagination and sorting.
+                    
+                    **Access:**
+                    - Admin role required
+                    - Returns templates in all statuses (DRAFT, PENDING, ACTIVE, REJECTED)
+                    
+                    **Pagination Parameters:**
+                    - page: Page number (default: 1)
+                    - size: Items per page (default: 10)
+                    - sortBy: Field to sort by (default: "createdAt")
+                    - sortDir: Sort direction - "ASC" or "DESC" (default: "DESC")
+                    
+                    **Common Sort Fields:**
+                    - createdAt: Creation date
+                    - updatedAt: Last update date
+                    - name: Template name
+                    - defaultPrice: Price
+                    - status: Template status
+                    
+                    **Use Cases:**
+                    - View all templates from vendor detail modal
+                    - Monitor vendor's template submission activity
+                    - Review vendor's workshop portfolio
+                    """
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Templates retrieved successfully",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized - Valid JWT token required"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403",
+                    description = "Forbidden - Admin role required"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "Not Found - Vendor does not exist"
+            )
+    })
+    public ResponseEntity<ApiResponse<Page<WorkshopTemplateResponse>>> getVendorWorkshopTemplates(
+            @Parameter(description = "Vendor ID", required = true)
+            @PathVariable UUID id,
+            @Parameter(description = "Page number (1-based)", example = "1")
+            @RequestParam(defaultValue = PaginationConstants.DEFAULT_PAGE) int page,
+            @Parameter(description = "Number of items per page", example = "10")
+            @RequestParam(defaultValue = PaginationConstants.DEFAULT_SIZE) int size,
+            @Parameter(description = "Field to sort by", example = "createdAt")
+            @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_BY) String sortBy,
+            @Parameter(description = "Sort direction: ASC or DESC", example = "DESC")
+            @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_DIR) String sortDir) {
+
+        Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        Pageable pageable = PageRequest.of(page - 1, size, sort);
+        Page<WorkshopTemplateResponse> response = workshopTemplateService.getWorkshopTemplatesByVendorId(id, pageable);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Vendor's workshop templates retrieved successfully", response));
+    }
+
     @GetMapping("/workshop-templates")
     @Operation(
             summary = "Get all workshop templates with pagination (Admin only)",

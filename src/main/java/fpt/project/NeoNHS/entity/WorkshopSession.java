@@ -39,7 +39,7 @@ public class WorkshopSession extends BaseEntity {
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private SessionStatus status = SessionStatus.SCHEDULED;
 
     // Relationships
