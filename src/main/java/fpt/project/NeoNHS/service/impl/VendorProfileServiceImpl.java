@@ -13,6 +13,8 @@ import fpt.project.NeoNHS.repository.VendorProfileRepository;
 import fpt.project.NeoNHS.service.VendorProfileService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -142,6 +144,8 @@ public class VendorProfileServiceImpl implements VendorProfileService {
                 .bankAccountNumber(vp.getBankAccountNumber())
                 .bankAccountName(vp.getBankAccountName())
                 .isVerifiedVendor(vp.getIsVerified())
+                .isActive(user.getIsActive())
+                .isBanned(user.getIsBanned())
                 .build();
     }
 }
