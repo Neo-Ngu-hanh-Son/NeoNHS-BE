@@ -12,8 +12,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import fpt.project.NeoNHS.dto.response.voucher.UserVoucherRespone;
 import java.security.Principal;
 import java.util.UUID;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/cart")
@@ -60,4 +62,9 @@ public class CartController {
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Pre-checked out successfully", response));
     }
 
+    @GetMapping("/vouchers")
+    public ResponseEntity<ApiResponse<List<UserVoucherRespone>>> getUserVouchers(Principal principal) {
+        List<UserVoucherRespone> vouchers = cartService.getUserVouchers(principal.getName());
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Get user vouchers successfully", vouchers));
+    }
 }

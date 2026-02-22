@@ -8,4 +8,8 @@ import java.util.UUID;
 
 @Repository
 public interface OrderDetailRepository extends JpaRepository<OrderDetail, UUID> {
+
+    boolean existsByTicketCatalogId(UUID ticketCatalogId);
+
+    boolean existsByTicketCatalog_EventId(UUID eventId);
 }

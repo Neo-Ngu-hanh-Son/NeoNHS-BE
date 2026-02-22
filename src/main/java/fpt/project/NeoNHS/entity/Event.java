@@ -68,5 +68,8 @@ public class Event extends BaseEntity {
     private List<TicketCatalog> ticketCatalogs;
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<EventImage> eventImages;
+
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Review> reviews;
 }

@@ -5,6 +5,8 @@ import fpt.project.NeoNHS.dto.request.cart.CheckoutRequest;
 import fpt.project.NeoNHS.dto.request.cart.UpdateCartItemRequest;
 import fpt.project.NeoNHS.dto.response.cart.CartResponse;
 import fpt.project.NeoNHS.dto.response.cart.CheckoutResponse;
+import fpt.project.NeoNHS.dto.response.voucher.UserVoucherRespone;
+import java.util.List;
 import java.util.UUID;
 
 public interface CartService {
@@ -17,5 +19,7 @@ public interface CartService {
     void removeFromCart(String userEmail, UUID cartItemId);
 
     CheckoutResponse preCheckoutCart(String userEmail, CheckoutRequest request);
+
+    List<UserVoucherRespone> getUserVouchers(String userEmail);
 
 }

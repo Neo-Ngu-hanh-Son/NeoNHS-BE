@@ -9,7 +9,11 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.UUID;
 
+import java.util.Optional;
+
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
     List<Transaction> findAll(Specification<Transaction> spec, Sort sort);
+
+    Optional<Transaction> findByPaymentGateway(String paymentGateway);
 }

@@ -143,4 +143,15 @@ public class AdminEventController {
         EventResponse event = eventService.restoreEvent(id);
         return ResponseEntity.ok(ApiResponse.success("Event restored successfully", event));
     }
+
+    @Operation(
+            summary = "Permanently delete event",
+            description = "Permanently delete an event from the database. Only allowed if no tickets from this event have ever been ordered. This action cannot be undone."
+    )
+    @DeleteMapping("/{id}/permanent")
+    public ResponseEntity<ApiResponse<Void>> hardDeleteEvent(
+            @Parameter(description = "Event ID") @PathVariable UUID id) {
+        eventService.hardDeleteEvent(id);
+        return ResponseEntity.ok(ApiResponse.success("Event permanently deleted successfully", null));
+    }
 }
