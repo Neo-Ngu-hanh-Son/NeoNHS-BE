@@ -21,6 +21,9 @@ import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.repository.UserVoucherRepository;
 import fpt.project.NeoNHS.service.CartService;
 import java.time.LocalDateTime;
+import fpt.project.NeoNHS.enums.EventStatus;
+import fpt.project.NeoNHS.enums.TicketCatalogStatus;
+import fpt.project.NeoNHS.entity.Event;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,10 +63,19 @@ public class CartServiceImpl implements CartService {
             cart.setCartItems(new ArrayList<>());
         }
 
+        // Validate basic ticket info and quota for the *new* quantity being requested
+        // Note: For existing items, we add the requested quantity to current.
+        int totalQuantityToCheck = request.getQuantity();
         Optional<CartItem> existingItem = cart.getCartItems().stream()
                 .filter(item -> item.getTicketCatalog() != null
                         && item.getTicketCatalog().getId().equals(ticketCatalog.getId()))
                 .findFirst();
+
+        if (existingItem.isPresent()) {
+            totalQuantityToCheck += existingItem.get().getQuantity();
+        }
+
+        validateTicketAvailability(ticketCatalog, totalQuantityToCheck);
 
         if (existingItem.isPresent()) {
             CartItem item = existingItem.get();
@@ -99,6 +111,8 @@ public class CartServiceImpl implements CartService {
         if (!cartItem.getCart().getId().equals(cart.getId())) {
             throw new BadRequestException("Item does not belong to user's cart");
         }
+
+        validateTicketAvailability(cartItem.getTicketCatalog(), request.getQuantity());
 
         cartItem.setQuantity(request.getQuantity());
         cartItemRepository.save(cartItem);
@@ -205,6 +219,9 @@ public class CartServiceImpl implements CartService {
                 throw new BadRequestException("Item " + item.getId() + " does not belong to user");
             }
 
+            // Re-validate availability at pre-checkout
+            validateTicketAvailability(item.getTicketCatalog(), item.getQuantity());
+
             BigDecimal itemPrice = item.getTicketCatalog().getPrice();
             BigDecimal subTotal = itemPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
             totalPrice = totalPrice.add(subTotal);
@@ -224,8 +241,13 @@ public class CartServiceImpl implements CartService {
         List<UserVoucherRespone> validVouchers = new ArrayList<>();
         List<UserVoucherRespone> invalidVouchers = new ArrayList<>();
 
+        // Final values to return
+        BigDecimal discountValue = BigDecimal.ZERO;
+        UserVoucherRespone appliedVoucherResponse = null;
+
         LocalDateTime now = LocalDateTime.now();
 
+        // 1. First Pass: Identify all valid/invalid vouchers based on BASE total price
         for (UserVoucher uv : userVouchers) {
             Voucher v = uv.getVoucher();
             boolean isValid = true;
@@ -262,11 +284,121 @@ public class CartServiceImpl implements CartService {
             }
         }
 
+        // 2. Second Pass: If a voucher is requested, try to apply it
+        if (request.getVoucherIds() != null && !request.getVoucherIds().isEmpty()) {
+            UUID reqId = request.getVoucherIds().get(0);
+
+            // Check if the requested voucher exists in the USER's vouchers
+            UserVoucher appliedVoucherEntity = userVouchers.stream()
+                    .filter(uv -> uv.getId().equals(reqId))
+                    .findFirst()
+                    .orElseThrow(() -> new BadRequestException("Voucher not found"));
+
+            // Check if it was deemed valid in step 1
+            boolean isValid = validVouchers.stream().anyMatch(v -> v.getUserVoucherId().equals(reqId));
+
+            if (!isValid) {
+                throw new BadRequestException("Selected voucher is not applicable for this order");
+            }
+
+            Voucher v = appliedVoucherEntity.getVoucher();
+            if (v.getDiscountType() == fpt.project.NeoNHS.enums.DiscountType.PERCENT) {
+                discountValue = totalPrice.multiply(v.getDiscountValue().divide(BigDecimal.valueOf(100)));
+                if (v.getMaxDiscountValue() != null && discountValue.compareTo(v.getMaxDiscountValue()) > 0) {
+                    discountValue = v.getMaxDiscountValue();
+                }
+            } else {
+                discountValue = v.getDiscountValue();
+            }
+
+            appliedVoucherResponse = validVouchers.stream()
+                    .filter(r -> r.getUserVoucherId().equals(reqId))
+                    .findFirst().orElse(null);
+        }
+
+        BigDecimal finalTotalPrice = totalPrice.subtract(discountValue).max(BigDecimal.ZERO);
+
         return CheckoutResponse.builder()
                 .cartItems(itemResponses)
                 .totalPrice(totalPrice)
                 .validVouchers(validVouchers)
                 .invalidVouchers(invalidVouchers)
+                .discountValue(discountValue)
+                .finalTotalPrice(finalTotalPrice)
+                .transactionDate(LocalDateTime.now())
+                .appliedVoucher(appliedVoucherResponse)
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserVoucherRespone> getUserVouchers(String userEmail) {
+        User user = getUserByEmail(userEmail);
+        List<UserVoucher> userVouchers = userVoucherRepository.findByUser_IdAndIsUsedFalse(user.getId());
+
+        List<UserVoucherRespone> voucherResponses = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+
+        for (UserVoucher uv : userVouchers) {
+            Voucher v = uv.getVoucher();
+            if ((v.getStartDate() != null && now.isBefore(v.getStartDate())) ||
+                    (v.getEndDate() != null && now.isAfter(v.getEndDate()))) {
+                continue;
+            }
+            if (v.getUsageLimit() != null && v.getUsageCount() >= v.getUsageLimit()) {
+                continue;
+            }
+
+            voucherResponses.add(UserVoucherRespone.builder()
+                    .userVoucherId(uv.getId())
+                    .code(v.getCode())
+                    .description(v.getDescription())
+                    .discountValue(v.getDiscountValue())
+                    .type(v.getDiscountType())
+                    .minOrderValue(v.getMinOrderValue())
+                    .build());
+        }
+        return voucherResponses;
+    }
+
+    private void validateTicketAvailability(TicketCatalog ticketCatalog, int quantity) {
+        // 1. Check Ticket Status
+        if (ticketCatalog.getStatus() != TicketCatalogStatus.ACTIVE) {
+            throw new BadRequestException("Ticket is not active for sale: " + ticketCatalog.getName());
+        }
+
+        // 2. Check Date Validity
+        LocalDateTime now = LocalDateTime.now();
+        if (ticketCatalog.getValidFromDate() != null && now.isBefore(ticketCatalog.getValidFromDate())) {
+            throw new BadRequestException("Ticket sale has not started yet: " + ticketCatalog.getName());
+        }
+        if (ticketCatalog.getValidToDate() != null && now.isAfter(ticketCatalog.getValidToDate())) {
+            throw new BadRequestException("Ticket sale has ended: " + ticketCatalog.getName());
+        }
+
+        // 3. Check Ticket Quota
+        int currentSold = ticketCatalog.getSoldQuantity() != null ? ticketCatalog.getSoldQuantity() : 0;
+        if (ticketCatalog.getTotalQuota() != null) {
+            if (currentSold + quantity > ticketCatalog.getTotalQuota()) {
+                throw new BadRequestException("Exceeds available tickets! Remaining: "
+                        + (ticketCatalog.getTotalQuota() - currentSold));
+            }
+        }
+
+        // 4. Check Event Status and Capacity
+        Event event = ticketCatalog.getEvent();
+        if (event != null) {
+            if (event.getStatus() == EventStatus.CANCELLED || event.getStatus() == EventStatus.COMPLETED) {
+                throw new BadRequestException("Event is not available for booking: " + event.getName());
+            }
+
+            if (event.getMaxParticipants() != null) {
+                int currentEnrolled = event.getCurrentEnrolled() != null ? event.getCurrentEnrolled() : 0;
+                if (currentEnrolled + quantity > event.getMaxParticipants()) {
+                    throw new BadRequestException("Event is full! Remaining slots: "
+                            + (event.getMaxParticipants() - currentEnrolled));
+                }
+            }
+        }
     }
 }

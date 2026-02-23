@@ -55,6 +55,8 @@ public class EventResponse {
 
     private LocalDateTime updatedAt;
 
+    private LocalDateTime deletedAt;
+
     private List<TagResponse> tags;
 
     /**
@@ -100,6 +102,7 @@ public class EventResponse {
                 .thumbnailUrl(thumbnail)
                 .createdAt(event.getCreatedAt())
                 .updatedAt(event.getUpdatedAt())
+                .deletedAt(event.getDeletedAt())
                 .tags(tagResponses)
                 .build();
     }

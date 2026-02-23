@@ -10,4 +10,5 @@ public interface VendorProfileService {
     VendorProfileResponse createVendorAccount(VendorRegisterRequest request); // Thêm mới
     VendorProfileResponse getVendorProfile(String email);
     VendorProfileResponse updateVendorProfile(UUID id, String email, UpdateVendorProfileRequest request);
+
 }
