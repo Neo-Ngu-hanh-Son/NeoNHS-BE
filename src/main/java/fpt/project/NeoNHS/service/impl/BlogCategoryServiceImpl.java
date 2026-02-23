@@ -40,6 +40,11 @@ public class BlogCategoryServiceImpl implements BlogCategoryService {
         return blogCategoryRepository.findAll(spec, pageable).map(this::mapToResponse);
     }
 
+
+    /**
+     * This method performs a HARD delete because blog category is not that important to keep.
+     * @param categoryId
+     */
     @Override
     @Transactional
     public void deleteBlogCategory(UUID categoryId) {
@@ -47,20 +52,15 @@ public class BlogCategoryServiceImpl implements BlogCategoryService {
         BlogCategory category = blogCategoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Blog category not found"));
 
-        if (category.getDeletedAt() != null) {
-            throw new BadRequestException("Blog category is already deleted");
-        }
+//        if (category.getDeletedAt() != null) {
+//            throw new BadRequestException("Blog category is already deleted");
+//        }
 
         long postCount = blogRepository.countByBlogCategoryId(categoryId);
         if (postCount > 0) {
             throw new BadRequestException("Cannot delete category. It is being used by existing blog posts.");
         }
-
-        category.setDeletedAt(LocalDateTime.now());
-        category.setDeletedBy(admin.getId());
-        category.setUpdatedBy(admin.getId());
-        category.setStatus(BlogCategoryStatus.ARCHIVED);
-        blogCategoryRepository.save(category);
+        blogCategoryRepository.delete(category);
     }
 
     private BlogCategoryResponse mapToResponse(BlogCategory category) {
@@ -79,7 +79,7 @@ public class BlogCategoryServiceImpl implements BlogCategoryService {
     @Override
     public void createBlogCategory(BlogCategoryRequest request) {
         UserPrincipal admin = getCurrentUserPrincipal();
-        if (blogCategoryRepository.existsByNameContaining(request.getName())) {
+        if (blogCategoryRepository.existsByNameContainingAndDeletedAtIsNull(request.getName())) {
             throw new BadRequestException("Category name already exists");
         }
         String slug = SlugGenerator.generateSlug(request.getName());

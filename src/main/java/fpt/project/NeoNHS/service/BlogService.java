@@ -12,13 +12,15 @@ import fpt.project.NeoNHS.enums.BlogStatus;
 
 public interface BlogService {
 
-  Page<BlogResponse> getBlogs(String search, BlogStatus status, List<String> tags, Pageable pageable);
+    Page<BlogResponse> getBlogs(String search, BlogStatus status, List<String> tags, Pageable pageable);
 
-  BlogResponse createBlog(BlogRequest request);
+    BlogResponse createBlog(BlogRequest request);
 
-  BlogResponse updateBlog(UUID id, BlogRequest request);
+    BlogResponse updateBlog(UUID id, BlogRequest request);
 
-  void deleteBlog(UUID id);
+    void deleteBlog(UUID id);
 
-  BlogResponse getBlogById(UUID id);
+    BlogResponse getBlogById(UUID id);
+
+    BlogResponse getBlogBySlug(String slug);
 }
