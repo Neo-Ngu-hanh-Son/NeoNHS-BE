@@ -87,12 +87,18 @@ public class PointServiceImpl implements PointService {
 
     @Override
     @Transactional
-    public PointResponse deletePoint(UUID id) {
-        if (!pointRepository.existsById(id)) {
-            throw new RuntimeException("Point not found with id: " + id);
+    public void deletePoint(UUID id, UUID userId) {
+        Point point = pointRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Point not found with id: " + id));
+
+        if (point.getDeletedAt() != null) {
+            throw new RuntimeException("Point is already deleted");
         }
-        pointRepository.deleteById(id);
-        return null;
+
+        point.setDeletedAt(java.time.LocalDateTime.now());
+        point.setDeletedBy(userId);
+
+        pointRepository.save(point);
     }
 
     @Override

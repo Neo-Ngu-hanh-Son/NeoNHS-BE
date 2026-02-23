@@ -17,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -107,12 +108,18 @@ public class AttractionServiceImpl implements AttractionService {
 
     @Override
     @Transactional
-    public void deleteAttraction(UUID id) {
+    public void deleteAttraction(UUID id, UUID userId) {
         Attraction attraction = attractionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Attraction not found with id: " + id));
 
-        //not really delete just set is active = false
+        if (!attraction.getIsActive()) {
+            throw new IllegalStateException("Attraction is already deleted.");
+        }
+
         attraction.setIsActive(false);
+        attraction.setDeletedAt(java.time.LocalDateTime.now());
+        attraction.setDeletedBy(userId);
+
         attractionRepository.save(attraction);
     }
 
