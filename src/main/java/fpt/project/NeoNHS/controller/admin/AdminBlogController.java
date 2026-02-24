@@ -40,7 +40,9 @@ public class AdminBlogController {
       @RequestParam(required = false) BlogStatus status,
       @RequestParam(required = false) List<String> tags,
       @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_BY) String sortBy,
-      @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_DIR) String sortDir) {
+      @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_DIR) String sortDir,
+      @RequestParam(defaultValue = "false") boolean featured,
+      @RequestParam(required = false) String categorySlug) {
 
     Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
         ? Sort.by(sortBy).ascending()
@@ -48,7 +50,7 @@ public class AdminBlogController {
 
     Pageable pageable = PageRequest.of(page, size, sort);
 
-    Page<BlogResponse> blogs = blogService.getBlogs(search, status, tags, pageable);
+    Page<BlogResponse> blogs = blogService.getBlogs(search, status, tags, pageable, featured, categorySlug);
     return ResponseEntity.ok(ApiResponse.success("Blogs retrieved successfully", blogs));
   }
 
