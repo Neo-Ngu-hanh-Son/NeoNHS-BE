@@ -28,7 +28,6 @@ import java.util.List;
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
-
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService customUserDetailsService;
     private static final String[] AUTH_APIS = {
@@ -40,7 +39,8 @@ public class SecurityConfig {
             "/api/public/**",
             "/api/points/**",
             "/api/blogs/**",
-            "/api/attractions/**"
+            "/api/attractions/**",
+            "/api/events/**",
     };
 
     // Swagger / docs

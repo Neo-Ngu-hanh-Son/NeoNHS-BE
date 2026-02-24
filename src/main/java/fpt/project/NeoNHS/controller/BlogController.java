@@ -23,7 +23,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class BlogController {
     private final BlogService blogService;
-    private final BlogCategoryService blogCategoryService;
 
     @Operation(summary = "Get all blogs", description = "Retrieve a paginated list of blogs with optional search and status filter")
     @GetMapping
@@ -34,7 +33,9 @@ public class BlogController {
             @RequestParam(required = false) BlogStatus status,
             @RequestParam(required = false) List<String> tags,
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_BY) String sortBy,
-            @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_DIR) String sortDir) {
+            @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_DIR) String sortDir,
+            @RequestParam(defaultValue = "false") boolean featured,
+            @RequestParam(required = false) String categorySlug) {
 
         Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
                 ? Sort.by(sortBy).ascending()
@@ -42,7 +43,7 @@ public class BlogController {
 
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Page<BlogResponse> blogs = blogService.getBlogs(search, status, tags, pageable);
+        Page<BlogResponse> blogs = blogService.getBlogs(search, status, tags, pageable, featured, categorySlug);
         return ResponseEntity.ok(ApiResponse.success("Blogs retrieved successfully", blogs));
     }
 

@@ -39,8 +39,9 @@ public class BlogServiceImpl implements BlogService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<BlogResponse> getBlogs(String search, BlogStatus status, List<String> tags, Pageable pageable) {
-        var spec = BlogSpecification.withFilters(search, status, tags);
+    public Page<BlogResponse> getBlogs(String search, BlogStatus status, List<String> tags, Pageable pageable,
+            boolean featured, String categorySlug) {
+        var spec = BlogSpecification.withFilters(search, status, tags, featured, categorySlug);
         return blogRepository.findAll(spec, pageable).map(BlogResponse::fromEntity);
     }
 
@@ -84,7 +85,8 @@ public class BlogServiceImpl implements BlogService {
         var targetStatus = resolveStatus(request.getStatus());
 
         if (blog.getStatus().equals(BlogStatus.ARCHIVED)) {
-            // Admin revoking an archived blog back to draft or published => Reset deletedAt and deletedBy
+            // Admin revoking an archived blog back to draft or published => Reset deletedAt
+            // and deletedBy
             blog.setDeletedAt(null);
             blog.setDeletedBy(null);
         }
@@ -148,7 +150,6 @@ public class BlogServiceImpl implements BlogService {
             }
         }
     }
-
 
     private UserPrincipal getCurrentUserPrincipal() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();

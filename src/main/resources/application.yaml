@@ -36,8 +36,8 @@ server:
 app:
   jwt:
     secret: dGhpc2lzYXZlcnlsb25nc2VjcmV0a2V5Zm9yand0c2lnbmluZ3B1cnBvc2Vz
-    expiration-ms: 86400000  # 24 hours
-#    expiration-ms: 30000  # Test
+    expiration-ms: 86400000 # 24 hours
+  #    expiration-ms: 30000  # Test
   fe-url: http://localhost:3000
 
 google-auth:

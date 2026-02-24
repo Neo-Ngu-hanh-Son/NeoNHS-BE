@@ -12,7 +12,8 @@ import fpt.project.NeoNHS.enums.BlogStatus;
 
 public interface BlogService {
 
-    Page<BlogResponse> getBlogs(String search, BlogStatus status, List<String> tags, Pageable pageable);
+    Page<BlogResponse> getBlogs(String search, BlogStatus status, List<String> tags, Pageable pageable,
+            boolean featured, String categorySlug);
 
     BlogResponse createBlog(BlogRequest request);
 
@@ -23,4 +24,5 @@ public interface BlogService {
     BlogResponse getBlogById(UUID id);
 
     BlogResponse getBlogBySlug(String slug);
+
 }
