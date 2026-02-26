@@ -23,25 +23,36 @@ public class AttractionSpecification {
             }
 
             if (filter.getName() != null && !filter.getName().isBlank()) {
-                predicates.add(criteriaBuilder.like(
-                        criteriaBuilder.lower(root.get("name")),
-                        "%" + filter.getName().toLowerCase() + "%"
-                ));
-            }
+                String keyword = "%" + filter.getName().toLowerCase() + "%";
 
-            if (filter.getDescription() != null && !filter.getDescription().isBlank()) {
-                predicates.add(criteriaBuilder.like(
-                        criteriaBuilder.lower(root.get("description")),
-                        "%" + filter.getDescription().toLowerCase() + "%"
+                predicates.add(criteriaBuilder.or(
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), keyword),
+//                        criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), keyword),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("address")), keyword)
                 ));
             }
-
-            if (filter.getAddress() != null && !filter.getAddress().isBlank()) {
-                predicates.add(criteriaBuilder.like(
-                        criteriaBuilder.lower(root.get("address")),
-                        "%" + filter.getAddress().toLowerCase() + "%"
-                ));
-            }
+//            This old code is using AND for name, description, and address, which is too strict.
+//            The above new code uses OR to allow matching any of the fields.
+//            if (filter.getName() != null && !filter.getName().isBlank()) {
+//                predicates.add(criteriaBuilder.like(
+//                        criteriaBuilder.lower(root.get("name")),
+//                        "%" + filter.getName().toLowerCase() + "%"
+//                ));
+//            }
+//
+//            if (filter.getDescription() != null && !filter.getDescription().isBlank()) {
+//                predicates.add(criteriaBuilder.like(
+//                        criteriaBuilder.lower(root.get("description")),
+//                        "%" + filter.getDescription().toLowerCase() + "%"
+//                ));
+//            }
+//
+//            if (filter.getAddress() != null && !filter.getAddress().isBlank()) {
+//                predicates.add(criteriaBuilder.like(
+//                        criteriaBuilder.lower(root.get("address")),
+//                        "%" + filter.getAddress().toLowerCase() + "%"
+//                ));
+//            }
 
             if (filter.getOpenHour() != null) {
                 predicates.add(criteriaBuilder.greaterThanOrEqualTo(

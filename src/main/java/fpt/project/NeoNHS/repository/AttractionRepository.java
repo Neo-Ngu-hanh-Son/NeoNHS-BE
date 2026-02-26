@@ -13,8 +13,11 @@ import java.util.UUID;
 
 @Repository
 public interface AttractionRepository extends JpaRepository<Attraction, UUID>, JpaSpecificationExecutor<Attraction> {
-    // Tìm kiếm theo tên (không phân biệt hoa thường) và chỉ lấy những cái đang active
+    // Tìm kiếm theo tên (không phân biệt hoa thường) và chỉ lấy những cái đang
+    // active
     @Query("SELECT a FROM Attraction a WHERE a.isActive = true " +
             "AND (:search IS NULL OR LOWER(a.name) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<Attraction> findAllActive(String search, Pageable pageable);
+
+    long countByDeletedAtIsNull();
 }

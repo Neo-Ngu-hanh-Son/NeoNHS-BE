@@ -18,5 +18,8 @@ public interface PointService {
 
     List<PointResponse> getPointsByAttraction(UUID attractionId);
 
-    Page<PointResponse> getAllPointsWithPagination(UUID attractionId, int page, int size, String sortBy, String sortDir, String search);
+    Page<PointResponse> getAllPointsWithPagination(UUID attractionId, int page, int size, String sortBy, String sortDir,
+            String search);
+
+    Page<PointResponse> getAllPoints(int page, int size, String sortBy, String sortDir, String search);
 }
