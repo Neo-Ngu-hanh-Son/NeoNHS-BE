@@ -18,5 +18,7 @@ public class UserResponse {
     private UserRole role;
     private Boolean isActive;
     private Boolean isBanned;
+    private String banReason;
+    private LocalDateTime bannedAt;
     private LocalDateTime createdAt;
 }

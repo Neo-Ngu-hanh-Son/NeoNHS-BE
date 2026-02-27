@@ -28,5 +28,5 @@ public interface UserService {
             String search, UserRole role, Boolean isBanned,
             Boolean deleted, Boolean includeDeleted);
 
-    void toggleBanUser(UUID id);
+    void toggleBanUser(UUID id, String reason);
 }

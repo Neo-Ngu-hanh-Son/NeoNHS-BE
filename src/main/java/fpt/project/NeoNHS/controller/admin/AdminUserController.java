@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.controller.admin;
 
 import fpt.project.NeoNHS.constants.PaginationConstants;
+import fpt.project.NeoNHS.dto.request.user.BanUserRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.user.UserResponse;
 import fpt.project.NeoNHS.enums.UserRole;
@@ -37,8 +38,13 @@ public class AdminUserController {
     }
 
     @PatchMapping("/{id}/toggle-ban")
-    public ApiResponse<String> toggleBan(@PathVariable UUID id) {
-        adminUserService.toggleBanUser(id);
+    public ApiResponse<String> toggleBan(
+            @PathVariable UUID id,
+            @RequestBody(required = false) BanUserRequest request) {
+
+        String reason = (request != null) ? request.getReason() : null;
+        adminUserService.toggleBanUser(id, reason);
+
         return ApiResponse.success("User status updated successfully");
     }
 }

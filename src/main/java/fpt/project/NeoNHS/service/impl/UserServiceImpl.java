@@ -99,11 +99,24 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public void toggleBanUser(UUID id) {
+    public void toggleBanUser(UUID id, String reason) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
 
-        user.setIsBanned(!user.getIsBanned());
+        boolean newBanStatus = !user.getIsBanned();
+        user.setIsBanned(newBanStatus);
+
+        if (newBanStatus) {
+            if (reason == null || reason.isBlank()) {
+                throw new BadRequestException("Reason is required when banning a user");
+            }
+            user.setBanReason(reason);
+            user.setBannedAt(java.time.LocalDateTime.now());
+        } else {
+            user.setBanReason(null);
+            user.setBannedAt(null);
+        }
+
         userRepository.save(user);
     }
 
@@ -143,6 +156,8 @@ public class UserServiceImpl implements UserService {
                 .role(user.getRole())
                 .isActive(user.getIsActive())
                 .isBanned(user.getIsBanned())
+                .banReason(user.getBanReason())
+                .bannedAt(user.getBannedAt())
                 .createdAt(user.getCreatedAt())
                 .build();
     }
