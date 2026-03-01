@@ -53,6 +53,8 @@ public class WorkshopTemplate extends BaseEntity {
 
     private LocalDateTime approvedAt;
 
+    private UUID rejectedBy;
+
     @Builder.Default
     @Column(precision = 3, scale = 2)
     private BigDecimal averageRating = BigDecimal.ZERO;

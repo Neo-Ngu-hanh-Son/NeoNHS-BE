@@ -461,7 +461,10 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
         template.setStatus(WorkshopStatus.ACTIVE);
         template.setApprovedBy(admin.getId());
         template.setApprovedAt(LocalDateTime.now());
-        template.setRejectReason(null); // Clear any previous rejection reason
+
+        // Clear any previous rejection data
+        template.setRejectReason(null);
+        template.setRejectedBy(null);
 
         // 5. Save and return
         WorkshopTemplate approvedTemplate = workshopTemplateRepository.save(template);
@@ -492,7 +495,10 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
         // 5. Update status to REJECTED and set rejection details
         template.setStatus(WorkshopStatus.REJECTED);
         template.setRejectReason(rejectReason);
-        template.setApprovedBy(null); // Clear approval details
+        template.setRejectedBy(admin.getId());
+
+        // Clear any previous approval data
+        template.setApprovedBy(null);
         template.setApprovedAt(null);
 
         // 6. Save and return
@@ -555,6 +561,7 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
                 .rejectReason(template.getRejectReason())
                 .approvedBy(template.getApprovedBy())
                 .approvedAt(template.getApprovedAt())
+                .rejectedBy(template.getRejectedBy())
                 .images(imageResponses)
                 .tags(tagResponses)
                 .build();

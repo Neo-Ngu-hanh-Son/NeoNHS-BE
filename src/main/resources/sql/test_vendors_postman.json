@@ -1,0 +1,356 @@
+{
+  "info": {
+    "name": "Admin Vendor Management - Test Data",
+    "description": "Postman collection for testing Admin Vendor Management API with pre-populated test data",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "YOUR_ADMIN_JWT_TOKEN_HERE",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{adminToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "1. Get All Vendors",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/vendors?page=1&size=10&sortBy=createdAt&sortDirection=DESC",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "vendors"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "size",
+              "value": "10"
+            },
+            {
+              "key": "sortBy",
+              "value": "createdAt"
+            },
+            {
+              "key": "sortDirection",
+              "value": "DESC"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "2. Search Vendors by Keyword",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/vendors/search?keyword=workshop&page=1&size=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "vendors", "search"],
+          "query": [
+            {
+              "key": "keyword",
+              "value": "workshop"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "size",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Filter Verified Vendors",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/vendors/filter/verified?isVerified=true&page=1&size=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "vendors", "filter", "verified"],
+          "query": [
+            {
+              "key": "isVerified",
+              "value": "true"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "size",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "4. Filter Unverified Vendors",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/vendors/filter/verified?isVerified=false&page=1&size=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "vendors", "filter", "verified"],
+          "query": [
+            {
+              "key": "isVerified",
+              "value": "false"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "size",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "5. Create New Vendor",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullname\": \"Emily Johnson\",\n  \"email\": \"emily.johnson@newvendor.com\",\n  \"password\": \"SecurePass123\",\n  \"phoneNumber\": \"+15551112222\",\n  \"businessName\": \"Johnson's Craft Workshop\",\n  \"description\": \"Handmade crafts and DIY workshops for all skill levels\",\n  \"address\": \"321 Craft Avenue, Portland, OR 97201\",\n  \"latitude\": \"45.515232\",\n  \"longitude\": \"-122.678366\",\n  \"taxCode\": \"TAX-JCW-2024-004\",\n  \"bankName\": \"US Bank\",\n  \"bankAccountNumber\": \"1111222233334444\",\n  \"bankAccountName\": \"Johnson's Craft Workshop LLC\",\n  \"isVerified\": true\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/vendors",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "vendors"]
+        }
+      }
+    },
+    {
+      "name": "6. Get Vendor by ID (Michael Anderson)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/vendors/:vendorId",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "vendors", ":vendorId"],
+          "variable": [
+            {
+              "key": "vendorId",
+              "value": "REPLACE_WITH_MICHAEL_VENDOR_PROFILE_ID"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "7. Update Vendor Profile",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullname\": \"Michael Anderson Sr.\",\n  \"phoneNumber\": \"+15551234999\",\n  \"businessName\": \"Workshop Pro Services - Premium\",\n  \"description\": \"Leading provider of professional automotive and technical workshops. NOW WITH PREMIUM SERVICES!\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/vendors/:vendorId",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "vendors", ":vendorId"],
+          "variable": [
+            {
+              "key": "vendorId",
+              "value": "REPLACE_WITH_VENDOR_ID"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "8. Ban Vendor (David Chen)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Violation of community guidelines - testing ban functionality\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/vendors/:vendorId/ban",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "vendors", ":vendorId", "ban"],
+          "variable": [
+            {
+              "key": "vendorId",
+              "value": "REPLACE_WITH_DAVID_VENDOR_ID"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "9. Get Banned Vendors",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/vendors/filter/banned?isBanned=true&page=1&size=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "vendors", "filter", "banned"],
+          "query": [
+            {
+              "key": "isBanned",
+              "value": "true"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "size",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "10. Unban Vendor",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/vendors/:vendorId/unban",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "vendors", ":vendorId", "unban"],
+          "variable": [
+            {
+              "key": "vendorId",
+              "value": "REPLACE_WITH_DAVID_VENDOR_ID"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "11. Advanced Filter (Verified + Active)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/vendors/filter?isVerified=true&isActive=true&isBanned=false&page=1&size=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "vendors", "filter"],
+          "query": [
+            {
+              "key": "isVerified",
+              "value": "true"
+            },
+            {
+              "key": "isActive",
+              "value": "true"
+            },
+            {
+              "key": "isBanned",
+              "value": "false"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "size",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "12. Delete Vendor (Soft Delete)",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/vendors/:vendorId",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "vendors", ":vendorId"],
+          "variable": [
+            {
+              "key": "vendorId",
+              "value": "REPLACE_WITH_VENDOR_ID_TO_DELETE"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "13. Get Vendor's Workshop Templates",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/vendors/:vendorId/workshop-templates?page=1&size=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "vendors", ":vendorId", "workshop-templates"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "size",
+              "value": "10"
+            }
+          ],
+          "variable": [
+            {
+              "key": "vendorId",
+              "value": "REPLACE_WITH_VENDOR_ID"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

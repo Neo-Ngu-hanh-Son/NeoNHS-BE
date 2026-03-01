@@ -37,6 +37,7 @@ public class WorkshopTemplateResponse {
     private String rejectReason;
     private UUID approvedBy;
     private LocalDateTime approvedAt;
+    private UUID rejectedBy;
 
     private List<WorkshopImageResponse> images;
     private List<WTagResponse> tags;
