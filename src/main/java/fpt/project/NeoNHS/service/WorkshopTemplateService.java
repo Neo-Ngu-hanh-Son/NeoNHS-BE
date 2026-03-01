@@ -52,7 +52,7 @@ public interface WorkshopTemplateService {
     // Approve/Reject (Admin only)
     WorkshopTemplateResponse approveWorkshopTemplate(String adminEmail, UUID id);
 
-    WorkshopTemplateResponse rejectWorkshopTemplate(String adminEmail, UUID id, String rejectReason);
+    WorkshopTemplateResponse rejectWorkshopTemplate(String adminEmail, UUID id, String adminNote);
 
     // Delete
     void deleteWorkshopTemplate(String email, UUID id);

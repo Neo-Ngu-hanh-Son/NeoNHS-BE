@@ -344,7 +344,7 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
                 .fullDescription(template.getFullDescription())
                 .estimatedDuration(template.getEstimatedDuration())
                 .averageRating(template.getAverageRating())
-                .totalReview(template.getTotalReview())
+                .totalRatings(template.getTotalRatings())
                 // Vendor information
                 .vendorId(template.getVendor().getId())
                 .vendorName(template.getVendor().getBusinessName())

@@ -381,11 +381,11 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
         // 4. Validate mandatory fields for submission
         validateTemplateCompleteness(template);
 
-        // 5. Update status to PENDING and clear rejection reason if exists
+        // 5. Update status to PENDING and clear admin note if exists
         template.setStatus(WorkshopStatus.PENDING);
-        if (template.getRejectReason() != null) {
-            template.setRejectReason(null);
-        }
+        template.setAdminNote(null);
+        template.setReviewedBy(null);
+        template.setReviewedAt(null);
 
         // 6. Save and return
         WorkshopTemplate submittedTemplate = workshopTemplateRepository.save(template);
@@ -459,12 +459,11 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
 
         // 4. Update status to ACTIVE and set approval details
         template.setStatus(WorkshopStatus.ACTIVE);
-        template.setApprovedBy(admin.getId());
-        template.setApprovedAt(LocalDateTime.now());
+        template.setReviewedBy(admin.getId());
+        template.setReviewedAt(LocalDateTime.now());
 
-        // Clear any previous rejection data
-        template.setRejectReason(null);
-        template.setRejectedBy(null);
+        // Clear any previous admin note on re-approval
+        template.setAdminNote(null);
 
         // 5. Save and return
         WorkshopTemplate approvedTemplate = workshopTemplateRepository.save(template);
@@ -473,7 +472,7 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
 
     @Override
     @Transactional
-    public WorkshopTemplateResponse rejectWorkshopTemplate(String adminEmail, UUID id, String rejectReason) {
+    public WorkshopTemplateResponse rejectWorkshopTemplate(String adminEmail, UUID id, String adminNote) {
         // 1. Find the admin user
         User admin = userRepository.findByEmail(adminEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "email", adminEmail));
@@ -487,19 +486,16 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
             throw new BadRequestException("Only templates with 'Pending' status can be rejected. Current status: " + template.getStatus());
         }
 
-        // 4. Validate reject reason
-        if (rejectReason == null || rejectReason.trim().isEmpty()) {
-            throw new BadRequestException("Reject reason is required");
+        // 4. Validate admin note
+        if (adminNote == null || adminNote.trim().isEmpty()) {
+            throw new BadRequestException("Admin note (reason) is required when rejecting");
         }
 
-        // 5. Update status to REJECTED and set rejection details
+        // 5. Update status to REJECTED and set review details
         template.setStatus(WorkshopStatus.REJECTED);
-        template.setRejectReason(rejectReason);
-        template.setRejectedBy(admin.getId());
-
-        // Clear any previous approval data
-        template.setApprovedBy(null);
-        template.setApprovedAt(null);
+        template.setAdminNote(adminNote);
+        template.setReviewedBy(admin.getId());
+        template.setReviewedAt(LocalDateTime.now());
 
         // 6. Save and return
         WorkshopTemplate rejectedTemplate = workshopTemplateRepository.save(template);
@@ -553,15 +549,14 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
                 .maxParticipants(template.getMaxParticipants())
                 .status(template.getStatus())
                 .averageRating(template.getAverageRating())
-                .totalReview(template.getTotalReview())
+                .totalRatings(template.getTotalRatings())
                 .vendorId(template.getVendor().getId())
                 .vendorName(template.getVendor().getBusinessName())
                 .createdAt(template.getCreatedAt())
                 .updatedAt(template.getUpdatedAt())
-                .rejectReason(template.getRejectReason())
-                .approvedBy(template.getApprovedBy())
-                .approvedAt(template.getApprovedAt())
-                .rejectedBy(template.getRejectedBy())
+                .adminNote(template.getAdminNote())
+                .reviewedBy(template.getReviewedBy())
+                .reviewedAt(template.getReviewedAt())
                 .images(imageResponses)
                 .tags(tagResponses)
                 .build();

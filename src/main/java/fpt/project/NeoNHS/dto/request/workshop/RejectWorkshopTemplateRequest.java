@@ -10,6 +10,6 @@ import lombok.*;
 @Builder
 public class RejectWorkshopTemplateRequest {
 
-    @NotBlank(message = "Reject reason is required")
-    private String rejectReason;
+    @NotBlank(message = "Admin note (reason) is required")
+    private String adminNote;
 }

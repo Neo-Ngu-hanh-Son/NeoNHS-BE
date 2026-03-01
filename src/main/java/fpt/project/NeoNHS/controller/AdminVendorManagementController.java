@@ -462,7 +462,7 @@ public class AdminVendorManagementController {
         WorkshopTemplateResponse response = workshopTemplateService.rejectWorkshopTemplate(
                 principal.getName(),
                 id,
-                request.getRejectReason());
+                request.getAdminNote());
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Workshop template rejected", response));
     }
 }
