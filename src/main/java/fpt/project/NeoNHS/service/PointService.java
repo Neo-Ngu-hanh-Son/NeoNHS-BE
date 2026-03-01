@@ -12,7 +12,7 @@ public interface PointService {
 
     PointResponse updatePoint(UUID id, PointRequest request);
 
-    PointResponse deletePoint(UUID id);
+    void deletePoint(UUID id, UUID userId);
 
     PointResponse getPointById(UUID id);
 

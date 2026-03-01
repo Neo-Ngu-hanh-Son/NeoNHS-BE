@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,6 +40,9 @@ public class VendorProfile extends BaseEntity {
     private String bankAccountNumber;
 
     private String bankAccountName;
+
+    @Column(precision = 5, scale = 2)
+    private BigDecimal commissionRate;
 
     @Builder.Default
     @Column(nullable = false)

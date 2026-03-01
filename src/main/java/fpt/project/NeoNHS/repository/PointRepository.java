@@ -19,9 +19,14 @@ import java.util.UUID;
 
 @Repository
 public interface PointRepository extends JpaRepository<Point, UUID>, JpaSpecificationExecutor<Point> {
+    @Query("SELECT p FROM Point p WHERE p.attraction.id = :attractionId " +
+            "AND p.deletedAt IS NULL " +
+            "ORDER BY p.orderIndex ASC")
+    List<Point> findByAttractionIdOrderByOrderIndexAsc(UUID attractionId);
 
     // Phân trang danh sách các điểm theo Attraction ID
     @Query("SELECT p FROM Point p WHERE p.attraction.id = :attractionId " +
+            "AND p.deletedAt IS NULL " +
             "AND (:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<Point> findByAttractionIdWithSearch(
@@ -30,8 +35,6 @@ public interface PointRepository extends JpaRepository<Point, UUID>, JpaSpecific
             Pageable pageable);
 
     long countByDeletedAtIsNull();
-
-    List<Point> findByAttractionIdOrderByOrderIndexAsc(UUID attractionId);
 
     Page<Point> findAll(Specification<Point> spec, Pageable pageable);
 }
