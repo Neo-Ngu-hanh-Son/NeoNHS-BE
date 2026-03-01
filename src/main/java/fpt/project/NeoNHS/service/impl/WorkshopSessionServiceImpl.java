@@ -132,6 +132,20 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
         return sessions.map(this::mapToResponse);
     }
 
+    @Override
+    public Page<WorkshopSessionResponse> getUpcomingSessionsByTemplateId(UUID templateId, Pageable pageable) {
+        WorkshopTemplate template = workshopTemplateRepository.findById(templateId)
+                .orElseThrow(() -> new ResourceNotFoundException("WorkshopTemplate", "id", templateId));
+        if (template.getStatus() != WorkshopStatus.ACTIVE) {
+            throw new ResourceNotFoundException("WorkshopTemplate", "id", templateId);
+        }
+        Specification<WorkshopSession> spec = Specification
+                .where(WorkshopSessionSpecification.hasTemplateId(templateId))
+                .and(WorkshopSessionSpecification.hasStatus(SessionStatus.SCHEDULED))
+                .and(WorkshopSessionSpecification.hasStartTimeAfter(LocalDateTime.now()));
+        return workshopSessionRepository.findAll(spec, pageable).map(this::mapToResponse);
+    }
+
     // ==================== SEARCH & FILTER ====================
 
     @Override

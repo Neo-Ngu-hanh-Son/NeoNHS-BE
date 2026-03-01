@@ -225,6 +225,58 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
                 .collect(Collectors.toList());
     }
 
+    // ==================== TOURIST ====================
+
+    @Override
+    public WorkshopTemplateResponse getActiveWorkshopTemplateById(UUID id) {
+        WorkshopTemplate template = workshopTemplateRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("WorkshopTemplate", "id", id));
+        if (template.getStatus() != WorkshopStatus.ACTIVE) {
+            throw new ResourceNotFoundException("WorkshopTemplate", "id", id);
+        }
+        return mapToResponse(template);
+    }
+
+    @Override
+    public Page<WorkshopTemplateResponse> getActiveWorkshopTemplates(Pageable pageable) {
+        Specification<WorkshopTemplate> spec = WorkshopTemplateSpecification.hasStatus(WorkshopStatus.ACTIVE);
+        return workshopTemplateRepository.findAll(spec, pageable)
+                .map(this::mapToResponse);
+    }
+
+    @Override
+    public Page<WorkshopTemplateResponse> searchAndFilterActiveTemplates(
+            String keyword,
+            UUID tagId,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            Integer minDuration,
+            Integer maxDuration,
+            BigDecimal minRating,
+            Pageable pageable
+    ) {
+        Specification<WorkshopTemplate> spec = WorkshopTemplateSpecification.hasStatus(WorkshopStatus.ACTIVE);
+
+        if (keyword != null && !keyword.isEmpty()) {
+            spec = spec.and(WorkshopTemplateSpecification.searchByKeyword(keyword));
+        }
+        if (tagId != null) {
+            spec = spec.and(WorkshopTemplateSpecification.hasTagId(tagId));
+        }
+        if (minPrice != null || maxPrice != null) {
+            spec = spec.and(WorkshopTemplateSpecification.hasPriceBetween(minPrice, maxPrice));
+        }
+        if (minDuration != null || maxDuration != null) {
+            spec = spec.and(WorkshopTemplateSpecification.hasDurationBetween(minDuration, maxDuration));
+        }
+        if (minRating != null) {
+            spec = spec.and(WorkshopTemplateSpecification.hasMinRating(minRating));
+        }
+
+        return workshopTemplateRepository.findAll(spec, pageable)
+                .map(this::mapToResponse);
+    }
+
     // ==================== UPDATE ====================
 
     @Override
