@@ -28,7 +28,6 @@ import java.util.List;
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
-
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService customUserDetailsService;
     private static final String[] AUTH_APIS = {
@@ -38,7 +37,10 @@ public class SecurityConfig {
     // Public business APIs
     private static final String[] PUBLIC_APIS = {
             "/api/public/**",
-            "/api/points/**"
+            "/api/points/**",
+            "/api/blogs/**",
+            "/api/attractions/**",
+            "/api/events/**",
     };
 
     // Swagger / docs
@@ -51,7 +53,6 @@ public class SecurityConfig {
     // Admin only
     private static final String[] ADMIN_APIS = {
             "/api/admin/**"
-//            "/api/attractions/**"
     };
 
     @Bean
@@ -62,14 +63,14 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(AUTH_APIS).permitAll()
-                        .requestMatchers(PUBLIC_APIS).permitAll()
-                        .requestMatchers(SWAGGER_APIS).permitAll()
-                        .requestMatchers(ADMIN_APIS).hasRole("ADMIN")
-                        .anyRequest().authenticated()
-                // Careful as unknown endpoints will be blocked (returning forbidden instead of 404)
-                // .anyRequest().authenticated()
+                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                                .requestMatchers(AUTH_APIS).permitAll()
+                                .requestMatchers(PUBLIC_APIS).permitAll()
+                                .requestMatchers(SWAGGER_APIS).permitAll()
+                                .requestMatchers(ADMIN_APIS).hasRole("ADMIN")
+                                .anyRequest().authenticated()
+                        // Careful as unknown endpoints will be blocked (returning forbidden instead of 404)
+                        // .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

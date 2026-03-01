@@ -20,4 +20,6 @@ public interface WorkshopTemplateRepository
     Page<WorkshopTemplate> findByVendorId(UUID vendorId, Pageable pageable);
 
     List<WorkshopTemplate> findByVendorUserEmail(String email);
+
+    long countByDeletedAtIsNull();
 }

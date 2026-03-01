@@ -17,11 +17,12 @@ import lombok.NoArgsConstructor;
 public class BlogRequest {
   @NotBlank(message = "Title is required")
   private String title;
-  private String slug;
   private String summary;
 
-  @NotBlank(message = "Content is required")
-  private String content;
+  @NotBlank(message = "Content is required (Structured JSON version)")
+  private String contentJSON;
+  @NotBlank(message = "Content is required (HTML version)")
+  private String contentHTML;
 
   private String thumbnailUrl;
 
