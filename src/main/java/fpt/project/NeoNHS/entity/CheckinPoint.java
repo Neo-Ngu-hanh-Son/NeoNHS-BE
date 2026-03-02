@@ -5,6 +5,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -51,4 +52,22 @@ public class CheckinPoint extends BaseEntity {
 
     @OneToMany(mappedBy = "checkinPoint", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<UserCheckIn> userCheckIns;
+
+    // ─── Panorama fields ───
+
+    @Column(name = "panorama_image_url", length = 2048)
+    private String panoramaImageUrl;
+
+    @Column(name = "default_yaw")
+    @Builder.Default
+    private Double defaultYaw = 0.0;
+
+    @Column(name = "default_pitch")
+    @Builder.Default
+    private Double defaultPitch = 0.0;
+
+    @Builder.Default
+    @OneToMany(mappedBy = "checkinPoint", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<PanoramaHotSpot> panoramaHotSpots = new ArrayList<>();
+
 }

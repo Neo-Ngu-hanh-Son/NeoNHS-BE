@@ -3,7 +3,9 @@ package fpt.project.NeoNHS.controller;
 import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.request.point.PointRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
+import fpt.project.NeoNHS.dto.response.point.PointPanoramaResponse;
 import fpt.project.NeoNHS.dto.response.point.PointResponse;
+import fpt.project.NeoNHS.service.PanoramaService;
 import fpt.project.NeoNHS.service.PointService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,6 +22,7 @@ import java.util.UUID;
 public class PointController {
 
     private final PointService pointService;
+    private final PanoramaService panoramaService;
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -72,9 +75,28 @@ public class PointController {
             @RequestParam(value = "size", defaultValue = PaginationConstants.DEFAULT_SIZE, required = false) int size,
             @RequestParam(value = "sortBy", defaultValue = "orderIndex", required = false) String sortBy,
             @RequestParam(value = "sortDir", defaultValue = PaginationConstants.SORT_ASC, required = false) String sortDir,
-            @RequestParam(value = "search", required = false) String searc
-    ) {
+            @RequestParam(value = "search", required = false) String searc) {
         Page<PointResponse> data = pointService.getAllPoints(page, size, sortBy, sortDir, searc);
         return ApiResponse.success(data);
+    }
+
+    /**
+     * Get panorama data for a specific point.
+     * Returns the 360° image URL, camera defaults, and all interactive hot spots.
+     */
+    @GetMapping("/{pointId}/panorama")
+    public ApiResponse<PointPanoramaResponse> getPointPanorama(@PathVariable UUID pointId) {
+        PointPanoramaResponse response = pointService.getPointPanorama(pointId);
+        return ApiResponse.success("Panorama data retrieved successfully", response);
+    }
+
+    /**
+     * Get panorama data for a specific checkin point.
+     * Returns the 360° image URL, camera defaults, and all interactive hot spots.
+     */
+    @GetMapping("/checkin-points/{checkinPointId}/panorama")
+    public ApiResponse<PointPanoramaResponse> getCheckinPointPanorama(@PathVariable UUID checkinPointId) {
+        PointPanoramaResponse response = panoramaService.getCheckinPointPanorama(checkinPointId);
+        return ApiResponse.success("Panorama data retrieved successfully", response);
     }
 }
