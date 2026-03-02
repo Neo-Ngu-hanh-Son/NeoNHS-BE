@@ -1,25 +1,38 @@
 package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.dto.request.auth.UpdateUserProfileRequest;
+import fpt.project.NeoNHS.dto.request.kyc.KycRequest;
 import fpt.project.NeoNHS.dto.response.auth.UserProfileResponse;
+import fpt.project.NeoNHS.dto.response.kyc.KycResponse;
 import fpt.project.NeoNHS.entity.User;
 import fpt.project.NeoNHS.exception.BadRequestException;
 import fpt.project.NeoNHS.exception.DuplicatePhonenumberException;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.service.UserService;
+import fpt.project.NeoNHS.service.VnptEkycService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.Normalizer;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final VnptEkycService vnptEkycService;
+
+    /**
+     * Ngưỡng faceMatchScore tối thiểu để xác nhận KYC (85%)
+     */
+    private static final double FACE_MATCH_THRESHOLD = 85.0;
 
     @Override
     public long countUsers() {
@@ -70,7 +83,8 @@ public class UserServiceImpl implements UserService {
                     .orElse(null);
             // If the phone number belongs to another user
             if (existingUser != null && !existingUser.getId().equals(id)) {
-                throw new DuplicatePhonenumberException("Phone number '" + request.getPhoneNumber() + "' is already in use!");
+                throw new DuplicatePhonenumberException(
+                        "Phone number '" + request.getPhoneNumber() + "' is already in use!");
             }
             user.setPhoneNumber(request.getPhoneNumber());
         }
@@ -83,12 +97,87 @@ public class UserServiceImpl implements UserService {
             user.setAvatarUrl(request.getAvatarUrl());
         }
 
+        // Bank / payout info — chỉ update khi client gửi lên (non-null)
+        if (request.getBankName() != null) {
+            user.setBankName(request.getBankName());
+        }
+        if (request.getBankBin() != null) {
+            user.setBankBin(request.getBankBin());
+        }
+        if (request.getBankAccountNumber() != null) {
+            user.setBankAccountNumber(request.getBankAccountNumber());
+        }
+        if (request.getBankAccountName() != null) {
+            user.setBankAccountName(request.getBankAccountName());
+        }
+
         userRepository.save(user);
         return mapToUserResponse(user);
     }
 
+    @Override
+    @Transactional
+    public KycResponse performEkyc(UUID userId, KycRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId.toString()));
+
+        if (Boolean.TRUE.equals(user.getKycVerified())) {
+            throw new BadRequestException("User already completed KYC verification");
+        }
+
+        log.info("Starting eKYC for user: {}", userId);
+        KycResponse kycResponse = vnptEkycService.performKyc(request);
+
+        if (kycResponse.isSuccess()) {
+            Double faceScore = kycResponse.getFaceMatchScore();
+
+            if (faceScore != null && faceScore >= FACE_MATCH_THRESHOLD) {
+                user.setKycVerified(true);
+
+                String rawName = kycResponse.getFullName();
+                String nameWithoutDiacritics = removeDiacritics(rawName);
+                user.setKycFullName(nameWithoutDiacritics);
+
+                user.setKycIdNumber(kycResponse.getIdNumber());
+                userRepository.save(user);
+
+                log.info("KYC successful for user: {}, name: {} (no diacritics: {}), faceScore: {}%",
+                        userId, rawName, nameWithoutDiacritics, faceScore);
+
+                kycResponse.setFullName(nameWithoutDiacritics);
+                kycResponse.setMessage("KYC verification successful. Face match score: " + faceScore + "%");
+            } else {
+                kycResponse.setSuccess(false);
+                kycResponse.setMessage(String.format(
+                        "KYC verification failed. Face match score: %.2f%% (minimum required: %.0f%%)",
+                        faceScore != null ? faceScore : 0.0, FACE_MATCH_THRESHOLD));
+                log.warn("KYC failed for user: {}, faceScore: {}% (threshold: {}%)",
+                        userId, faceScore, FACE_MATCH_THRESHOLD);
+            }
+        }
+
+        return kycResponse;
+    }
+
+    // =========================================================
+    // Helpers
+    // =========================================================
+
     private boolean isValidPhoneNumber(String phone) {
         return phone != null && phone.matches("^0[0-9]{9}$");
+    }
+
+    private String removeDiacritics(String input) {
+        if (input == null || input.isEmpty()) {
+            return input;
+        }
+
+        String result = input.replace('đ', 'd').replace('Đ', 'D');
+
+        String normalized = Normalizer.normalize(result, Normalizer.Form.NFD);
+
+        Pattern pattern = Pattern.compile("\\p{M}");
+        return pattern.matcher(normalized).replaceAll("");
     }
 
     private UserProfileResponse mapToUserResponse(User user) {
@@ -99,6 +188,14 @@ public class UserServiceImpl implements UserService {
                 .phoneNumber(user.getPhoneNumber())
                 .avatarUrl(user.getAvatarUrl())
                 .role(user.getRole().name())
+                .bankName(user.getBankName())
+                .bankBin(user.getBankBin())
+                .bankAccountNumber(user.getBankAccountNumber())
+                .bankAccountName(user.getBankAccountName())
+                .balance(user.getBalance())
+                .kycVerified(user.getKycVerified())
+                .kycFullName(user.getKycFullName())
+                .kycIdNumber(user.getKycIdNumber())
                 .build();
     }
 }
