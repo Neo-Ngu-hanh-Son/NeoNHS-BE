@@ -16,7 +16,7 @@ public interface AttractionService {
 
     AttractionResponse updateAttraction(UUID id, AttractionRequest request);
 
-    void deleteAttraction(UUID id);
+    void deleteAttraction(UUID id, UUID userId);
 
     Page<AttractionResponse> getAllAttractionsWithPagination(int page, int size, String sortBy, String sortDir, String search);
 }

@@ -6,11 +6,13 @@ import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.point.PointPanoramaResponse;
 import fpt.project.NeoNHS.dto.response.point.PointResponse;
 import fpt.project.NeoNHS.service.PanoramaService;
+import fpt.project.NeoNHS.security.UserPrincipal;
 import fpt.project.NeoNHS.service.PointService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -64,8 +66,11 @@ public class PointController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<Void> deletePoint(@PathVariable UUID id) {
-        pointService.deletePoint(id);
+    public ApiResponse<Void> deletePoint(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        pointService.deletePoint(id, currentUser.getId());
         return ApiResponse.success("Point deleted successfully", null);
     }
 
