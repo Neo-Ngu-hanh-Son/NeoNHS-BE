@@ -43,3 +43,11 @@ app:
 google-auth:
   client-id: ${GOOGLE_AUTH_CLIENT_ID}
   client-secret: ${GOOGLE_AUTH_CLIENT_SECRET}
+
+# VNPT eKYC Configuration
+vnpt:
+  ekyc:
+    access-token: ${VNPT_EKYC_ACCESS_TOKEN}
+    token-id: ${VNPT_EKYC_TOKEN_ID}
+    token-key: ${VNPT_EKYC_TOKEN_KEY}
+

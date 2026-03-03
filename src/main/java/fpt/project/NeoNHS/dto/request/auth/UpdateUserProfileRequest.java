@@ -20,4 +20,8 @@ public class UpdateUserProfileRequest {
     private String email;
 
     private String avatarUrl;
+    private String bankName;
+    private String bankBin;
+    private String bankAccountNumber;
+    private String bankAccountName;
 }

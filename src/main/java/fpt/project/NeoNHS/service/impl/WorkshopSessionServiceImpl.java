@@ -5,13 +5,18 @@ import fpt.project.NeoNHS.dto.request.workshop.UpdateWorkshopSessionRequest;
 import fpt.project.NeoNHS.dto.response.workshop.WTagResponse;
 import fpt.project.NeoNHS.dto.response.workshop.WorkshopImageResponse;
 import fpt.project.NeoNHS.dto.response.workshop.WorkshopSessionResponse;
+import fpt.project.NeoNHS.entity.Order;
+import fpt.project.NeoNHS.entity.User;
 import fpt.project.NeoNHS.entity.WorkshopSession;
 import fpt.project.NeoNHS.entity.WorkshopTag;
 import fpt.project.NeoNHS.entity.WorkshopTemplate;
 import fpt.project.NeoNHS.enums.SessionStatus;
+import fpt.project.NeoNHS.enums.TransactionStatus;
 import fpt.project.NeoNHS.enums.WorkshopStatus;
 import fpt.project.NeoNHS.exception.BadRequestException;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
+import fpt.project.NeoNHS.repository.OrderRepository;
+import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.repository.VendorProfileRepository;
 import fpt.project.NeoNHS.repository.WorkshopSessionRepository;
 import fpt.project.NeoNHS.repository.WorkshopTemplateRepository;
@@ -19,6 +24,7 @@ import fpt.project.NeoNHS.service.WorkshopSessionService;
 import fpt.project.NeoNHS.specification.WorkshopSessionSpecification;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -31,6 +37,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class WorkshopSessionServiceImpl implements WorkshopSessionService {
@@ -38,6 +45,8 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
     private final WorkshopSessionRepository workshopSessionRepository;
     private final WorkshopTemplateRepository workshopTemplateRepository;
     private final VendorProfileRepository vendorProfileRepository;
+    private final OrderRepository orderRepository;
+    private final UserRepository userRepository;
 
     // ==================== CREATE ====================
 
@@ -105,10 +114,9 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
     public Page<WorkshopSessionResponse> getAllUpcomingSessions(Pageable pageable) {
         // Get all SCHEDULED sessions that start in the future
         Page<WorkshopSession> sessions = workshopSessionRepository.findByStatusAndStartTimeAfter(
-                SessionStatus.SCHEDULED, 
-                LocalDateTime.now(), 
-                pageable
-        );
+                SessionStatus.SCHEDULED,
+                LocalDateTime.now(),
+                pageable);
         return sessions.map(this::mapToResponse);
     }
 
@@ -118,7 +126,8 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
         vendorProfileRepository.findByUserEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("VendorProfile", "email", email));
 
-        Page<WorkshopSession> sessions = workshopSessionRepository.findByWorkshopTemplateVendorUserEmail(email, pageable);
+        Page<WorkshopSession> sessions = workshopSessionRepository.findByWorkshopTemplateVendorUserEmail(email,
+                pageable);
         return sessions.map(this::mapToResponse);
     }
 
@@ -145,8 +154,7 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
             BigDecimal minPrice,
             BigDecimal maxPrice,
             Boolean availableOnly,
-            Pageable pageable
-    ) {
+            Pageable pageable) {
         Specification<WorkshopSession> spec = Specification.where((root, query, cb) -> cb.conjunction());
 
         if (keyword != null && !keyword.isEmpty()) {
@@ -210,7 +218,8 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
         }
 
         // 5. Validate time constraints
-        if (session.getEndTime().isBefore(session.getStartTime()) || session.getEndTime().equals(session.getStartTime())) {
+        if (session.getEndTime().isBefore(session.getStartTime())
+                || session.getEndTime().equals(session.getStartTime())) {
             throw new BadRequestException("End time must be after start time");
         }
 
@@ -222,12 +231,12 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
         // 7. Update maxParticipants with validation
         if (request.getMaxParticipants() != null) {
             if (request.getMaxParticipants() < session.getCurrentEnrolled()) {
-                throw new BadRequestException("Cannot reduce max participants (" + request.getMaxParticipants() + 
+                throw new BadRequestException("Cannot reduce max participants (" + request.getMaxParticipants() +
                         ") below current enrollments (" + session.getCurrentEnrolled() + ")");
             }
             if (request.getMaxParticipants() < session.getWorkshopTemplate().getMinParticipants()) {
-                throw new BadRequestException("Max participants (" + request.getMaxParticipants() + 
-                        ") cannot be less than template's minimum participants (" + 
+                throw new BadRequestException("Max participants (" + request.getMaxParticipants() +
+                        ") cannot be less than template's minimum participants (" +
                         session.getWorkshopTemplate().getMinParticipants() + ")");
             }
             session.setMaxParticipants(request.getMaxParticipants());
@@ -284,9 +293,23 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
 
         // 4. Update status to CANCELLED
         session.setStatus(SessionStatus.CANCELLED);
-
-        // 5. Save and return
         WorkshopSession cancelledSession = workshopSessionRepository.save(session);
+
+        // 5. Hoàn tiền vào balance cho tất cả user đã thanh toán thành công
+        List<Order> paidOrders = orderRepository
+                .findOrdersByWorkshopSessionIdAndTxStatus(id, TransactionStatus.SUCCESS);
+
+        for (Order order : paidOrders) {
+            User buyer = order.getUser();
+            double refund = order.getFinalAmount().doubleValue();
+            double current = buyer.getBalance() != null ? buyer.getBalance() : 0.0;
+            buyer.setBalance(current + refund);
+            userRepository.save(buyer);
+            log.info("[Cancel Refund] Refunded {} VND to {} (orderId={})",
+                    refund, buyer.getEmail(), order.getId());
+        }
+
+        // 6. Return
         return mapToResponse(cancelledSession);
     }
 
