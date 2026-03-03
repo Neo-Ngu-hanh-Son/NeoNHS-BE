@@ -20,4 +20,6 @@ public class VendorProfileResponse extends UserProfileResponse {
     private String bankAccountNumber;
     private String bankAccountName;
     private Boolean isVerifiedVendor;
+    private Boolean isActive;
+    private Boolean isBanned;
 }

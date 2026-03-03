@@ -27,6 +27,8 @@ public interface WorkshopTemplateService {
 
     Page<WorkshopTemplateResponse> getMyWorkshopTemplates(String email, Pageable pageable);
 
+    Page<WorkshopTemplateResponse> getWorkshopTemplatesByVendorId(UUID vendorId, Pageable pageable);
+
     // Search & Filter
     List<WorkshopTemplateResponse> searchWorkshopTemplates(
             String keyword,

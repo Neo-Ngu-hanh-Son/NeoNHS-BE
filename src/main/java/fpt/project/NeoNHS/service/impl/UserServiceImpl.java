@@ -1,10 +1,14 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.request.auth.UpdateUserProfileRequest;
 import fpt.project.NeoNHS.dto.request.kyc.KycRequest;
 import fpt.project.NeoNHS.dto.response.auth.UserProfileResponse;
 import fpt.project.NeoNHS.dto.response.kyc.KycResponse;
+import fpt.project.NeoNHS.dto.request.user.UserFilterRequest;
+import fpt.project.NeoNHS.dto.response.user.UserResponse;
 import fpt.project.NeoNHS.entity.User;
+import fpt.project.NeoNHS.enums.UserRole;
 import fpt.project.NeoNHS.exception.BadRequestException;
 import fpt.project.NeoNHS.exception.DuplicatePhonenumberException;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
@@ -13,6 +17,8 @@ import fpt.project.NeoNHS.service.UserService;
 import fpt.project.NeoNHS.service.VnptEkycService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import fpt.project.NeoNHS.specification.UserSpecification;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -178,6 +184,71 @@ public class UserServiceImpl implements UserService {
 
         Pattern pattern = Pattern.compile("\\p{M}");
         return pattern.matcher(normalized).replaceAll("");
+    }
+
+    @Override
+    @Transactional
+    public void toggleBanUser(UUID id, String reason) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
+
+        boolean newBanStatus = !user.getIsBanned();
+        user.setIsBanned(newBanStatus);
+
+        if (newBanStatus) {
+            if (reason == null || reason.isBlank()) {
+                throw new BadRequestException("Reason is required when banning a user");
+            }
+            user.setBanReason(reason);
+            user.setBannedAt(java.time.LocalDateTime.now());
+        } else {
+            user.setBanReason(null);
+            user.setBannedAt(null);
+        }
+
+        userRepository.save(user);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<UserResponse> getAllUsersWithPagination(int page, int size, String sortBy,
+            String sortDir, String search,
+            UserRole role, Boolean isBanned,
+            Boolean deleted, Boolean includeDeleted) {
+
+        Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        int actualSize = Math.min(size, PaginationConstants.MAX_PAGE_SIZE);
+        Pageable pageable = PageRequest.of(page, actualSize, sort);
+
+        UserFilterRequest filters = UserFilterRequest.builder()
+                .search(search)
+                .role(role)
+                .isBanned(isBanned)
+                .deleted(deleted)
+                .includeDeleted(includeDeleted)
+                .build();
+
+        return userRepository.findAll(UserSpecification.withFilters(filters), pageable)
+                .map(this::mapToAdminUserResponse);
+    }
+
+    private UserResponse mapToAdminUserResponse(User user) {
+        return UserResponse.builder()
+                .id(user.getId())
+                .fullname(user.getFullname())
+                .email(user.getEmail())
+                .phoneNumber(user.getPhoneNumber())
+                .avatarUrl(user.getAvatarUrl())
+                .role(user.getRole())
+                .isActive(user.getIsActive())
+                .isBanned(user.getIsBanned())
+                .banReason(user.getBanReason())
+                .bannedAt(user.getBannedAt())
+                .createdAt(user.getCreatedAt())
+                .build();
     }
 
     private UserProfileResponse mapToUserResponse(User user) {

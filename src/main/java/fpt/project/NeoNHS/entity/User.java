@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,7 +36,7 @@ public class User extends BaseEntity {
     private String avatarUrl;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private UserRole role;
 
     @Builder.Default
@@ -69,6 +70,12 @@ public class User extends BaseEntity {
     private String kycDocumentId;
     private String kycFullName;
     private String kycIdNumber;
+
+    @Column(length = 500)
+    private String banReason;
+
+    @Column
+    private LocalDateTime bannedAt;
 
     // Relationships
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

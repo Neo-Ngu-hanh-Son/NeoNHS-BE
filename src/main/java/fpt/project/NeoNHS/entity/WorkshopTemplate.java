@@ -43,7 +43,7 @@ public class WorkshopTemplate extends BaseEntity {
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private WorkshopStatus status = WorkshopStatus.DRAFT;
 
     @Column(columnDefinition = "TEXT")
@@ -65,15 +65,15 @@ public class WorkshopTemplate extends BaseEntity {
     @JoinColumn(name = "vendor_id", nullable = false)
     private VendorProfile vendor;
 
-    @OneToMany(mappedBy = "workshopTemplate", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "workshopTemplate", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<WorkshopSession> workshopSessions;
 
-    @OneToMany(mappedBy = "workshopTemplate", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "workshopTemplate", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<WorkshopImage> workshopImages;
 
-    @OneToMany(mappedBy = "workshopTemplate", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "workshopTemplate", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<WorkshopTag> workshopTags;
 
-    @OneToMany(mappedBy = "workshopTemplate", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "workshopTemplate", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Review> reviews;
 }

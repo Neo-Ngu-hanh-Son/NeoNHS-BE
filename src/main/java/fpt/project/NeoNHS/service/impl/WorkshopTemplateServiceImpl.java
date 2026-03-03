@@ -168,6 +168,16 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
         return templates.map(this::mapToResponse);
     }
 
+    @Override
+    public Page<WorkshopTemplateResponse> getWorkshopTemplatesByVendorId(UUID vendorId, Pageable pageable) {
+        // Validate vendor exists
+        VendorProfile vendor = vendorProfileRepository.findById(vendorId)
+                .orElseThrow(() -> new ResourceNotFoundException("VendorProfile", "id", vendorId));
+
+        Page<WorkshopTemplate> templates = workshopTemplateRepository.findByVendorId(vendorId, pageable);
+        return templates.map(this::mapToResponse);
+    }
+
     // ==================== SEARCH & FILTER ====================
 
     @Override
@@ -275,13 +285,14 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
                 throw new BadRequestException("Thumbnail index is out of bounds");
             }
 
-            // Remove old images
+            // Clear existing images (orphanRemoval will delete them)
             if (template.getWorkshopImages() != null) {
-                workshopImageRepository.deleteAll(template.getWorkshopImages());
+                template.getWorkshopImages().clear();
+            } else {
+                template.setWorkshopImages(new ArrayList<>());
             }
 
-            // Create new images
-            List<WorkshopImage> newImages = new ArrayList<>();
+            // Add new images to the existing collection
             int thumbnailIndex = request.getThumbnailIndex() != null ? request.getThumbnailIndex() : 0;
             for (int i = 0; i < request.getImageUrls().size(); i++) {
                 WorkshopImage image = WorkshopImage.builder()
@@ -289,9 +300,8 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
                         .isThumbnail(i == thumbnailIndex)
                         .workshopTemplate(template)
                         .build();
-                newImages.add(image);
+                template.getWorkshopImages().add(image);
             }
-            template.setWorkshopImages(newImages);
         }
 
         // 7. Update tags if provided
@@ -302,13 +312,14 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
                 throw new BadRequestException("One or more tag IDs are invalid");
             }
 
-            // Remove old tags
+            // Clear existing tags (orphanRemoval will delete them)
             if (template.getWorkshopTags() != null) {
-                workshopTagRepository.deleteAll(template.getWorkshopTags());
+                template.getWorkshopTags().clear();
+            } else {
+                template.setWorkshopTags(new ArrayList<>());
             }
 
-            // Create new tags
-            List<WorkshopTag> newTags = new ArrayList<>();
+            // Add new tags to the existing collection
             for (WTag tag : tags) {
                 WorkshopTagId tagId = new WorkshopTagId(template.getId(), tag.getId());
                 WorkshopTag workshopTag = WorkshopTag.builder()
@@ -316,9 +327,8 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
                         .workshopTemplate(template)
                         .wTag(tag)
                         .build();
-                newTags.add(workshopTag);
+                template.getWorkshopTags().add(workshopTag);
             }
-            template.setWorkshopTags(newTags);
         }
 
         // 8. Save and return

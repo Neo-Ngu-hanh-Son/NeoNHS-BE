@@ -4,11 +4,13 @@ import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.request.attraction.AttractionRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.attraction.AttractionResponse;
+import fpt.project.NeoNHS.security.UserPrincipal;
 import fpt.project.NeoNHS.service.AttractionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -60,8 +62,11 @@ public class AttractionController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<Void> deleteAttraction(@PathVariable UUID id) {
-        attractionService.deleteAttraction(id);
+    public ApiResponse<Void> deleteAttraction(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        attractionService.deleteAttraction(id, currentUser.getId());
         return ApiResponse.success("Attraction deleted successfully!", null);
     }
 }

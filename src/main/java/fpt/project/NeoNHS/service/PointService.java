@@ -12,11 +12,14 @@ public interface PointService {
 
     PointResponse updatePoint(UUID id, PointRequest request);
 
-    PointResponse deletePoint(UUID id);
+    void deletePoint(UUID id, UUID userId);
 
     PointResponse getPointById(UUID id);
 
     List<PointResponse> getPointsByAttraction(UUID attractionId);
 
-    Page<PointResponse> getAllPointsWithPagination(UUID attractionId, int page, int size, String sortBy, String sortDir, String search);
+    Page<PointResponse> getAllPointsWithPagination(UUID attractionId, int page, int size, String sortBy, String sortDir,
+            String search);
+
+    Page<PointResponse> getAllPoints(int page, int size, String sortBy, String sortDir, String search);
 }

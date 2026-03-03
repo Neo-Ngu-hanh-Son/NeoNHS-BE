@@ -31,7 +31,10 @@ public class Blog extends BaseEntity {
     private String summary;
 
     @Column(columnDefinition = "TEXT")
-    private String content;
+    private String contentJSON; // Use for web render
+
+    @Column(columnDefinition = "TEXT")
+    private String contentHTML; // Use for mobile render
 
     private String thumbnailUrl;
 
@@ -43,11 +46,12 @@ public class Blog extends BaseEntity {
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private BlogStatus status = BlogStatus.DRAFT;
 
     private LocalDateTime publishedAt;
 
+    @Column(columnDefinition = "TEXT")
     private String tags;
 
     @Builder.Default

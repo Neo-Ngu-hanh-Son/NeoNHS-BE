@@ -3,8 +3,14 @@ package fpt.project.NeoNHS.service;
 import fpt.project.NeoNHS.dto.request.auth.UpdateUserProfileRequest;
 import fpt.project.NeoNHS.dto.request.kyc.KycRequest;
 import fpt.project.NeoNHS.dto.response.auth.UserProfileResponse;
+<<<<<<< HEAD
 import fpt.project.NeoNHS.dto.response.kyc.KycResponse;
+=======
+import fpt.project.NeoNHS.dto.response.user.UserResponse;
+>>>>>>> 81703ccfd057048d898af6903da9ad74d23d165e
 import fpt.project.NeoNHS.entity.User;
+import fpt.project.NeoNHS.enums.UserRole;
+import org.springframework.data.domain.Page;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -24,4 +30,10 @@ public interface UserService {
     UserProfileResponse updateProfile(String email, UpdateUserProfileRequest request, UUID id);
 
     KycResponse performEkyc(UUID userId, KycRequest request);
+    Page<UserResponse> getAllUsersWithPagination(
+            int page, int size, String sortBy, String sortDir,
+            String search, UserRole role, Boolean isBanned,
+            Boolean deleted, Boolean includeDeleted);
+
+    void toggleBanUser(UUID id, String reason);
 }

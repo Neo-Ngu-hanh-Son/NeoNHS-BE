@@ -2,7 +2,6 @@ package fpt.project.NeoNHS.controller;
 
 import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.request.workshop.CreateWorkshopTemplateRequest;
-import fpt.project.NeoNHS.dto.request.workshop.RejectWorkshopTemplateRequest;
 import fpt.project.NeoNHS.dto.request.workshop.UpdateWorkshopTemplateRequest;
 
 import fpt.project.NeoNHS.dto.response.ApiResponse;
@@ -35,7 +34,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/workshops")
 @RequiredArgsConstructor
-@Tag(name = "Workshop Template Management", description = "APIs for managing workshop templates - the blueprints that require admin approval")
+@Tag(name = "Vendor - Workshop Template Management", description = "APIs for managing workshop templates - the blueprints that require admin approval")
 public class WorkshopTemplateController {
 
         private final WorkshopTemplateService workshopTemplateService;
@@ -149,72 +148,6 @@ public class WorkshopTemplateController {
                 WorkshopTemplateResponse response = workshopTemplateService.getWorkshopTemplateById(id);
                 return ResponseEntity
                                 .ok(ApiResponse.success(HttpStatus.OK, "Workshop template retrieved successfully",
-                                                response));
-        }
-
-        @Operation(
-                summary = "Get all workshop templates with pagination (Admin only)",
-                description = """
-                        Retrieves all workshop templates with pagination and sorting. Admin access only.
-                        
-                        **Access:**
-                        - Admin role required
-                        - Returns templates in all statuses (DRAFT, PENDING, ACTIVE, REJECTED)
-                        
-                        **Pagination Parameters:**
-                        - page: Page number (default: 1)
-                        - size: Items per page (default: 10)
-                        - sortBy: Field to sort by (default: "createdAt")
-                        - sortDir: Sort direction - "asc" or "desc" (default: "desc")
-                        
-                        **Common Sort Fields:**
-                        - createdAt: Creation date
-                        - updatedAt: Last update date
-                        - name: Template name
-                        - defaultPrice: Price
-                        - status: Template status
-                        
-                        **Use Cases:**
-                        - Admin dashboard to review all templates
-                        - Monitoring pending approvals
-                        - Template management
-                        """
-        )
-        @ApiResponses(value = {
-                @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                        responseCode = "200",
-                        description = "Templates retrieved successfully",
-                        content = @Content(mediaType = "application/json")
-                ),
-                @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                        responseCode = "401",
-                        description = "Unauthorized - Valid JWT token required"
-                ),
-                @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                        responseCode = "403",
-                        description = "Forbidden - Admin role required"
-                )
-        })
-        @GetMapping("/templates")
-        @PreAuthorize("hasRole('ADMIN')")
-        public ResponseEntity<ApiResponse<Page<WorkshopTemplateResponse>>> getAllWorkshopTemplates(
-                        @Parameter(description = "Page number (1-based)", example = "1")
-                        @RequestParam(defaultValue = PaginationConstants.DEFAULT_PAGE) int page,
-                        @Parameter(description = "Number of items per page", example = "10")
-                        @RequestParam(defaultValue = PaginationConstants.DEFAULT_SIZE) int size,
-                        @Parameter(description = "Field to sort by", example = "createdAt")
-                        @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_BY) String sortBy,
-                        @Parameter(description = "Sort direction: asc or desc", example = "desc")
-                        @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_DIR) String sortDir) {
-
-                Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
-                                ? Sort.by(sortBy).ascending()
-                                : Sort.by(sortBy).descending();
-
-                Pageable pageable = PageRequest.of(page, size, sort);
-                Page<WorkshopTemplateResponse> response = workshopTemplateService.getAllWorkshopTemplates(pageable);
-                return ResponseEntity
-                                .ok(ApiResponse.success(HttpStatus.OK, "Workshop templates retrieved successfully",
                                                 response));
         }
 
@@ -547,140 +480,6 @@ public class WorkshopTemplateController {
                                                 response));
         }
 
-        // ==================== APPROVE/REJECT WORKSHOP TEMPLATE (ADMIN ONLY) ====================
-
-        @Operation(
-                summary = "Approve a workshop template (Admin only)",
-                description = """
-                        Approves a PENDING workshop template, making it ACTIVE and available for scheduling.
-                        
-                        **Requirements:**
-                        - Admin role required
-                        - Template must be in PENDING status
-                        
-                        **Workflow:**
-                        1. Admin reviews the submitted template
-                        2. Admin clicks Approve
-                        3. Status changes from PENDING → ACTIVE
-                        4. Approval timestamp and admin ID are recorded
-                        5. Template becomes available for vendors to create sessions
-                        
-                        **After Approval:**
-                        - Vendor can no longer edit the template
-                        - Vendor can create workshop sessions based on this template
-                        - Template appears in public listings
-                        """
-        )
-        @ApiResponses(value = {
-                @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                        responseCode = "200",
-                        description = "Template approved successfully",
-                        content = @Content(mediaType = "application/json",
-                                         schema = @Schema(implementation = WorkshopTemplateResponse.class))
-                ),
-                @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                        responseCode = "400",
-                        description = "Bad Request - Template is not in PENDING status"
-                ),
-                @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                        responseCode = "401",
-                        description = "Unauthorized - Valid JWT token required"
-                ),
-                @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                        responseCode = "403",
-                        description = "Forbidden - Admin role required"
-                ),
-                @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                        responseCode = "404",
-                        description = "Not Found - Template does not exist"
-                )
-        })
-        @PostMapping("/templates/{id}/approve")
-        @PreAuthorize("hasRole('ADMIN')")
-        public ResponseEntity<ApiResponse<WorkshopTemplateResponse>> approveWorkshopTemplate(
-                        @Parameter(description = "Workshop Template ID", required = true)
-                        @PathVariable UUID id,
-                        Principal principal) {
-                WorkshopTemplateResponse response = workshopTemplateService.approveWorkshopTemplate(
-                                principal.getName(),
-                                id);
-                return ResponseEntity
-                                .ok(ApiResponse.success(HttpStatus.OK,
-                                                "Workshop template approved successfully",
-                                                response));
-        }
-
-        @Operation(
-                summary = "Reject a workshop template (Admin only)",
-                description = """
-                        Rejects a PENDING workshop template with a reason, allowing the vendor to fix and resubmit.
-                        
-                        **Requirements:**
-                        - Admin role required
-                        - Template must be in PENDING status
-                        - Reject reason is mandatory
-                        
-                        **Workflow:**
-                        1. Admin reviews the submitted template
-                        2. Admin finds issues (incomplete info, policy violations, etc.)
-                        3. Admin clicks Reject and provides detailed reason
-                        4. Status changes from PENDING → REJECTED
-                        5. Rejection reason is stored and shown to vendor
-                        
-                        **After Rejection:**
-                        - Vendor can view the rejection reason
-                        - Vendor can edit the template to fix issues
-                        - Vendor can resubmit for approval
-                        - Previous approval data is cleared
-                        
-                        **Common Rejection Reasons:**
-                        - Inappropriate content
-                        - Missing required information
-                        - Low quality images
-                        - Unclear description
-                        - Pricing concerns
-                        """
-        )
-        @ApiResponses(value = {
-                @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                        responseCode = "200",
-                        description = "Template rejected successfully",
-                        content = @Content(mediaType = "application/json",
-                                         schema = @Schema(implementation = WorkshopTemplateResponse.class))
-                ),
-                @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                        responseCode = "400",
-                        description = "Bad Request - Template is not in PENDING status or reject reason is missing"
-                ),
-                @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                        responseCode = "401",
-                        description = "Unauthorized - Valid JWT token required"
-                ),
-                @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                        responseCode = "403",
-                        description = "Forbidden - Admin role required"
-                ),
-                @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                        responseCode = "404",
-                        description = "Not Found - Template does not exist"
-                )
-        })
-        @PostMapping("/templates/{id}/reject")
-        @PreAuthorize("hasRole('ADMIN')")
-        public ResponseEntity<ApiResponse<WorkshopTemplateResponse>> rejectWorkshopTemplate(
-                        @Parameter(description = "Workshop Template ID", required = true)
-                        @PathVariable UUID id,
-                        @Valid @RequestBody RejectWorkshopTemplateRequest request,
-                        Principal principal) {
-                WorkshopTemplateResponse response = workshopTemplateService.rejectWorkshopTemplate(
-                                principal.getName(),
-                                id,
-                                request.getRejectReason());
-                return ResponseEntity
-                                .ok(ApiResponse.success(HttpStatus.OK,
-                                                "Workshop template rejected",
-                                                response));
-        }
 
         // ==================== DELETE WORKSHOP TEMPLATE ====================
 
