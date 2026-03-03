@@ -50,6 +50,26 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     private Boolean isBanned = false;
 
+    private Double balance;
+
+    // for payout
+    private String bankName;
+    private String bankBin;
+    private String bankAccountNumber;
+    private String bankAccountName;
+
+    // @Builder.Default
+    // @Column(nullable = false)
+    // private Boolean isBankVerified = false;
+
+    // ---- kyc ----
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean kycVerified = false;
+    private String kycDocumentId;
+    private String kycFullName;
+    private String kycIdNumber;
+
     // Relationships
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private VendorProfile vendorProfile;

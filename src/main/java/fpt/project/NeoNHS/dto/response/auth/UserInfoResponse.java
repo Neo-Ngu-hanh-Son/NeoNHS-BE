@@ -17,9 +17,11 @@ public class UserInfoResponse {
     private String phoneNumber;
     private String avatarUrl;
     private UserRole role;
+
     private Boolean isActive = true;
-    private Boolean isVerified = false;
-    private Boolean isBanned = false;
+    private Boolean isVerified;
+    private Boolean isBanned;
+    private Boolean kycVerified;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -34,6 +36,7 @@ public class UserInfoResponse {
                 .isActive(user.getIsActive())
                 .isVerified(user.getIsVerified())
                 .isBanned(user.getIsBanned())
+                .kycVerified(user.getKycVerified())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();

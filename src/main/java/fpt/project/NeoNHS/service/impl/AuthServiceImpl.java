@@ -106,7 +106,6 @@ public class AuthServiceImpl implements AuthService {
                 .build();
     }
 
-
     private boolean isValidPhoneNumber(String phone) {
         return phone != null && phone.matches("^0[0-9]{9}$");
     }
@@ -167,6 +166,7 @@ public class AuthServiceImpl implements AuthService {
 
     /**
      * Generate AuthResponse containing JWT token, refresh token and user info
+     * 
      * @param user
      * @param authentication
      * @return
@@ -274,6 +274,7 @@ public class AuthServiceImpl implements AuthService {
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .isBanned(user.getIsBanned())
+                .kycVerified(user.getKycVerified())
                 .phoneNumber(user.getPhoneNumber())
                 .build();
     }
@@ -310,5 +311,3 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 }
-
-
