@@ -26,6 +26,7 @@ public class WorkshopTemplateResponse {
     private Integer minParticipants;
     private Integer maxParticipants;
     private WorkshopStatus status;
+    private Boolean isPublished;
     private BigDecimal averageRating;
     private Integer totalRatings;
     private UUID vendorId;

@@ -71,6 +71,9 @@ public interface WorkshopTemplateService {
 
     WorkshopTemplateResponse rejectWorkshopTemplate(String adminEmail, UUID id, String adminNote);
 
+    // Toggle Publish
+    WorkshopTemplateResponse togglePublishWorkshopTemplate(String email, UUID id);
+
     // Delete
     void deleteWorkshopTemplate(String email, UUID id);
 }

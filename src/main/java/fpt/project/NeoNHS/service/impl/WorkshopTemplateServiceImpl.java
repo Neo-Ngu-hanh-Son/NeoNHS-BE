@@ -231,7 +231,7 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
     public WorkshopTemplateResponse getActiveWorkshopTemplateById(UUID id) {
         WorkshopTemplate template = workshopTemplateRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("WorkshopTemplate", "id", id));
-        if (template.getStatus() != WorkshopStatus.ACTIVE) {
+        if (template.getStatus() != WorkshopStatus.ACTIVE || !Boolean.TRUE.equals(template.getIsPublished())) {
             throw new ResourceNotFoundException("WorkshopTemplate", "id", id);
         }
         return mapToResponse(template);
@@ -239,7 +239,8 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
 
     @Override
     public Page<WorkshopTemplateResponse> getActiveWorkshopTemplates(Pageable pageable) {
-        Specification<WorkshopTemplate> spec = WorkshopTemplateSpecification.hasStatus(WorkshopStatus.ACTIVE);
+        Specification<WorkshopTemplate> spec = WorkshopTemplateSpecification.hasStatus(WorkshopStatus.ACTIVE)
+                .and(WorkshopTemplateSpecification.isPublished());
         return workshopTemplateRepository.findAll(spec, pageable)
                 .map(this::mapToResponse);
     }
@@ -255,7 +256,8 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
             BigDecimal minRating,
             Pageable pageable
     ) {
-        Specification<WorkshopTemplate> spec = WorkshopTemplateSpecification.hasStatus(WorkshopStatus.ACTIVE);
+        Specification<WorkshopTemplate> spec = WorkshopTemplateSpecification.hasStatus(WorkshopStatus.ACTIVE)
+                .and(WorkshopTemplateSpecification.isPublished());
 
         if (keyword != null && !keyword.isEmpty()) {
             spec = spec.and(WorkshopTemplateSpecification.searchByKeyword(keyword));
@@ -411,6 +413,33 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
         workshopTemplateRepository.delete(template);
     }
 
+    // ==================== TOGGLE PUBLISH ====================
+
+    @Override
+    @Transactional
+    public WorkshopTemplateResponse togglePublishWorkshopTemplate(String email, UUID id) {
+        // 1. Find the workshop template
+        WorkshopTemplate template = workshopTemplateRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("WorkshopTemplate", "id", id));
+
+        // 2. Verify ownership
+        if (!template.getVendor().getUser().getEmail().equals(email)) {
+            throw new BadRequestException("You do not have permission to toggle publish status of this workshop template");
+        }
+
+        // 3. Only allow toggle if status is ACTIVE
+        if (template.getStatus() != WorkshopStatus.ACTIVE) {
+            throw new BadRequestException("Only ACTIVE templates can be published/unpublished. Current status: " + template.getStatus());
+        }
+
+        // 4. Toggle isPublished
+        template.setIsPublished(!template.getIsPublished());
+
+        // 5. Save and return
+        WorkshopTemplate savedTemplate = workshopTemplateRepository.save(template);
+        return mapToResponse(savedTemplate);
+    }
+
     // ==================== REGISTER/SUBMIT FOR APPROVAL ====================
 
     @Override
@@ -435,6 +464,7 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
 
         // 5. Update status to PENDING and clear admin note if exists
         template.setStatus(WorkshopStatus.PENDING);
+        template.setIsPublished(false);
         template.setAdminNote(null);
         template.setReviewedBy(null);
         template.setReviewedAt(null);
@@ -511,6 +541,7 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
 
         // 4. Update status to ACTIVE and set approval details
         template.setStatus(WorkshopStatus.ACTIVE);
+        template.setIsPublished(false);
         template.setReviewedBy(admin.getId());
         template.setReviewedAt(LocalDateTime.now());
 
@@ -545,6 +576,7 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
 
         // 5. Update status to REJECTED and set review details
         template.setStatus(WorkshopStatus.REJECTED);
+        template.setIsPublished(false);
         template.setAdminNote(adminNote);
         template.setReviewedBy(admin.getId());
         template.setReviewedAt(LocalDateTime.now());
@@ -600,6 +632,7 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
                 .minParticipants(template.getMinParticipants())
                 .maxParticipants(template.getMaxParticipants())
                 .status(template.getStatus())
+                .isPublished(template.getIsPublished())
                 .averageRating(template.getAverageRating())
                 .totalRatings(template.getTotalRatings())
                 .vendorId(template.getVendor().getId())

@@ -54,6 +54,10 @@ public class WorkshopTemplate extends BaseEntity {
     private LocalDateTime reviewedAt;
 
     @Builder.Default
+    @Column(nullable = false)
+    private Boolean isPublished = false;
+
+    @Builder.Default
     @Column(precision = 3, scale = 2)
     private BigDecimal averageRating = BigDecimal.ZERO;
 

@@ -136,7 +136,7 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
     public Page<WorkshopSessionResponse> getUpcomingSessionsByTemplateId(UUID templateId, Pageable pageable) {
         WorkshopTemplate template = workshopTemplateRepository.findById(templateId)
                 .orElseThrow(() -> new ResourceNotFoundException("WorkshopTemplate", "id", templateId));
-        if (template.getStatus() != WorkshopStatus.ACTIVE) {
+        if (template.getStatus() != WorkshopStatus.ACTIVE || !Boolean.TRUE.equals(template.getIsPublished())) {
             throw new ResourceNotFoundException("WorkshopTemplate", "id", templateId);
         }
         Specification<WorkshopSession> spec = Specification
