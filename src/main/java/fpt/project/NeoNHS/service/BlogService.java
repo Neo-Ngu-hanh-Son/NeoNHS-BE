@@ -9,11 +9,16 @@ import org.springframework.data.domain.Pageable;
 import fpt.project.NeoNHS.dto.request.blog.BlogRequest;
 import fpt.project.NeoNHS.dto.response.blog.BlogResponse;
 import fpt.project.NeoNHS.enums.BlogStatus;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface BlogService {
 
     Page<BlogResponse> getBlogs(String search, BlogStatus status, List<String> tags, Pageable pageable,
             boolean featured, String categorySlug);
+
+    @Transactional(readOnly = true)
+    Page<BlogResponse> getActiveBlogs(String search, BlogStatus status, List<String> tags, Pageable pageable,
+                                      boolean featured, String categorySlug);
 
     BlogResponse createBlog(BlogRequest request);
 

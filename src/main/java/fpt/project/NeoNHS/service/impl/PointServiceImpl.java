@@ -141,7 +141,7 @@ public class PointServiceImpl implements PointService {
                 .map(this::mapToResponse);
     }
 
-    // Get all points across all attractions with pagination and search (if needed)
+    // Get all points and checkin points across all attractions with pagination and search (if needed)
     @Override
     public Page<PointResponse> getAllPoints(int page, int size, String sortBy, String sortDir, String search) {
         Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)

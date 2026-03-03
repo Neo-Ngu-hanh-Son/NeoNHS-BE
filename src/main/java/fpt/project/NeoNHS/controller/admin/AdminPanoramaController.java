@@ -26,7 +26,7 @@ public class AdminPanoramaController {
 
   private final PanoramaService panoramaService;
 
-  // NOTE: Panaroma public endpoints is at PointController
+  // NOTE: Panorama public endpoints is at PointController
 
   // ═══════════════════════════════════════════════════════
   // Point Panorama endpoints

@@ -45,6 +45,15 @@ public class BlogServiceImpl implements BlogService {
         return blogRepository.findAll(spec, pageable).map(BlogResponse::fromEntity);
     }
 
+    @Transactional(readOnly = true)
+    @Override
+    public Page<BlogResponse> getActiveBlogs(String search, BlogStatus status, List<String> tags, Pageable pageable,
+                                             boolean featured, String categorySlug) {
+        status = BlogStatus.PUBLISHED; // Force only show published blogs
+        var spec = BlogSpecification.withFilters(search, status, tags, featured, categorySlug);
+        return blogRepository.findAll(spec, pageable).map(BlogResponse::fromEntity);
+    }
+
     @Override
     @Transactional
     public BlogResponse createBlog(BlogRequest request) {

@@ -73,11 +73,6 @@ public class PanoramaServiceImpl implements PanoramaService {
   public PointPanoramaResponse getPointPanorama(UUID pointId) {
     Point point = pointRepository.findById(pointId)
         .orElseThrow(() -> new ResourceNotFoundException("Point not found with id: " + pointId));
-
-    if (point.getPanoramaImageUrl() == null || point.getPanoramaImageUrl().isBlank()) {
-      throw new BadRequestException("Point does not have a panorama image configured");
-    }
-
     return mapPointToPanoramaResponse(point);
   }
 
