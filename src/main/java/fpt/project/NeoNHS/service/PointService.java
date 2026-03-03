@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.service;
 
 import fpt.project.NeoNHS.dto.request.point.PointRequest;
+import fpt.project.NeoNHS.dto.response.point.PointPanoramaResponse;
 import fpt.project.NeoNHS.dto.response.point.PointResponse;
 import org.springframework.data.domain.Page;
 
@@ -27,4 +28,5 @@ public interface PointService {
 
     Page<PointResponse> getAllPointsForAdmin(int page, int size, String sortBy, String sortDir, String search,
                                              boolean includeDeleted);
+    PointPanoramaResponse getPointPanorama(UUID pointId);
 }

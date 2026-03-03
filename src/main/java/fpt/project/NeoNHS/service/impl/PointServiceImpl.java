@@ -2,11 +2,13 @@ package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.request.point.PointRequest;
+import fpt.project.NeoNHS.dto.response.point.PointPanoramaResponse;
 import fpt.project.NeoNHS.dto.response.point.PointResponse;
 import fpt.project.NeoNHS.entity.Attraction;
 import fpt.project.NeoNHS.entity.Point;
 import fpt.project.NeoNHS.repository.AttractionRepository;
 import fpt.project.NeoNHS.repository.PointRepository;
+import fpt.project.NeoNHS.service.PanoramaService;
 import fpt.project.NeoNHS.service.PointService;
 import fpt.project.NeoNHS.specification.PointSpecification;
 import jakarta.transaction.Transactional;
@@ -26,6 +28,7 @@ public class PointServiceImpl implements PointService {
 
     private final PointRepository pointRepository;
     private final AttractionRepository attractionRepository;
+    private final PanoramaService panoramaService;
 
     @Override
     @Transactional
@@ -146,7 +149,7 @@ public class PointServiceImpl implements PointService {
                 .map(this::mapToResponse);
     }
 
-//    Get all points across all attractions with pagination and search (if needed)
+    // Get all points and checkin points across all attractions with pagination and search (if needed)
     @Override
     public Page<PointResponse> getAllPoints(int page, int size, String sortBy, String sortDir, String search) {
         return findAllPoints(page, size, sortBy, sortDir, search, true);
@@ -184,6 +187,14 @@ public class PointServiceImpl implements PointService {
                 .estTimeSpent(entity.getEstTimeSpent())
                 .type(entity.getType())
                 .attractionId(entity.getAttraction().getId())
+                .panoramaImageUrl(entity.getPanoramaImageUrl())
+                .defaultPitch(entity.getDefaultPitch())
+                .defaultYaw(entity.getDefaultYaw())
                 .build();
+    }
+
+    @Override
+    public PointPanoramaResponse getPointPanorama(UUID pointId) {
+        return panoramaService.getPointPanorama(pointId);
     }
 }
