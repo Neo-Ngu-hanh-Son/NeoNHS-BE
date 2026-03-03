@@ -17,6 +17,8 @@ public interface PointService {
 
     PointResponse getPointById(UUID id);
 
+    PointResponse getPointByIdForAdmin(UUID id);
+
     List<PointResponse> getPointsByAttraction(UUID attractionId);
 
     Page<PointResponse> getAllPointsWithPagination(UUID attractionId, int page, int size, String sortBy, String sortDir,
@@ -24,5 +26,7 @@ public interface PointService {
 
     Page<PointResponse> getAllPoints(int page, int size, String sortBy, String sortDir, String search);
 
+    Page<PointResponse> getAllPointsForAdmin(int page, int size, String sortBy, String sortDir, String search,
+                                             boolean includeDeleted);
     PointPanoramaResponse getPointPanorama(UUID pointId);
 }
