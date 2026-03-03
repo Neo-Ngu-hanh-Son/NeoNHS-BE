@@ -8,7 +8,6 @@ import fpt.project.NeoNHS.entity.Point;
 import fpt.project.NeoNHS.repository.AttractionRepository;
 import fpt.project.NeoNHS.repository.PointRepository;
 import fpt.project.NeoNHS.service.PointService;
-import fpt.project.NeoNHS.specification.AttractionSpecification;
 import fpt.project.NeoNHS.specification.PointSpecification;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -106,6 +105,14 @@ public class PointServiceImpl implements PointService {
     @Override
     public PointResponse getPointById(UUID id) {
         Point point = pointRepository.findById(id)
+                .filter(p -> p.getDeletedAt() == null)
+                .orElseThrow(() -> new RuntimeException("Point not found with id: " + id));
+        return mapToResponse(point);
+    }
+
+    @Override
+    public PointResponse getPointByIdForAdmin(UUID id) {
+        Point point = pointRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Point not found with id: " + id));
         return mapToResponse(point);
     }
@@ -142,13 +149,24 @@ public class PointServiceImpl implements PointService {
 //    Get all points across all attractions with pagination and search (if needed)
     @Override
     public Page<PointResponse> getAllPoints(int page, int size, String sortBy, String sortDir, String search) {
+        return findAllPoints(page, size, sortBy, sortDir, search, true);
+    }
+
+    @Override
+    public Page<PointResponse> getAllPointsForAdmin(int page, int size, String sortBy, String sortDir, String search,
+                                                    boolean includeDeleted) {
+        return findAllPoints(page, size, sortBy, sortDir, search, !includeDeleted);
+    }
+
+    private Page<PointResponse> findAllPoints(int page, int size, String sortBy, String sortDir, String search,
+                                              boolean excludeDeleted) {
         Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
                 ? Sort.by(sortBy).ascending()
                 : Sort.by(sortBy).descending();
 
         Pageable pageable = PageRequest.of(page, Math.min(size, PaginationConstants.MAX_PAGE_SIZE), sort);
 
-        return pointRepository.findAll(PointSpecification.withFilters(search), pageable)
+        return pointRepository.findAll(PointSpecification.withFilters(search, excludeDeleted), pageable)
                 .map(this::mapToResponse);
     }
 

@@ -17,7 +17,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -55,6 +54,25 @@ public class AttractionServiceImpl implements AttractionService {
     @Override
     public Page<AttractionResponse> getAllAttractionsWithPagination(int page, int size, String sortBy,
                                                                     String sortDir, String search) {
+        return findAttractions(page, size, sortBy, sortDir, search, true);
+    }
+
+    @Override
+    public Page<AttractionResponse> getAllAttractionsWithPaginationForAdmin(int page, int size, String sortBy,
+                                                                             String sortDir, String search,
+                                                                             boolean includeInactive) {
+        return findAttractions(page, size, sortBy, sortDir, search, !includeInactive);
+    }
+
+    @Override
+    public AttractionResponse getAttractionByIdForAdmin(UUID id) {
+        Attraction attraction = attractionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Attraction not found"));
+        return mapToResponse(attraction);
+    }
+
+    private Page<AttractionResponse> findAttractions(int page, int size, String sortBy, String sortDir, String search,
+                                                     boolean activeOnly) {
         Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
                 ? Sort.by(sortBy).ascending()
                 : Sort.by(sortBy).descending();
@@ -68,7 +86,7 @@ public class AttractionServiceImpl implements AttractionService {
                 .address(search)
                 .build();
 
-        return attractionRepository.findAll(AttractionSpecification.withFilters(filters), pageable)
+        return attractionRepository.findAll(AttractionSpecification.withFilters(filters, activeOnly), pageable)
                 .map(this::mapToResponse);
     }
 
