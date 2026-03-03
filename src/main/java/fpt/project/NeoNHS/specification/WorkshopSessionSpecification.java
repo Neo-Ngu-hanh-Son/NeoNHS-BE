@@ -90,6 +90,10 @@ public class WorkshopSessionSpecification {
         };
     }
 
+    public static Specification<WorkshopSession> hasPublishedTemplate() {
+        return (root, query, cb) -> cb.equal(root.get("workshopTemplate").get("isPublished"), true);
+    }
+
     public static Specification<WorkshopSession> searchByKeyword(String keyword) {
         return (root, query, cb) -> {
             if (keyword == null || keyword.isEmpty()) {

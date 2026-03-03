@@ -103,12 +103,12 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
 
     @Override
     public Page<WorkshopSessionResponse> getAllUpcomingSessions(Pageable pageable) {
-        // Get all SCHEDULED sessions that start in the future
-        Page<WorkshopSession> sessions = workshopSessionRepository.findByStatusAndStartTimeAfter(
-                SessionStatus.SCHEDULED, 
-                LocalDateTime.now(), 
-                pageable
-        );
+        // Get all SCHEDULED sessions that start in the future, only from published templates
+        Specification<WorkshopSession> spec = Specification
+                .where(WorkshopSessionSpecification.hasStatus(SessionStatus.SCHEDULED))
+                .and(WorkshopSessionSpecification.hasStartTimeAfter(LocalDateTime.now()))
+                .and(WorkshopSessionSpecification.hasPublishedTemplate());
+        Page<WorkshopSession> sessions = workshopSessionRepository.findAll(spec, pageable);
         return sessions.map(this::mapToResponse);
     }
 
@@ -136,7 +136,8 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
     public Page<WorkshopSessionResponse> getUpcomingSessionsByTemplateId(UUID templateId, Pageable pageable) {
         WorkshopTemplate template = workshopTemplateRepository.findById(templateId)
                 .orElseThrow(() -> new ResourceNotFoundException("WorkshopTemplate", "id", templateId));
-        if (template.getStatus() != WorkshopStatus.ACTIVE || !Boolean.TRUE.equals(template.getIsPublished())) {
+        // C1: Direct link accessible — only check ACTIVE status, NOT isPublished
+        if (template.getStatus() != WorkshopStatus.ACTIVE) {
             throw new ResourceNotFoundException("WorkshopTemplate", "id", templateId);
         }
         Specification<WorkshopSession> spec = Specification
@@ -161,7 +162,8 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
             Boolean availableOnly,
             Pageable pageable
     ) {
-        Specification<WorkshopSession> spec = Specification.where((root, query, cb) -> cb.conjunction());
+        // Only show sessions from published templates in public search
+        Specification<WorkshopSession> spec = Specification.where(WorkshopSessionSpecification.hasPublishedTemplate());
 
         if (keyword != null && !keyword.isEmpty()) {
             spec = spec.and(WorkshopSessionSpecification.searchByKeyword(keyword));

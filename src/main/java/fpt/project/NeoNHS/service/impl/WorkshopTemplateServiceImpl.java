@@ -231,7 +231,8 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
     public WorkshopTemplateResponse getActiveWorkshopTemplateById(UUID id) {
         WorkshopTemplate template = workshopTemplateRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("WorkshopTemplate", "id", id));
-        if (template.getStatus() != WorkshopStatus.ACTIVE || !Boolean.TRUE.equals(template.getIsPublished())) {
+        // C1: Direct link accessible — only check ACTIVE status, NOT isPublished
+        if (template.getStatus() != WorkshopStatus.ACTIVE) {
             throw new ResourceNotFoundException("WorkshopTemplate", "id", id);
         }
         return mapToResponse(template);
