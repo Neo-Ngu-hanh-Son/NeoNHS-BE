@@ -26,6 +26,8 @@ public class UserVoucher {
     @Column(nullable = false)
     private Boolean isUsed = false;
 
+    private LocalDateTime usedDate;
+
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -34,4 +36,8 @@ public class UserVoucher {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "voucher_id", nullable = false)
     private Voucher voucher;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id")
+    private Order usedInOrder;
 }
