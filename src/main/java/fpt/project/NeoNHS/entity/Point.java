@@ -75,6 +75,9 @@ public class Point extends BaseEntity {
     @Builder.Default
     private Double defaultPitch = 0.0;
 
+    @Column(name = "google_place_id")
+    private String googlePlaceId;
+
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "attraction_id", nullable = false)

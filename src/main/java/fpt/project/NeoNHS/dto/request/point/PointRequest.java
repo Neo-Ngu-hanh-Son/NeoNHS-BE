@@ -18,4 +18,5 @@ public class PointRequest {
     private Integer estTimeSpent;
     private PointType type;
     private UUID attractionId;
+    private String googlePlaceId;   
 }
