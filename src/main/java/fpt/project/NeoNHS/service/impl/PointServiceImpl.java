@@ -47,6 +47,7 @@ public class PointServiceImpl implements PointService {
                 .orderIndex(request.getOrderIndex())
                 .estTimeSpent(request.getEstTimeSpent())
                 .type(request.getType())
+                .googlePlaceId(request.getGooglePlaceId())
                 .attraction(attraction)
                 .build();
 
@@ -79,6 +80,8 @@ public class PointServiceImpl implements PointService {
             point.setEstTimeSpent(request.getEstTimeSpent());
         if (request.getType() != null)
             point.setType(request.getType());
+        if (request.getGooglePlaceId() != null)
+            point.setGooglePlaceId(request.getGooglePlaceId());
 
         if (request.getAttractionId() != null) {
             Attraction attraction = attractionRepository.findById(request.getAttractionId())
@@ -190,6 +193,7 @@ public class PointServiceImpl implements PointService {
                 .panoramaImageUrl(entity.getPanoramaImageUrl())
                 .defaultPitch(entity.getDefaultPitch())
                 .defaultYaw(entity.getDefaultYaw())
+                .googlePlaceId(entity.getGooglePlaceId())
                 .build();
     }
 

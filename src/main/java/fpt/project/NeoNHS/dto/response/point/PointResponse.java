@@ -27,4 +27,5 @@ public class PointResponse {
     private String panoramaImageUrl;
     private Double defaultYaw = 0.0;
     private Double defaultPitch = 0.0;
+    private String googlePlaceId;
 }
