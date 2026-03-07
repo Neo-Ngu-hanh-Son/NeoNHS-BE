@@ -36,6 +36,7 @@ public class BlogServiceImpl implements BlogService {
     private final BlogRepository blogRepository;
     private final UserRepository userRepository;
     private final BlogCategoryRepository blogCategoryRepository;
+    private final RedisBlogServiceImpl redisBlogService;
 
     @Override
     @Transactional(readOnly = true)
@@ -146,6 +147,15 @@ public class BlogServiceImpl implements BlogService {
 
         validateBlogStatus(blog);
         return BlogResponse.fromEntity(blog);
+    }
+
+    @Override
+    public void incrementViewCount(UUID id) {
+        redisBlogService.incrementTempViewCount(id);
+    }
+
+    public void addTotalViewCount(UUID blogId, int count) {
+        blogRepository.incrementViews(blogId, count);
     }
 
     private void validateBlogStatus(Blog blog) {

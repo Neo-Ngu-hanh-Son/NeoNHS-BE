@@ -40,8 +40,6 @@ public class PointServiceImpl implements PointService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .thumbnailUrl(request.getThumbnailUrl())
-                .history(request.getHistory())
-                .historyAudioUrl(request.getHistoryAudioUrl())
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
                 .orderIndex(request.getOrderIndex())
@@ -66,10 +64,6 @@ public class PointServiceImpl implements PointService {
             point.setDescription(request.getDescription());
         if (request.getThumbnailUrl() != null)
             point.setThumbnailUrl(request.getThumbnailUrl());
-        if (request.getHistory() != null)
-            point.setHistory(request.getHistory());
-        if (request.getHistoryAudioUrl() != null)
-            point.setHistoryAudioUrl(request.getHistoryAudioUrl());
         if (request.getLatitude() != null)
             point.setLatitude(request.getLatitude());
         if (request.getLongitude() != null)
@@ -137,7 +131,7 @@ public class PointServiceImpl implements PointService {
 
     @Override
     public Page<PointResponse> getAllPointsWithPagination(UUID attractionId, int page, int size, String sortBy,
-            String sortDir, String search) {
+                                                          String sortDir, String search) {
         if (!attractionRepository.existsById(attractionId)) {
             throw new RuntimeException("Attraction not found");
         }
@@ -152,7 +146,8 @@ public class PointServiceImpl implements PointService {
                 .map(this::mapToResponse);
     }
 
-    // Get all points and checkin points across all attractions with pagination and search (if needed)
+    // Get all points and checkin points across all attractions with pagination and
+    // search (if needed)
     @Override
     public Page<PointResponse> getAllPoints(int page, int size, String sortBy, String sortDir, String search) {
         return findAllPoints(page, size, sortBy, sortDir, search, true);
@@ -177,13 +172,14 @@ public class PointServiceImpl implements PointService {
     }
 
     private PointResponse mapToResponse(Point entity) {
+        int historyAudioCount = (int) entity.getHistoryAudios().stream()
+                .filter(historyAudio -> historyAudio.getDeletedAt() == null)
+                .count();
         return PointResponse.builder()
                 .id(entity.getId())
                 .name(entity.getName())
                 .description(entity.getDescription())
                 .thumbnailUrl(entity.getThumbnailUrl())
-                .history(entity.getHistory())
-                .historyAudioUrl(entity.getHistoryAudioUrl())
                 .latitude(entity.getLatitude())
                 .longitude(entity.getLongitude())
                 .orderIndex(entity.getOrderIndex())
@@ -194,6 +190,7 @@ public class PointServiceImpl implements PointService {
                 .defaultPitch(entity.getDefaultPitch())
                 .defaultYaw(entity.getDefaultYaw())
                 .googlePlaceId(entity.getGooglePlaceId())
+                .historyAudioCount(historyAudioCount)
                 .build();
     }
 

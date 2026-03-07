@@ -30,4 +30,6 @@ public interface BlogService {
 
     BlogResponse getBlogBySlug(String slug);
 
+    void incrementViewCount(UUID id);
+    void addTotalViewCount(UUID id, int viewsToAdd);
 }
