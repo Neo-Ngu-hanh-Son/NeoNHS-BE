@@ -1,0 +1,54 @@
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#ffffff"
+    primaryTextColor: "#000000"
+    primaryBorderColor: "#000000"
+    activationBkgColor: "#eeeeee"
+    activationBorderColor: "#000000"
+    actorBkg: "#ffffff"
+    actorTextColor: "#000000"
+    actorBorder: "#000000"
+    altBackground: "#f5f5f5"
+    altBorder: "#000000"
+  sequence:
+    actorMargin: 10
+    messageMargin: 0
+---
+sequenceDiagram
+    actor Tourist as Tourist <br/> <<user>>
+    participant RegisterPage as RegisterPage <br/> <<user interaction>>
+    participant AuthController as AuthController <br/> <<coordinator>>
+    participant AuthService as AuthService <br/> <<service>>
+    participant UserRepository as UserRepository <br/> <<repository>>
+    participant PasswordEncoder as PasswordEncoder <br/> <<service>>
+    participant DB
+    participant RedisAuthService as RedisAuthService <br/> <<service>>
+    participant MailService as MailService <br/> <<service>>
+
+    Tourist->>+RegisterPage: 1. Fills registration form and submit
+    RegisterPage->>+AuthController: 2. register(request)
+    AuthController->>+AuthService: 3. register(request)
+
+    AuthService->>AuthService: 4. validateUser(request)
+    alt 4A Validation failed
+        AuthService-->>AuthController: 4A1. Validation failed
+        AuthController-->>RegisterPage: 4A2. Error response
+        RegisterPage-->>Tourist: 4A3. Show validation error
+    else 4B Validation passed
+        AuthService->>+PasswordEncoder: 4B1. encodePassword(request)
+        PasswordEncoder-->>-AuthService: 4B2. Encoded password
+        AuthService->>+UserRepository: 4B3. createUser(request)
+        UserRepository->>+DB: 4B4. save(user)
+        DB-->>-UserRepository: 4B5. Saved user entity
+        UserRepository-->>-AuthService: 4B6. User entity
+    end
+    AuthService->>+RedisAuthService: 5. createTemporaryOTP(email)
+    RedisAuthService-->>-AuthService: 6. OTP number
+    AuthService->>+MailService: 7. sendVerifyEmailRequest(user, OTP)
+    MailService-->>-AuthService: 8. Email sent
+
+    AuthService-->>-AuthController: 9. User registered successfully
+    AuthController-->>-RegisterPage: 10. User registered successfully
+    RegisterPage-->>-Tourist: 11. Show success message and ask to verify email

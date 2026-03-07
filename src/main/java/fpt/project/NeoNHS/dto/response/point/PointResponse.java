@@ -16,8 +16,6 @@ public class PointResponse {
     private String name;
     private String description;
     private String thumbnailUrl;
-    private String history;
-    private String historyAudioUrl;
     private BigDecimal latitude;
     private BigDecimal longitude;
     private Integer orderIndex;
@@ -25,6 +23,9 @@ public class PointResponse {
     private PointType type;
     private UUID attractionId;
     private String panoramaImageUrl;
+    @Builder.Default
     private Double defaultYaw = 0.0;
+    @Builder.Default
     private Double defaultPitch = 0.0;
+    private Integer historyAudioCount;
 }

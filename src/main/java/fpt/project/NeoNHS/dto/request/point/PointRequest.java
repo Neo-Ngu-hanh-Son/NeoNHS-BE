@@ -10,8 +10,6 @@ public class PointRequest {
     private String name;
     private String description;
     private String thumbnailUrl;
-    private String history;
-    private String historyAudioUrl;
     private BigDecimal latitude;
     private BigDecimal longitude;
     private Integer orderIndex;

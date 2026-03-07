@@ -37,4 +37,6 @@ public interface PointRepository extends JpaRepository<Point, UUID>, JpaSpecific
     long countByDeletedAtIsNull();
 
     Page<Point> findAll(Specification<Point> spec, Pageable pageable);
+
+    boolean existsByIdAndDeletedAtIsNull(UUID id);
 }
