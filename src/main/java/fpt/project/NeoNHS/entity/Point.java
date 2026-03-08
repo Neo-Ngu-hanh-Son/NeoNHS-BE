@@ -5,6 +5,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -36,11 +37,6 @@ public class Point extends BaseEntity {
 
     private String thumbnailUrl;
 
-    @Column(columnDefinition = "TEXT")
-    private String history;
-
-    private String historyAudioUrl;
-
     @Column(precision = 10, scale = 7)
     private BigDecimal latitude;
 
@@ -50,6 +46,9 @@ public class Point extends BaseEntity {
     private Integer orderIndex;
 
     private Integer estTimeSpent;
+
+    @Column(columnDefinition = "TEXT")
+    private String historyText;
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
@@ -62,6 +61,20 @@ public class Point extends BaseEntity {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    @Column(name = "panorama_image_url", length = 2048)
+    private String panoramaImageUrl;
+
+    @Column(name = "default_yaw")
+    @Builder.Default
+    private Double defaultYaw = 0.0;
+
+    @Column(name = "default_pitch")
+    @Builder.Default
+    private Double defaultPitch = 0.0;
+
+    @Column(name = "google_place_id")
+    private String googlePlaceId;
+
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "attraction_id", nullable = false)
@@ -72,4 +85,18 @@ public class Point extends BaseEntity {
 
     @OneToMany(mappedBy = "point", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<UserVisitedPoint> userVisitedPoints;
+
+    @Builder.Default
+    @OneToMany(mappedBy = "point", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<PanoramaHotSpot> panoramaHotSpots = new ArrayList<>();
+
+    @Builder.Default
+    @OneToMany(
+            mappedBy = "point",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    private List<PointHistoryAudio> historyAudios = new ArrayList<>();
+
 }

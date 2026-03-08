@@ -2,13 +2,14 @@ package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.request.point.PointRequest;
+import fpt.project.NeoNHS.dto.response.point.PointPanoramaResponse;
 import fpt.project.NeoNHS.dto.response.point.PointResponse;
 import fpt.project.NeoNHS.entity.Attraction;
 import fpt.project.NeoNHS.entity.Point;
 import fpt.project.NeoNHS.repository.AttractionRepository;
 import fpt.project.NeoNHS.repository.PointRepository;
+import fpt.project.NeoNHS.service.PanoramaService;
 import fpt.project.NeoNHS.service.PointService;
-import fpt.project.NeoNHS.specification.AttractionSpecification;
 import fpt.project.NeoNHS.specification.PointSpecification;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class PointServiceImpl implements PointService {
 
     private final PointRepository pointRepository;
     private final AttractionRepository attractionRepository;
+    private final PanoramaService panoramaService;
 
     @Override
     @Transactional
@@ -38,13 +40,12 @@ public class PointServiceImpl implements PointService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .thumbnailUrl(request.getThumbnailUrl())
-                .history(request.getHistory())
-                .historyAudioUrl(request.getHistoryAudioUrl())
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
                 .orderIndex(request.getOrderIndex())
                 .estTimeSpent(request.getEstTimeSpent())
                 .type(request.getType())
+                .googlePlaceId(request.getGooglePlaceId())
                 .attraction(attraction)
                 .build();
 
@@ -63,10 +64,6 @@ public class PointServiceImpl implements PointService {
             point.setDescription(request.getDescription());
         if (request.getThumbnailUrl() != null)
             point.setThumbnailUrl(request.getThumbnailUrl());
-        if (request.getHistory() != null)
-            point.setHistory(request.getHistory());
-        if (request.getHistoryAudioUrl() != null)
-            point.setHistoryAudioUrl(request.getHistoryAudioUrl());
         if (request.getLatitude() != null)
             point.setLatitude(request.getLatitude());
         if (request.getLongitude() != null)
@@ -77,6 +74,8 @@ public class PointServiceImpl implements PointService {
             point.setEstTimeSpent(request.getEstTimeSpent());
         if (request.getType() != null)
             point.setType(request.getType());
+        if (request.getGooglePlaceId() != null)
+            point.setGooglePlaceId(request.getGooglePlaceId());
 
         if (request.getAttractionId() != null) {
             Attraction attraction = attractionRepository.findById(request.getAttractionId())
@@ -106,6 +105,14 @@ public class PointServiceImpl implements PointService {
     @Override
     public PointResponse getPointById(UUID id) {
         Point point = pointRepository.findById(id)
+                .filter(p -> p.getDeletedAt() == null)
+                .orElseThrow(() -> new RuntimeException("Point not found with id: " + id));
+        return mapToResponse(point);
+    }
+
+    @Override
+    public PointResponse getPointByIdForAdmin(UUID id) {
+        Point point = pointRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Point not found with id: " + id));
         return mapToResponse(point);
     }
@@ -124,7 +131,7 @@ public class PointServiceImpl implements PointService {
 
     @Override
     public Page<PointResponse> getAllPointsWithPagination(UUID attractionId, int page, int size, String sortBy,
-            String sortDir, String search) {
+                                                          String sortDir, String search) {
         if (!attractionRepository.existsById(attractionId)) {
             throw new RuntimeException("Attraction not found");
         }
@@ -139,33 +146,56 @@ public class PointServiceImpl implements PointService {
                 .map(this::mapToResponse);
     }
 
-//    Get all points across all attractions with pagination and search (if needed)
+    // Get all points and checkin points across all attractions with pagination and
+    // search (if needed)
     @Override
     public Page<PointResponse> getAllPoints(int page, int size, String sortBy, String sortDir, String search) {
+        return findAllPoints(page, size, sortBy, sortDir, search, true);
+    }
+
+    @Override
+    public Page<PointResponse> getAllPointsForAdmin(int page, int size, String sortBy, String sortDir, String search,
+                                                    boolean includeDeleted) {
+        return findAllPoints(page, size, sortBy, sortDir, search, !includeDeleted);
+    }
+
+    private Page<PointResponse> findAllPoints(int page, int size, String sortBy, String sortDir, String search,
+                                              boolean excludeDeleted) {
         Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
                 ? Sort.by(sortBy).ascending()
                 : Sort.by(sortBy).descending();
 
         Pageable pageable = PageRequest.of(page, Math.min(size, PaginationConstants.MAX_PAGE_SIZE), sort);
 
-        return pointRepository.findAll(PointSpecification.withFilters(search), pageable)
+        return pointRepository.findAll(PointSpecification.withFilters(search, excludeDeleted), pageable)
                 .map(this::mapToResponse);
     }
 
     private PointResponse mapToResponse(Point entity) {
+        int historyAudioCount = (int) entity.getHistoryAudios().stream()
+                .filter(historyAudio -> historyAudio.getDeletedAt() == null)
+                .count();
         return PointResponse.builder()
                 .id(entity.getId())
                 .name(entity.getName())
                 .description(entity.getDescription())
                 .thumbnailUrl(entity.getThumbnailUrl())
-                .history(entity.getHistory())
-                .historyAudioUrl(entity.getHistoryAudioUrl())
                 .latitude(entity.getLatitude())
                 .longitude(entity.getLongitude())
                 .orderIndex(entity.getOrderIndex())
                 .estTimeSpent(entity.getEstTimeSpent())
                 .type(entity.getType())
                 .attractionId(entity.getAttraction().getId())
+                .panoramaImageUrl(entity.getPanoramaImageUrl())
+                .defaultPitch(entity.getDefaultPitch())
+                .defaultYaw(entity.getDefaultYaw())
+                .googlePlaceId(entity.getGooglePlaceId())
+                .historyAudioCount(historyAudioCount)
                 .build();
+    }
+
+    @Override
+    public PointPanoramaResponse getPointPanorama(UUID pointId) {
+        return panoramaService.getPointPanorama(pointId);
     }
 }

@@ -8,9 +8,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PointSpecification {
-    public static Specification<Point> withFilters(String search) {
+    public static Specification<Point> withFilters(String search, boolean deletedOnlyExcluded) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
+
+            if (deletedOnlyExcluded) {
+                predicates.add(criteriaBuilder.isNull(root.get("deletedAt")));
+            }
 
             if (search != null && !search.isBlank()) {
                 String keyword = "%" + search.toLowerCase() + "%";

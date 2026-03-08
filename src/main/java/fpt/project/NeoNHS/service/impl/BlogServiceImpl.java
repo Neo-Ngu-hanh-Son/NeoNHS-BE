@@ -36,11 +36,21 @@ public class BlogServiceImpl implements BlogService {
     private final BlogRepository blogRepository;
     private final UserRepository userRepository;
     private final BlogCategoryRepository blogCategoryRepository;
+    private final RedisBlogServiceImpl redisBlogService;
 
     @Override
     @Transactional(readOnly = true)
     public Page<BlogResponse> getBlogs(String search, BlogStatus status, List<String> tags, Pageable pageable,
             boolean featured, String categorySlug) {
+        var spec = BlogSpecification.withFilters(search, status, tags, featured, categorySlug);
+        return blogRepository.findAll(spec, pageable).map(BlogResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Page<BlogResponse> getActiveBlogs(String search, BlogStatus status, List<String> tags, Pageable pageable,
+                                             boolean featured, String categorySlug) {
+        status = BlogStatus.PUBLISHED; // Force only show published blogs
         var spec = BlogSpecification.withFilters(search, status, tags, featured, categorySlug);
         return blogRepository.findAll(spec, pageable).map(BlogResponse::fromEntity);
     }
@@ -137,6 +147,15 @@ public class BlogServiceImpl implements BlogService {
 
         validateBlogStatus(blog);
         return BlogResponse.fromEntity(blog);
+    }
+
+    @Override
+    public void incrementViewCount(UUID id) {
+        redisBlogService.incrementTempViewCount(id);
+    }
+
+    public void addTotalViewCount(UUID blogId, int count) {
+        blogRepository.incrementViews(blogId, count);
     }
 
     private void validateBlogStatus(Blog blog) {

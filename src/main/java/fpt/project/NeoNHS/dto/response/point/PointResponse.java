@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.dto.response.point;
 
+import jakarta.persistence.Column;
 import lombok.Builder;
 import lombok.Data;
 
@@ -15,12 +16,17 @@ public class PointResponse {
     private String name;
     private String description;
     private String thumbnailUrl;
-    private String history;
-    private String historyAudioUrl;
     private BigDecimal latitude;
     private BigDecimal longitude;
     private Integer orderIndex;
     private Integer estTimeSpent;
     private PointType type;
     private UUID attractionId;
+    private String panoramaImageUrl;
+    @Builder.Default
+    private Double defaultYaw = 0.0;
+    @Builder.Default
+    private Double defaultPitch = 0.0;
+    private String googlePlaceId;
+    private Integer historyAudioCount;
 }

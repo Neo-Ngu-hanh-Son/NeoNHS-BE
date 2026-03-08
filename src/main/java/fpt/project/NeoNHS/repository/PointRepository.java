@@ -1,8 +1,6 @@
 package fpt.project.NeoNHS.repository;
 
-import fpt.project.NeoNHS.entity.Attraction;
 import fpt.project.NeoNHS.entity.Point;
-import fpt.project.NeoNHS.enums.PointType;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,7 +11,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -37,4 +34,6 @@ public interface PointRepository extends JpaRepository<Point, UUID>, JpaSpecific
     long countByDeletedAtIsNull();
 
     Page<Point> findAll(Specification<Point> spec, Pageable pageable);
+
+    boolean existsByIdAndDeletedAtIsNull(UUID id);
 }

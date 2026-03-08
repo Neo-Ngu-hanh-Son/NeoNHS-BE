@@ -4,7 +4,6 @@ import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.blog.BlogResponse;
 import fpt.project.NeoNHS.enums.BlogStatus;
-import fpt.project.NeoNHS.service.BlogCategoryService;
 import fpt.project.NeoNHS.service.BlogService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +33,7 @@ public class BlogController {
             @RequestParam(required = false) List<String> tags,
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_BY) String sortBy,
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_DIR) String sortDir,
-            @RequestParam(defaultValue = "false") boolean featured,
+            @RequestParam(defaultValue = "false") boolean isFeatured,
             @RequestParam(required = false) String categorySlug) {
 
         Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
@@ -43,7 +42,7 @@ public class BlogController {
 
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Page<BlogResponse> blogs = blogService.getBlogs(search, status, tags, pageable, featured, categorySlug);
+        Page<BlogResponse> blogs = blogService.getActiveBlogs(search, status, tags, pageable, isFeatured, categorySlug);
         return ResponseEntity.ok(ApiResponse.success("Blogs retrieved successfully", blogs));
     }
 
@@ -57,5 +56,11 @@ public class BlogController {
     public ApiResponse<BlogResponse> getBlogById(@PathVariable UUID id) {
         var blog = blogService.getBlogById(id);
         return ApiResponse.success("Blog retrieved successfully", blog);
+    }
+
+    @PostMapping("/{id}/view")
+    public ResponseEntity<ApiResponse> incrementViewCount(@PathVariable UUID id) {
+        blogService.incrementViewCount(id);
+        return ResponseEntity.ok(ApiResponse.success("Ok"));
     }
 }

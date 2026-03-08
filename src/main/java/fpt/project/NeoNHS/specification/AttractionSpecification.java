@@ -1,12 +1,8 @@
 package fpt.project.NeoNHS.specification;
 
 import fpt.project.NeoNHS.dto.request.attraction.AttractionFilterRequest;
-import fpt.project.NeoNHS.dto.request.event.EventFilterRequest;
 import fpt.project.NeoNHS.entity.Attraction;
-import fpt.project.NeoNHS.entity.Event;
 import jakarta.persistence.criteria.Expression;
-import jakarta.persistence.criteria.Join;
-import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -14,9 +10,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class AttractionSpecification {
-    public static Specification<Attraction> withFilters(AttractionFilterRequest filter) {
+    public static Specification<Attraction> withFilters(AttractionFilterRequest filter, boolean activeOnly) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
+
+            if (activeOnly) {
+                predicates.add(criteriaBuilder.isTrue(root.get("isActive")));
+                predicates.add(criteriaBuilder.isNull(root.get("deletedAt")));
+            }
 
             if (filter.getStatus() != null) {
                 predicates.add(criteriaBuilder.equal(root.get("status"), filter.getStatus()));
