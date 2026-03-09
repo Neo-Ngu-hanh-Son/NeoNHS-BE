@@ -162,7 +162,9 @@ Retrieves detailed information about a specific workshop template.
 |---|---|
 | **Method** | `GET` |
 | **URL** | `/api/workshops/templates/{id}` |
-| **Auth** | **Public** — no authentication required |
+| **Auth** | 🔐 **Authenticated** — requires valid JWT token |
+
+> ⚠️ **Note:** This is NOT a public endpoint. It requires authentication because `/api/workshops/**` is not in the public routes list. For the **public (tourist)** version, use `GET /api/public/workshops/templates/{id}` instead (only returns ACTIVE templates).
 
 #### Path Parameters
 
@@ -201,6 +203,7 @@ Retrieves detailed information about a specific workshop template.
 | Code | Description |
 |------|-------------|
 | `200` | Template retrieved successfully |
+| `401` | Unauthorized — JWT token required |
 | `404` | Template does not exist |
 
 ---
@@ -219,7 +222,7 @@ Retrieves all templates created by the authenticated vendor with pagination.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `page` | int | `1` | Page number (1-based) |
+| `page` | int | `0` | Page number (0-based) |
 | `size` | int | `10` | Items per page |
 | `sortBy` | String | `createdAt` | Field to sort by |
 | `sortDir` | String | `desc` | Sort direction: `asc` or `desc` |
@@ -241,13 +244,15 @@ Retrieves all templates created by the authenticated vendor with pagination.
 
 ### 4. Filter / Search Workshop Templates
 
-Advanced search and filtering for templates. **Public endpoint**.
+Advanced search and filtering for templates. **⚠️ Requires authentication** (not a public endpoint).
 
 | | |
 |---|---|
 | **Method** | `GET` |
 | **URL** | `/api/workshops/templates/filter` |
-| **Auth** | **Public** — no authentication required |
+| **Auth** | 🔐 **Authenticated** — requires valid JWT token |
+
+> ⚠️ **Note:** Despite having no `@PreAuthorize` annotation, this endpoint is NOT public because `/api/workshops/**` requires authentication per SecurityConfig. For a **public (tourist)** search, use `GET /api/public/workshops/templates/search` instead.
 
 #### Query Parameters (all optional)
 
@@ -274,6 +279,7 @@ Advanced search and filtering for templates. **Public endpoint**.
 |------|-------------|
 | `200` | Templates filtered successfully |
 | `400` | Invalid filter parameters |
+| `401` | Unauthorized — JWT token required |
 
 ---
 
@@ -517,7 +523,9 @@ Retrieves detailed information about a specific session.
 |---|---|
 | **Method** | `GET` |
 | **URL** | `/api/workshops/sessions/{id}` |
-| **Auth** | **Public** — no authentication required |
+| **Auth** | 🔐 **Authenticated** — requires valid JWT token |
+
+> ⚠️ **Note:** This is NOT a public endpoint. `/api/workshops/**` requires authentication per SecurityConfig.
 
 #### Path Parameters
 
@@ -556,19 +564,22 @@ Retrieves detailed information about a specific session.
 | Code | Description |
 |------|-------------|
 | `200` | Session retrieved successfully |
+| `401` | Unauthorized — JWT token required |
 | `404` | Session does not exist |
 
 ---
 
 ### 11. Get All Upcoming Sessions
 
-Retrieves all `SCHEDULED` sessions starting in the future. **Public endpoint**.
+Retrieves all `SCHEDULED` sessions starting in the future. **⚠️ Requires authentication** (not a public endpoint).
 
 | | |
 |---|---|
 | **Method** | `GET` |
 | **URL** | `/api/workshops/sessions` |
-| **Auth** | **Public** — no authentication required |
+| **Auth** | 🔐 **Authenticated** — requires valid JWT token |
+
+> ⚠️ **Note:** `/api/workshops/**` requires authentication. For public session browsing, use the Tourist API at `GET /api/public/workshops/templates/{id}/sessions`.
 
 #### Query Parameters
 
@@ -588,6 +599,7 @@ Retrieves all `SCHEDULED` sessions starting in the future. **Public endpoint**.
 | Code | Description |
 |------|-------------|
 | `200` | Sessions retrieved successfully |
+| `401` | Unauthorized — JWT token required |
 
 ---
 
@@ -627,13 +639,15 @@ Retrieves all sessions created by the authenticated vendor.
 
 ### 13. Get Sessions by Template ID
 
-Retrieves all sessions for a specific template. **Public endpoint**.
+Retrieves all sessions for a specific template. **⚠️ Requires authentication** (not a public endpoint).
 
 | | |
 |---|---|
 | **Method** | `GET` |
 | **URL** | `/api/workshops/sessions/template/{templateId}` |
-| **Auth** | **Public** — no authentication required |
+| **Auth** | 🔐 **Authenticated** — requires valid JWT token |
+
+> ⚠️ **Note:** `/api/workshops/**` requires authentication. For public session browsing by template, use `GET /api/public/workshops/templates/{id}/sessions` instead.
 
 #### Path Parameters
 
@@ -655,19 +669,22 @@ Retrieves all sessions for a specific template. **Public endpoint**.
 | Code | Description |
 |------|-------------|
 | `200` | Sessions retrieved successfully |
+| `401` | Unauthorized — JWT token required |
 | `404` | Template does not exist |
 
 ---
 
 ### 14. Filter / Search Workshop Sessions
 
-Advanced search and filtering for sessions. **Public endpoint**.
+Advanced search and filtering for sessions. **⚠️ Requires authentication** (not a public endpoint).
 
 | | |
 |---|---|
 | **Method** | `GET` |
 | **URL** | `/api/workshops/sessions/filter` |
-| **Auth** | **Public** — no authentication required |
+| **Auth** | 🔐 **Authenticated** — requires valid JWT token |
+
+> ⚠️ **Note:** `/api/workshops/**` requires authentication per SecurityConfig. There is currently no public equivalent for session filtering.
 
 #### Query Parameters (all optional)
 
@@ -702,6 +719,7 @@ Advanced search and filtering for sessions. **Public endpoint**.
 |------|-------------|
 | `200` | Sessions filtered successfully |
 | `400` | Invalid filter parameters |
+| `401` | Unauthorized — JWT token required |
 
 ---
 
@@ -838,8 +856,8 @@ Cancels a `SCHEDULED` session (soft delete). Use this when the session has enrol
 
 ```
 ┌──────────┐     Submit      ┌──────────┐     Admin      ┌──────────┐
-│          │  ──────────────> │          │  ──Approve───> │          │
-│  DRAFT   │    /register    │ PENDING  │                │  ACTIVE  │
+│          │  ──────────────>│          │  ──Approve───> │          │
+│  DRAFT   │    /register    │  PENDING │                │  ACTIVE  │
 │          │ <────────────── │          │                │          │
 └──────────┘   Edit & Fix    └──────────┘                └──────────┘
       ▲                            │                          │
@@ -892,22 +910,39 @@ Vendor creates from ACTIVE template
 
 ## Quick Reference Table
 
+### Vendor / Authenticated APIs (`/api/workshops/...`)
+
+> ⚠️ All `/api/workshops/**` routes require authentication (valid JWT token). Routes with `VENDOR` also require the VENDOR role via `@PreAuthorize`.
+
 | # | Method | Endpoint | Auth | Description |
 |---|--------|----------|------|-------------|
 | 1 | `POST` | `/api/workshops/templates` | VENDOR | Create template (DRAFT) |
-| 2 | `GET` | `/api/workshops/templates/{id}` | Public | Get template by ID |
+| 2 | `GET` | `/api/workshops/templates/{id}` | VENDOR | Get template by ID (any status) |
 | 3 | `GET` | `/api/workshops/templates/my` | VENDOR | Get my templates (paginated) |
-| 4 | `GET` | `/api/workshops/templates/filter` | Public | Search/filter templates |
+| 4 | `GET` | `/api/workshops/templates/filter` | VENDOR | Search/filter templates (all statuses) |
 | 5 | `PUT` | `/api/workshops/templates/{id}` | VENDOR | Update template (DRAFT/REJECTED only) |
 | 6 | `POST` | `/api/workshops/templates/{id}/register` | VENDOR | Submit for admin approval |
 | 7 | `POST` | `/api/workshops/templates/{id}/toggle-publish` | VENDOR | Toggle publish (ACTIVE only) |
 | 8 | `DELETE` | `/api/workshops/templates/{id}` | VENDOR | Delete template (non-ACTIVE only) |
 | 9 | `POST` | `/api/workshops/sessions` | VENDOR | Create session from ACTIVE template |
-| 10 | `GET` | `/api/workshops/sessions/{id}` | Public | Get session by ID |
-| 11 | `GET` | `/api/workshops/sessions` | Public | Get all upcoming sessions |
+| 10 | `GET` | `/api/workshops/sessions/{id}` | VENDOR | Get session by ID |
+| 11 | `GET` | `/api/workshops/sessions` | VENDOR | Get all upcoming sessions |
 | 12 | `GET` | `/api/workshops/sessions/my` | VENDOR | Get my sessions (paginated) |
-| 13 | `GET` | `/api/workshops/sessions/template/{templateId}` | Public | Get sessions by template |
-| 14 | `GET` | `/api/workshops/sessions/filter` | Public | Search/filter sessions |
+| 13 | `GET` | `/api/workshops/sessions/template/{templateId}` | VENDOR | Get sessions by template |
+| 14 | `GET` | `/api/workshops/sessions/filter` | VENDOR | Search/filter sessions |
 | 15 | `PUT` | `/api/workshops/sessions/{id}` | VENDOR | Update session (SCHEDULED only) |
 | 16 | `DELETE` | `/api/workshops/sessions/{id}` | VENDOR | Delete session (no enrollments) |
 | 17 | `POST` | `/api/workshops/sessions/{id}/cancel` | VENDOR | Cancel session (soft delete) |
+
+### Public Tourist APIs (`/api/public/workshops/...`)
+
+> ✅ These are the **truly public** endpoints — no authentication required. Defined in `WorkshopTouristController` and whitelisted via `/api/public/**` in SecurityConfig.
+
+| # | Method | Endpoint | Auth | Description |
+|---|--------|----------|------|-------------|
+| P1 | `GET` | `/api/public/workshops/templates` | PUBLIC | Get all ACTIVE templates (paginated, 1-based page) |
+| P2 | `GET` | `/api/public/workshops/templates/{id}` | PUBLIC | Get ACTIVE template detail (404 if not ACTIVE) |
+| P3 | `GET` | `/api/public/workshops/templates/search` | PUBLIC | Search/filter ACTIVE templates (keyword, tag, price, duration, rating) |
+| P4 | `GET` | `/api/public/workshops/templates/{id}/sessions` | PUBLIC | Get upcoming SCHEDULED sessions for an ACTIVE template |
+| P5 | `GET` | `/api/wtags/all` | PUBLIC | Get all workshop tags (no pagination) |
+
