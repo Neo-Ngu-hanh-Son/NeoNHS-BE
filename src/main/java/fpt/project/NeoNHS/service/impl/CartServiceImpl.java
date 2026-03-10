@@ -368,13 +368,13 @@ public class CartServiceImpl implements CartService {
         }
 
         // 2. Check Date Validity
-        LocalDateTime now = LocalDateTime.now();
-        if (ticketCatalog.getValidFromDate() != null && now.isBefore(ticketCatalog.getValidFromDate())) {
-            throw new BadRequestException("Ticket sale has not started yet: " + ticketCatalog.getName());
+        /*LocalDateTime now = LocalDateTime.now();
+            if (ticketCatalog.getValidFromDate() != null && now.isBefore(ticketCatalog.getValidFromDate())) {
+                throw new BadRequestException("Ticket sale has not started yet: " + ticketCatalog.getName());
         }
         if (ticketCatalog.getValidToDate() != null && now.isAfter(ticketCatalog.getValidToDate())) {
             throw new BadRequestException("Ticket sale has ended: " + ticketCatalog.getName());
-        }
+        }*/
 
         // 3. Check Ticket Quota
         int currentSold = ticketCatalog.getSoldQuantity() != null ? ticketCatalog.getSoldQuantity() : 0;
