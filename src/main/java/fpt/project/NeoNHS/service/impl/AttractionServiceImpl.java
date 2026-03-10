@@ -54,6 +54,25 @@ public class AttractionServiceImpl implements AttractionService {
     @Override
     public Page<AttractionResponse> getAllAttractionsWithPagination(int page, int size, String sortBy,
                                                                     String sortDir, String search) {
+        return findAttractions(page, size, sortBy, sortDir, search, true);
+    }
+
+    @Override
+    public Page<AttractionResponse> getAllAttractionsWithPaginationForAdmin(int page, int size, String sortBy,
+                                                                             String sortDir, String search,
+                                                                             boolean includeInactive) {
+        return findAttractions(page, size, sortBy, sortDir, search, !includeInactive);
+    }
+
+    @Override
+    public AttractionResponse getAttractionByIdForAdmin(UUID id) {
+        Attraction attraction = attractionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Attraction not found"));
+        return mapToResponse(attraction);
+    }
+
+    private Page<AttractionResponse> findAttractions(int page, int size, String sortBy, String sortDir, String search,
+                                                     boolean activeOnly) {
         Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
                 ? Sort.by(sortBy).ascending()
                 : Sort.by(sortBy).descending();
@@ -67,7 +86,7 @@ public class AttractionServiceImpl implements AttractionService {
                 .address(search)
                 .build();
 
-        return attractionRepository.findAll(AttractionSpecification.withFilters(filters), pageable)
+        return attractionRepository.findAll(AttractionSpecification.withFilters(filters, activeOnly), pageable)
                 .map(this::mapToResponse);
     }
 
@@ -107,12 +126,18 @@ public class AttractionServiceImpl implements AttractionService {
 
     @Override
     @Transactional
-    public void deleteAttraction(UUID id) {
+    public void deleteAttraction(UUID id, UUID userId) {
         Attraction attraction = attractionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Attraction not found with id: " + id));
 
-        //not really delete just set is active = false
+        if (!attraction.getIsActive()) {
+            throw new IllegalStateException("Attraction is already deleted.");
+        }
+
         attraction.setIsActive(false);
+        attraction.setDeletedAt(java.time.LocalDateTime.now());
+        attraction.setDeletedBy(userId);
+
         attractionRepository.save(attraction);
     }
 

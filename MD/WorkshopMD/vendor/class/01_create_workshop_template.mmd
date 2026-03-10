@@ -176,7 +176,7 @@ classDiagram
     WTagRepository ..> WTag : manages
     VendorProfileRepository ..> VendorProfile : manages
 
-    %% Entity relationships
+    %% Entity relationships 
     WorkshopTemplate --> VendorProfile : vendor (ManyToOne)
     WorkshopTemplate "1" --> "*" WorkshopImage : workshopImages (OneToMany, cascade)
     WorkshopTemplate "1" --> "*" WorkshopTag : workshopTags (OneToMany, cascade)

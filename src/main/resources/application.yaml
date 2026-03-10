@@ -37,9 +37,20 @@ app:
   jwt:
     secret: dGhpc2lzYXZlcnlsb25nc2VjcmV0a2V5Zm9yand0c2lnbmluZ3B1cnBvc2Vz
     expiration-ms: 86400000 # 24 hours
-  #    expiration-ms: 30000  # Test
   fe-url: http://localhost:3000
 
 google-auth:
   client-id: ${GOOGLE_AUTH_CLIENT_ID}
   client-secret: ${GOOGLE_AUTH_CLIENT_SECRET}
+
+# VNPT eKYC Configuration
+vnpt:
+  ekyc:
+    access-token: ${VNPT_EKYC_ACCESS_TOKEN}
+    token-id: ${VNPT_EKYC_TOKEN_ID}
+    token-key: ${VNPT_EKYC_TOKEN_KEY}
+
+# NeoNHS Face Verification Service (Python microservice)
+face-service:
+  base-url: ${FACE_SERVICE_URL:http://localhost:8001}
+

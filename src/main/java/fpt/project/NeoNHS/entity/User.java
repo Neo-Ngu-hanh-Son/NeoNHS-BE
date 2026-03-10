@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -49,6 +50,40 @@ public class User extends BaseEntity {
     @Builder.Default
     @Column(nullable = false)
     private Boolean isBanned = false;
+
+    private Double balance;
+
+    // for payout
+    private String bankName;
+    private String bankBin;
+    private String bankAccountNumber;
+    private String bankAccountName;
+
+    // @Builder.Default
+    // @Column(nullable = false)
+    // private Boolean isBankVerified = false;
+
+    // ---- kyc ----
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean kycVerified = false;
+    private String kycDocumentId;
+    private String kycFullName;
+    private String kycIdNumber;
+
+    /**
+     * Face embedding (512-dim vector as JSON string) — extracted from selfie during
+     * KYC.
+     * Used for face verification before withdrawal.
+     */
+    @Column(columnDefinition = "TEXT")
+    private String faceEmbedding;
+
+    @Column(length = 500)
+    private String banReason;
+
+    @Column
+    private LocalDateTime bannedAt;
 
     // Relationships
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

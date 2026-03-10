@@ -1,0 +1,64 @@
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#ffffff"
+    primaryTextColor: "#000000"
+    primaryBorderColor: "#000000"
+    activationBkgColor: "#eeeeee"
+    activationBorderColor: "#000000"
+    actorBkg: "#ffffff"
+    actorTextColor: "#000000"
+    actorBorder: "#000000"
+    altBackground: "#f5f5f5"
+    altBorder: "#000000"
+  sequence:
+    actorMargin: 10
+    messageMargin: 0
+---
+sequenceDiagram
+    actor Tourist as Tourist <br/> <<user>>
+    participant LoginPage as LoginPage <br/> <<user interaction>>
+    participant AuthController as AuthController <br/> <<coordinator>>
+    participant AuthService as AuthService <br/> <<service>>
+    participant AuthenticationManager as AuthenticationManager <br/> <<service>>
+    participant UserRepository as UserRepository <br/> <<repository>>
+    participant DB
+    participant JwtTokenProvider as JwtTokenProvider <br/> <<service>>
+    participant RedisAuthService as RedisAuthService <br/> <<service>>
+
+    Tourist->>+LoginPage: 1. Fills login form and submit
+    LoginPage->>+AuthController: 2. login(request)
+    AuthController->>+AuthService: 3. login(request)
+
+    AuthService->>+AuthenticationManager: 4. authenticate(credentials)
+    AuthenticationManager-->>-AuthService: 5. Authentication object
+
+    alt 5A Authentication failed
+        AuthService-->>AuthController: 5A1. Authentication failed
+        AuthController-->>LoginPage: 5A2. Error response
+        LoginPage-->>Tourist: 5A3. Show login error
+    else 5B Authentication passed
+        AuthService->>+UserRepository: 5B1. findById(userId)
+        UserRepository->>+DB: 5B2. findById(userId)
+        DB-->>-UserRepository: 5B3. User result
+        UserRepository-->>-AuthService: 5B4. User entity
+    end
+
+    AuthService->>AuthService: 6. validateUser(user)
+    
+    alt 6A Validation failed
+        AuthService-->>AuthController: 6A1. Validation failed
+        AuthController-->>LoginPage: 6A2. Error response
+        LoginPage-->>Tourist: 6A3. Show error message
+    else 6B Validation passed
+        AuthService->>+JwtTokenProvider: 6B1. generateTokens(authentication)
+        JwtTokenProvider-->>-AuthService: 6B2. Tokens
+        
+        AuthService->>+RedisAuthService: 6B3. saveRefreshToken(refreshToken, userId)
+        RedisAuthService-->>-AuthService: 6B4. Saved successfully
+    end
+
+    AuthService-->>-AuthController: 7. Login successful
+    AuthController-->>-LoginPage: 8. Success response
+    LoginPage-->>-Tourist: 9. Show success and redirect

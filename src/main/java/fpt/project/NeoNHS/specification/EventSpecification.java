@@ -7,6 +7,7 @@ import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,14 +50,14 @@ public class EventSpecification {
             if (filter.getStartDate() != null) {
                 predicates.add(criteriaBuilder.greaterThanOrEqualTo(
                         root.get("startTime"),
-                        filter.getStartDate()
+                        filter.getStartDate().atStartOfDay()
                 ));
             }
 
             if (filter.getEndDate() != null) {
                 predicates.add(criteriaBuilder.lessThanOrEqualTo(
                         root.get("endTime"),
-                        filter.getEndDate()
+                        filter.getEndDate().atTime(LocalTime.MAX)
                 ));
             }
 

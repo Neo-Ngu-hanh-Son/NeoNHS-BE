@@ -1,0 +1,97 @@
+---
+config:
+  theme: redux
+  look: neo
+---
+classDiagram
+    direction RL
+    class AuthController {
+        - AuthService authService
+        + register(request: RegisterRequest) ResponseEntity~ApiResponse~AuthResponse~~
+    }
+
+    class AuthService {
+        <<interface>>
+        + register(request: RegisterRequest) AuthResponse
+    }
+
+    class AuthServiceImpl {
+        - UserRepository userRepository
+        - PasswordEncoder passwordEncoder
+        - MailService mailService
+        - RedisAuthService redisAuthService
+        + register(request: RegisterRequest) AuthResponse
+        - isValidPhoneNumber(phone: String) boolean
+        - generateVerifyToken() String
+        - validatePassword(password: String) void
+    }
+
+    class RegisterRequest {
+        - String fullname
+        - String email
+        - String password
+        - String phoneNumber
+    }
+
+    class AuthResponse {
+        - String accessToken
+        - String refreshToken
+        - String tokenType
+        - UserInfoResponse userInfo
+    }
+
+    class UserRepository {
+        <<interface>>
+        + existsByEmail(email: String) boolean
+        + save(user: User) User
+    }
+
+    class User {
+        - UUID id
+        - String fullname
+        - String email
+        - String passwordHash
+        - String phoneNumber
+        - UserRole role
+        - Boolean isActive
+        - Boolean isVerified
+    }
+
+    class MailService {
+        <<interface>>
+        + sendVerifyEmailAsync(user: User, template: EmailTemplate, verifyToken: String, appUrl: String) void
+    }
+
+    class MailServiceImpl {
+        + sendVerifyEmailAsync(user: User, template: EmailTemplate, verifyToken: String, appUrl: String) void
+    }
+
+    class RedisAuthService {
+        <<interface>>
+        + saveOtp(email: String, verifyToken: String) void
+    }
+
+    class PasswordEncoder {
+        <<interface>>
+        + encode(rawPassword: CharSequence) String
+    }
+
+    %% Relationships
+    AuthController ..> AuthService
+    AuthServiceImpl ..|> AuthService
+
+    AuthController ..> RegisterRequest
+    AuthController ..> AuthResponse
+
+    AuthServiceImpl ..> UserRepository
+    AuthServiceImpl ..> PasswordEncoder
+    AuthServiceImpl ..> MailService
+    AuthServiceImpl ..> RedisAuthService
+
+    AuthServiceImpl ..> RegisterRequest
+    AuthServiceImpl ..> AuthResponse
+    AuthServiceImpl ..> User
+
+    UserRepository ..> User
+
+    MailServiceImpl ..|> MailService
