@@ -225,6 +225,61 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
                 .collect(Collectors.toList());
     }
 
+    // ==================== TOURIST ====================
+
+    @Override
+    public WorkshopTemplateResponse getActiveWorkshopTemplateById(UUID id) {
+        WorkshopTemplate template = workshopTemplateRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("WorkshopTemplate", "id", id));
+        // C1: Direct link accessible — only check ACTIVE status, NOT isPublished
+        if (template.getStatus() != WorkshopStatus.ACTIVE) {
+            throw new ResourceNotFoundException("WorkshopTemplate", "id", id);
+        }
+        return mapToResponse(template);
+    }
+
+    @Override
+    public Page<WorkshopTemplateResponse> getActiveWorkshopTemplates(Pageable pageable) {
+        Specification<WorkshopTemplate> spec = WorkshopTemplateSpecification.hasStatus(WorkshopStatus.ACTIVE)
+                .and(WorkshopTemplateSpecification.isPublished());
+        return workshopTemplateRepository.findAll(spec, pageable)
+                .map(this::mapToResponse);
+    }
+
+    @Override
+    public Page<WorkshopTemplateResponse> searchAndFilterActiveTemplates(
+            String keyword,
+            UUID tagId,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            Integer minDuration,
+            Integer maxDuration,
+            BigDecimal minRating,
+            Pageable pageable
+    ) {
+        Specification<WorkshopTemplate> spec = WorkshopTemplateSpecification.hasStatus(WorkshopStatus.ACTIVE)
+                .and(WorkshopTemplateSpecification.isPublished());
+
+        if (keyword != null && !keyword.isEmpty()) {
+            spec = spec.and(WorkshopTemplateSpecification.searchByKeyword(keyword));
+        }
+        if (tagId != null) {
+            spec = spec.and(WorkshopTemplateSpecification.hasTagId(tagId));
+        }
+        if (minPrice != null || maxPrice != null) {
+            spec = spec.and(WorkshopTemplateSpecification.hasPriceBetween(minPrice, maxPrice));
+        }
+        if (minDuration != null || maxDuration != null) {
+            spec = spec.and(WorkshopTemplateSpecification.hasDurationBetween(minDuration, maxDuration));
+        }
+        if (minRating != null) {
+            spec = spec.and(WorkshopTemplateSpecification.hasMinRating(minRating));
+        }
+
+        return workshopTemplateRepository.findAll(spec, pageable)
+                .map(this::mapToResponse);
+    }
+
     // ==================== UPDATE ====================
 
     @Override
@@ -359,6 +414,33 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
         workshopTemplateRepository.delete(template);
     }
 
+    // ==================== TOGGLE PUBLISH ====================
+
+    @Override
+    @Transactional
+    public WorkshopTemplateResponse togglePublishWorkshopTemplate(String email, UUID id) {
+        // 1. Find the workshop template
+        WorkshopTemplate template = workshopTemplateRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("WorkshopTemplate", "id", id));
+
+        // 2. Verify ownership
+        if (!template.getVendor().getUser().getEmail().equals(email)) {
+            throw new BadRequestException("You do not have permission to toggle publish status of this workshop template");
+        }
+
+        // 3. Only allow toggle if status is ACTIVE
+        if (template.getStatus() != WorkshopStatus.ACTIVE) {
+            throw new BadRequestException("Only ACTIVE templates can be published/unpublished. Current status: " + template.getStatus());
+        }
+
+        // 4. Toggle isPublished
+        template.setIsPublished(!template.getIsPublished());
+
+        // 5. Save and return
+        WorkshopTemplate savedTemplate = workshopTemplateRepository.save(template);
+        return mapToResponse(savedTemplate);
+    }
+
     // ==================== REGISTER/SUBMIT FOR APPROVAL ====================
 
     @Override
@@ -381,11 +463,12 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
         // 4. Validate mandatory fields for submission
         validateTemplateCompleteness(template);
 
-        // 5. Update status to PENDING and clear rejection reason if exists
+        // 5. Update status to PENDING and clear admin note if exists
         template.setStatus(WorkshopStatus.PENDING);
-        if (template.getRejectReason() != null) {
-            template.setRejectReason(null);
-        }
+        template.setIsPublished(false);
+        template.setAdminNote(null);
+        template.setReviewedBy(null);
+        template.setReviewedAt(null);
 
         // 6. Save and return
         WorkshopTemplate submittedTemplate = workshopTemplateRepository.save(template);
@@ -459,9 +542,12 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
 
         // 4. Update status to ACTIVE and set approval details
         template.setStatus(WorkshopStatus.ACTIVE);
-        template.setApprovedBy(admin.getId());
-        template.setApprovedAt(LocalDateTime.now());
-        template.setRejectReason(null); // Clear any previous rejection reason
+        template.setIsPublished(false);
+        template.setReviewedBy(admin.getId());
+        template.setReviewedAt(LocalDateTime.now());
+
+        // Clear any previous admin note on re-approval
+        template.setAdminNote(null);
 
         // 5. Save and return
         WorkshopTemplate approvedTemplate = workshopTemplateRepository.save(template);
@@ -470,7 +556,7 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
 
     @Override
     @Transactional
-    public WorkshopTemplateResponse rejectWorkshopTemplate(String adminEmail, UUID id, String rejectReason) {
+    public WorkshopTemplateResponse rejectWorkshopTemplate(String adminEmail, UUID id, String adminNote) {
         // 1. Find the admin user
         User admin = userRepository.findByEmail(adminEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "email", adminEmail));
@@ -484,16 +570,17 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
             throw new BadRequestException("Only templates with 'Pending' status can be rejected. Current status: " + template.getStatus());
         }
 
-        // 4. Validate reject reason
-        if (rejectReason == null || rejectReason.trim().isEmpty()) {
-            throw new BadRequestException("Reject reason is required");
+        // 4. Validate admin note
+        if (adminNote == null || adminNote.trim().isEmpty()) {
+            throw new BadRequestException("Admin note (reason) is required when rejecting");
         }
 
-        // 5. Update status to REJECTED and set rejection details
+        // 5. Update status to REJECTED and set review details
         template.setStatus(WorkshopStatus.REJECTED);
-        template.setRejectReason(rejectReason);
-        template.setApprovedBy(null); // Clear approval details
-        template.setApprovedAt(null);
+        template.setIsPublished(false);
+        template.setAdminNote(adminNote);
+        template.setReviewedBy(admin.getId());
+        template.setReviewedAt(LocalDateTime.now());
 
         // 6. Save and return
         WorkshopTemplate rejectedTemplate = workshopTemplateRepository.save(template);
@@ -546,15 +633,16 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
                 .minParticipants(template.getMinParticipants())
                 .maxParticipants(template.getMaxParticipants())
                 .status(template.getStatus())
+                .isPublished(template.getIsPublished())
                 .averageRating(template.getAverageRating())
-                .totalReview(template.getTotalReview())
+                .totalRatings(template.getTotalRatings())
                 .vendorId(template.getVendor().getId())
                 .vendorName(template.getVendor().getBusinessName())
                 .createdAt(template.getCreatedAt())
                 .updatedAt(template.getUpdatedAt())
-                .rejectReason(template.getRejectReason())
-                .approvedBy(template.getApprovedBy())
-                .approvedAt(template.getApprovedAt())
+                .adminNote(template.getAdminNote())
+                .reviewedBy(template.getReviewedBy())
+                .reviewedAt(template.getReviewedAt())
                 .images(imageResponses)
                 .tags(tagResponses)
                 .build();

@@ -26,17 +26,18 @@ public class WorkshopTemplateResponse {
     private Integer minParticipants;
     private Integer maxParticipants;
     private WorkshopStatus status;
+    private Boolean isPublished;
     private BigDecimal averageRating;
-    private Integer totalReview;
+    private Integer totalRatings;
     private UUID vendorId;
     private String vendorName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    // Approval tracking fields
-    private String rejectReason;
-    private UUID approvedBy;
-    private LocalDateTime approvedAt;
+    // Approval/Rejection tracking fields
+    private String adminNote;
+    private UUID reviewedBy;
+    private LocalDateTime reviewedAt;
 
     private List<WorkshopImageResponse> images;
     private List<WTagResponse> tags;

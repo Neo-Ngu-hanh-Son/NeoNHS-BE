@@ -25,6 +25,9 @@ public interface WorkshopSessionService {
 
     Page<WorkshopSessionResponse> getSessionsByTemplateId(UUID templateId, Pageable pageable);
 
+    // ==================== TOURIST ====================
+    Page<WorkshopSessionResponse> getUpcomingSessionsByTemplateId(UUID templateId, Pageable pageable);
+
     // ==================== SEARCH & FILTER ====================
     Page<WorkshopSessionResponse> searchWorkshopSessions(
             String keyword,

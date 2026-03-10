@@ -36,7 +36,7 @@ public class WorkshopSessionResponse {
     private String fullDescription;
     private Integer estimatedDuration;
     private BigDecimal averageRating;
-    private Integer totalReview;
+    private Integer totalRatings;
 
     // Vendor information
     private UUID vendorId;

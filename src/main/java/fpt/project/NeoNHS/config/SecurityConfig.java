@@ -42,6 +42,7 @@ public class SecurityConfig {
             "/api/blogs/**",
             "/api/attractions/**",
             "/api/events/**",
+            "/api/wtags/all",
     };
 
     // Swagger / docs

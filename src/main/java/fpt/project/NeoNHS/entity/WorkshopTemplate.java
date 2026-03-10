@@ -47,18 +47,22 @@ public class WorkshopTemplate extends BaseEntity {
     private WorkshopStatus status = WorkshopStatus.DRAFT;
 
     @Column(columnDefinition = "TEXT")
-    private String rejectReason;
+    private String adminNote;
 
-    private UUID approvedBy;
+    private UUID reviewedBy;
 
-    private LocalDateTime approvedAt;
+    private LocalDateTime reviewedAt;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean isPublished = false;
 
     @Builder.Default
     @Column(precision = 3, scale = 2)
     private BigDecimal averageRating = BigDecimal.ZERO;
 
     @Builder.Default
-    private Integer totalReview = 0;
+    private Integer totalRatings = 0;
 
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)

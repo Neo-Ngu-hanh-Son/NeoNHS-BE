@@ -28,6 +28,10 @@ public class WorkshopTemplateSpecification {
         };
     }
 
+    public static Specification<WorkshopTemplate> isPublished() {
+        return (root, query, cb) -> cb.equal(root.get("isPublished"), true);
+    }
+
     public static Specification<WorkshopTemplate> hasVendorId(UUID vendorId) {
         return (root, query, cb) -> {
             if (vendorId == null) {
