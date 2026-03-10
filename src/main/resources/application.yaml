@@ -3,9 +3,9 @@ spring:
     name: NeoNHS
 
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: jdbc:mysql://localhost:3306/neonhs_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
+    username: root
+    password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -49,4 +49,8 @@ vnpt:
     access-token: ${VNPT_EKYC_ACCESS_TOKEN}
     token-id: ${VNPT_EKYC_TOKEN_ID}
     token-key: ${VNPT_EKYC_TOKEN_KEY}
+
+# NeoNHS Face Verification Service (Python microservice)
+face-service:
+  base-url: ${FACE_SERVICE_URL:http://localhost:8001}
 
