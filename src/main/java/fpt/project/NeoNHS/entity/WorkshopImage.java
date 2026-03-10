@@ -2,9 +2,8 @@ package fpt.project.NeoNHS.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
+import lombok.experimental.SuperBuilder;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -13,22 +12,19 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class WorkshopImage {
+@SuperBuilder
+public class WorkshopImage extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 2048)
     private String imageUrl;
 
     @Builder.Default
     @Column(nullable = false)
     private Boolean isThumbnail = false;
-
-    @CreationTimestamp
-    private LocalDateTime createdAt;
 
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)

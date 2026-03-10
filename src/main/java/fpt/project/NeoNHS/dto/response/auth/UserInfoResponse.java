@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.dto.response.auth;
 
+import fpt.project.NeoNHS.entity.User;
 import fpt.project.NeoNHS.enums.UserRole;
 import lombok.Builder;
 import lombok.Data;
@@ -16,9 +17,28 @@ public class UserInfoResponse {
     private String phoneNumber;
     private String avatarUrl;
     private UserRole role;
+
     private Boolean isActive = true;
-    private Boolean isVerified = false;
-    private Boolean isBanned = false;
+    private Boolean isVerified;
+    private Boolean isBanned;
+    private Boolean kycVerified;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    public static UserInfoResponse fromEntity(User user) {
+        return UserInfoResponse.builder()
+                .id(user.getId())
+                .fullname(user.getFullname())
+                .email(user.getEmail())
+                .phoneNumber(user.getPhoneNumber())
+                .avatarUrl(user.getAvatarUrl())
+                .role(user.getRole())
+                .isActive(user.getIsActive())
+                .isVerified(user.getIsVerified())
+                .isBanned(user.getIsBanned())
+                .kycVerified(user.getKycVerified())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .build();
+    }
 }

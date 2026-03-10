@@ -3,8 +3,7 @@ package fpt.project.NeoNHS.entity;
 import fpt.project.NeoNHS.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,8 +15,8 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class User {
+@SuperBuilder
+public class User extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -37,7 +36,7 @@ public class User {
     private String avatarUrl;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private UserRole role;
 
     @Builder.Default
@@ -52,11 +51,39 @@ public class User {
     @Column(nullable = false)
     private Boolean isBanned = false;
 
-    @CreationTimestamp
-    private LocalDateTime createdAt;
+    private Double balance;
 
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
+    // for payout
+    private String bankName;
+    private String bankBin;
+    private String bankAccountNumber;
+    private String bankAccountName;
+
+    // @Builder.Default
+    // @Column(nullable = false)
+    // private Boolean isBankVerified = false;
+
+    // ---- kyc ----
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean kycVerified = false;
+    private String kycDocumentId;
+    private String kycFullName;
+    private String kycIdNumber;
+
+    /**
+     * Face embedding (512-dim vector as JSON string) — extracted from selfie during
+     * KYC.
+     * Used for face verification before withdrawal.
+     */
+    @Column(columnDefinition = "TEXT")
+    private String faceEmbedding;
+
+    @Column(length = 500)
+    private String banReason;
+
+    @Column
+    private LocalDateTime bannedAt;
 
     // Relationships
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

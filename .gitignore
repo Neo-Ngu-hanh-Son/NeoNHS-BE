@@ -36,3 +36,8 @@ build/
 .env
 .env.local
 .env.*.local
+
+.application.yaml
+
+### AI-genrated document files ###
+# diagrams/

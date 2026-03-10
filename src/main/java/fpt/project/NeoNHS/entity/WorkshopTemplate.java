@@ -3,8 +3,7 @@ package fpt.project.NeoNHS.entity;
 import fpt.project.NeoNHS.enums.WorkshopStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -17,8 +16,8 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class WorkshopTemplate {
+@SuperBuilder
+public class WorkshopTemplate extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -44,45 +43,41 @@ public class WorkshopTemplate {
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private WorkshopStatus status = WorkshopStatus.PENDING;
+    @Column(nullable = false, length = 20)
+    private WorkshopStatus status = WorkshopStatus.DRAFT;
 
     @Column(columnDefinition = "TEXT")
-    private String rejectReason;
+    private String adminNote;
 
-    private UUID approvedBy;
+    private UUID reviewedBy;
 
-    private LocalDateTime approvedAt;
+    private LocalDateTime reviewedAt;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean isPublished = false;
 
     @Builder.Default
     @Column(precision = 3, scale = 2)
     private BigDecimal averageRating = BigDecimal.ZERO;
 
     @Builder.Default
-    private Integer totalReview = 0;
-
-    private UUID transactionId;
-
-    @CreationTimestamp
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
+    private Integer totalRatings = 0;
 
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vendor_id", nullable = false)
     private VendorProfile vendor;
 
-    @OneToMany(mappedBy = "workshopTemplate", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "workshopTemplate", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<WorkshopSession> workshopSessions;
 
-    @OneToMany(mappedBy = "workshopTemplate", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "workshopTemplate", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<WorkshopImage> workshopImages;
 
-    @OneToMany(mappedBy = "workshopTemplate", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "workshopTemplate", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<WorkshopTag> workshopTags;
 
-    @OneToMany(mappedBy = "workshopTemplate", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "workshopTemplate", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Review> reviews;
 }

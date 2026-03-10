@@ -1,15 +1,21 @@
 package fpt.project.NeoNHS.security;
 
+import fpt.project.NeoNHS.helpers.HashingHelper;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import io.netty.util.internal.StringUtil;
+import org.apache.commons.codec.digest.Sha2Crypt;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.io.UnsupportedEncodingException;
 import java.util.Date;
 import java.util.UUID;
+
 
 @Component
 public class JwtTokenProvider {
@@ -59,5 +65,9 @@ public class JwtTokenProvider {
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
+    }
+
+    public String generateRefreshToken() {
+        return UUID.randomUUID().toString();
     }
 }

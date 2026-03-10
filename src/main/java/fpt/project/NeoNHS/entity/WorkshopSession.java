@@ -3,8 +3,7 @@ package fpt.project.NeoNHS.entity;
 import fpt.project.NeoNHS.enums.SessionStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -17,8 +16,8 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class WorkshopSession {
+@SuperBuilder
+public class WorkshopSession extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -40,14 +39,8 @@ public class WorkshopSession {
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private SessionStatus status = SessionStatus.SCHEDULED;
-
-    @CreationTimestamp
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
 
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)

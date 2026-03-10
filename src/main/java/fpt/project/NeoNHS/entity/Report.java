@@ -3,7 +3,7 @@ package fpt.project.NeoNHS.entity;
 import fpt.project.NeoNHS.enums.ReportStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -14,8 +14,8 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class Report {
+@SuperBuilder
+public class Report extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -46,9 +46,6 @@ public class Report {
     private String handleNote;
 
     private LocalDateTime resolvedAt;
-
-    @CreationTimestamp
-    private LocalDateTime createdAt;
 
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)

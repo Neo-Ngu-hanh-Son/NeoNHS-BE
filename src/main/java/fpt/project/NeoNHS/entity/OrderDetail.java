@@ -31,6 +31,12 @@ public class OrderDetail {
     @CreationTimestamp
     private LocalDateTime createdAt;
 
+    @Column(precision = 12, scale = 2)
+    private BigDecimal commissionAmount; // Số tiền phí hệ thống thu (Cột "Fee")
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal netAmount;        // Số tiền Vendor thực nhận (Cột "Net")
+
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)

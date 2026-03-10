@@ -3,8 +3,7 @@ package fpt.project.NeoNHS.entity;
 import fpt.project.NeoNHS.enums.TicketCatalogStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -17,8 +16,8 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class TicketCatalog {
+@SuperBuilder
+public class TicketCatalog extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -47,15 +46,12 @@ public class TicketCatalog {
     private Integer totalQuota;
 
     @Builder.Default
+    private Integer soldQuantity = 0;
+
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TicketCatalogStatus status = TicketCatalogStatus.ACTIVE;
-
-    @CreationTimestamp
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
 
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)

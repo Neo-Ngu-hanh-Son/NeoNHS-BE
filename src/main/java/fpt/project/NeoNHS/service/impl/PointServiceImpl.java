@@ -1,13 +1,201 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.PaginationConstants;
+import fpt.project.NeoNHS.dto.request.point.PointRequest;
+import fpt.project.NeoNHS.dto.response.point.PointPanoramaResponse;
+import fpt.project.NeoNHS.dto.response.point.PointResponse;
+import fpt.project.NeoNHS.entity.Attraction;
+import fpt.project.NeoNHS.entity.Point;
+import fpt.project.NeoNHS.repository.AttractionRepository;
 import fpt.project.NeoNHS.repository.PointRepository;
+import fpt.project.NeoNHS.service.PanoramaService;
 import fpt.project.NeoNHS.service.PointService;
+import fpt.project.NeoNHS.specification.PointSpecification;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class PointServiceImpl implements PointService {
 
     private final PointRepository pointRepository;
+    private final AttractionRepository attractionRepository;
+    private final PanoramaService panoramaService;
+
+    @Override
+    @Transactional
+    public PointResponse createPoint(PointRequest request) {
+        Attraction attraction = attractionRepository.findById(request.getAttractionId())
+                .orElseThrow(() -> new RuntimeException("Attraction not found with id: " + request.getAttractionId()));
+
+        Point point = Point.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .thumbnailUrl(request.getThumbnailUrl())
+                .latitude(request.getLatitude())
+                .longitude(request.getLongitude())
+                .orderIndex(request.getOrderIndex())
+                .estTimeSpent(request.getEstTimeSpent())
+                .type(request.getType())
+                .googlePlaceId(request.getGooglePlaceId())
+                .attraction(attraction)
+                .build();
+
+        return mapToResponse(pointRepository.save(point));
+    }
+
+    @Override
+    @Transactional
+    public PointResponse updatePoint(UUID id, PointRequest request) {
+        Point point = pointRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Point not found with id: " + id));
+
+        if (request.getName() != null)
+            point.setName(request.getName());
+        if (request.getDescription() != null)
+            point.setDescription(request.getDescription());
+        if (request.getThumbnailUrl() != null)
+            point.setThumbnailUrl(request.getThumbnailUrl());
+        if (request.getLatitude() != null)
+            point.setLatitude(request.getLatitude());
+        if (request.getLongitude() != null)
+            point.setLongitude(request.getLongitude());
+        if (request.getOrderIndex() != null)
+            point.setOrderIndex(request.getOrderIndex());
+        if (request.getEstTimeSpent() != null)
+            point.setEstTimeSpent(request.getEstTimeSpent());
+        if (request.getType() != null)
+            point.setType(request.getType());
+        if (request.getGooglePlaceId() != null)
+            point.setGooglePlaceId(request.getGooglePlaceId());
+
+        if (request.getAttractionId() != null) {
+            Attraction attraction = attractionRepository.findById(request.getAttractionId())
+                    .orElseThrow(() -> new RuntimeException("Attraction not found"));
+            point.setAttraction(attraction);
+        }
+
+        return mapToResponse(pointRepository.save(point));
+    }
+
+    @Override
+    @Transactional
+    public void deletePoint(UUID id, UUID userId) {
+        Point point = pointRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Point not found with id: " + id));
+
+        if (point.getDeletedAt() != null) {
+            throw new RuntimeException("Point is already deleted");
+        }
+
+        point.setDeletedAt(java.time.LocalDateTime.now());
+        point.setDeletedBy(userId);
+
+        pointRepository.save(point);
+    }
+
+    @Override
+    public PointResponse getPointById(UUID id) {
+        Point point = pointRepository.findById(id)
+                .filter(p -> p.getDeletedAt() == null)
+                .orElseThrow(() -> new RuntimeException("Point not found with id: " + id));
+        return mapToResponse(point);
+    }
+
+    @Override
+    public PointResponse getPointByIdForAdmin(UUID id) {
+        Point point = pointRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Point not found with id: " + id));
+        return mapToResponse(point);
+    }
+
+    @Override
+    public List<PointResponse> getPointsByAttraction(UUID attractionId) {
+        if (!attractionRepository.existsById(attractionId)) {
+            throw new RuntimeException("Attraction not found with id: " + attractionId);
+        }
+
+        return pointRepository.findByAttractionIdOrderByOrderIndexAsc(attractionId)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Override
+    public Page<PointResponse> getAllPointsWithPagination(UUID attractionId, int page, int size, String sortBy,
+                                                          String sortDir, String search) {
+        if (!attractionRepository.existsById(attractionId)) {
+            throw new RuntimeException("Attraction not found");
+        }
+
+        Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        Pageable pageable = PageRequest.of(page, Math.min(size, PaginationConstants.MAX_PAGE_SIZE), sort);
+
+        return pointRepository.findByAttractionIdWithSearch(attractionId, search, pageable)
+                .map(this::mapToResponse);
+    }
+
+    // Get all points and checkin points across all attractions with pagination and
+    // search (if needed)
+    @Override
+    public Page<PointResponse> getAllPoints(int page, int size, String sortBy, String sortDir, String search) {
+        return findAllPoints(page, size, sortBy, sortDir, search, true);
+    }
+
+    @Override
+    public Page<PointResponse> getAllPointsForAdmin(int page, int size, String sortBy, String sortDir, String search,
+                                                    boolean includeDeleted) {
+        return findAllPoints(page, size, sortBy, sortDir, search, !includeDeleted);
+    }
+
+    private Page<PointResponse> findAllPoints(int page, int size, String sortBy, String sortDir, String search,
+                                              boolean excludeDeleted) {
+        Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        Pageable pageable = PageRequest.of(page, Math.min(size, PaginationConstants.MAX_PAGE_SIZE), sort);
+
+        return pointRepository.findAll(PointSpecification.withFilters(search, excludeDeleted), pageable)
+                .map(this::mapToResponse);
+    }
+
+    private PointResponse mapToResponse(Point entity) {
+        int historyAudioCount = (int) entity.getHistoryAudios().stream()
+                .filter(historyAudio -> historyAudio.getDeletedAt() == null)
+                .count();
+        return PointResponse.builder()
+                .id(entity.getId())
+                .name(entity.getName())
+                .description(entity.getDescription())
+                .thumbnailUrl(entity.getThumbnailUrl())
+                .latitude(entity.getLatitude())
+                .longitude(entity.getLongitude())
+                .orderIndex(entity.getOrderIndex())
+                .estTimeSpent(entity.getEstTimeSpent())
+                .type(entity.getType())
+                .attractionId(entity.getAttraction().getId())
+                .panoramaImageUrl(entity.getPanoramaImageUrl())
+                .defaultPitch(entity.getDefaultPitch())
+                .defaultYaw(entity.getDefaultYaw())
+                .googlePlaceId(entity.getGooglePlaceId())
+                .historyAudioCount(historyAudioCount)
+                .build();
+    }
+
+    @Override
+    public PointPanoramaResponse getPointPanorama(UUID pointId) {
+        return panoramaService.getPointPanorama(pointId);
+    }
 }

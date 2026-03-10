@@ -1,0 +1,101 @@
+package fpt.project.NeoNHS.specification;
+
+import fpt.project.NeoNHS.dto.request.attraction.AttractionFilterRequest;
+import fpt.project.NeoNHS.entity.Attraction;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.jpa.domain.Specification;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class AttractionSpecification {
+    public static Specification<Attraction> withFilters(AttractionFilterRequest filter, boolean activeOnly) {
+        return (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (activeOnly) {
+                predicates.add(criteriaBuilder.isTrue(root.get("isActive")));
+                predicates.add(criteriaBuilder.isNull(root.get("deletedAt")));
+            }
+
+            if (filter.getStatus() != null) {
+                predicates.add(criteriaBuilder.equal(root.get("status"), filter.getStatus()));
+            }
+
+            if (filter.getName() != null && !filter.getName().isBlank()) {
+                String keyword = "%" + filter.getName().toLowerCase() + "%";
+
+                predicates.add(criteriaBuilder.or(
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), keyword),
+//                        criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), keyword),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("address")), keyword)
+                ));
+            }
+//            This old code is using AND for name, description, and address, which is too strict.
+//            The above new code uses OR to allow matching any of the fields.
+//            if (filter.getName() != null && !filter.getName().isBlank()) {
+//                predicates.add(criteriaBuilder.like(
+//                        criteriaBuilder.lower(root.get("name")),
+//                        "%" + filter.getName().toLowerCase() + "%"
+//                ));
+//            }
+//
+//            if (filter.getDescription() != null && !filter.getDescription().isBlank()) {
+//                predicates.add(criteriaBuilder.like(
+//                        criteriaBuilder.lower(root.get("description")),
+//                        "%" + filter.getDescription().toLowerCase() + "%"
+//                ));
+//            }
+//
+//            if (filter.getAddress() != null && !filter.getAddress().isBlank()) {
+//                predicates.add(criteriaBuilder.like(
+//                        criteriaBuilder.lower(root.get("address")),
+//                        "%" + filter.getAddress().toLowerCase() + "%"
+//                ));
+//            }
+
+            if (filter.getOpenHour() != null) {
+                predicates.add(criteriaBuilder.greaterThanOrEqualTo(
+                        root.get("openHour"),
+                        filter.getOpenHour()
+                ));
+            }
+
+            if (filter.getCloseHour() != null) {
+                predicates.add(criteriaBuilder.lessThanOrEqualTo(
+                        root.get("closeHour"),
+                        filter.getCloseHour()
+                ));
+            }
+
+
+            if (filter.getLatitude() != null && filter.getLongitude() != null) {
+
+                Double userLat = filter.getLatitude().doubleValue();
+                Double userLon = filter.getLongitude().doubleValue();
+
+                Expression<Double> distanceMeters = criteriaBuilder.function(
+                        "ST_Distance_Sphere",
+                        Double.class,
+                        criteriaBuilder.function(
+                                "POINT",
+                                Object.class,
+                                root.get("longitude"),
+                                root.get("latitude")
+                        ),
+                        criteriaBuilder.function(
+                                "POINT",
+                                Object.class,
+                                criteriaBuilder.literal(userLon),
+                                criteriaBuilder.literal(userLat)
+                        )
+                );
+
+                predicates.add(criteriaBuilder.lessThanOrEqualTo(distanceMeters, 100.0));
+            }
+
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+}

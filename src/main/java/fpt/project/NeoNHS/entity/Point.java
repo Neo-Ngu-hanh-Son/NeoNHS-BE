@@ -2,13 +2,19 @@ package fpt.project.NeoNHS.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.math.BigDecimal;
+import fpt.project.NeoNHS.enums.PointType;
+
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
 
 @Entity
 @Table(name = "points")
@@ -16,8 +22,8 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class Point {
+@SuperBuilder
+public class Point extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -31,11 +37,6 @@ public class Point {
 
     private String thumbnailUrl;
 
-    @Column(columnDefinition = "TEXT")
-    private String history;
-
-    private String historyAudioUrl;
-
     @Column(precision = 10, scale = 7)
     private BigDecimal latitude;
 
@@ -46,11 +47,33 @@ public class Point {
 
     private Integer estTimeSpent;
 
+    @Column(columnDefinition = "TEXT")
+    private String historyText;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PointType type = PointType.DEFAULT;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    @Column(name = "panorama_image_url", length = 2048)
+    private String panoramaImageUrl;
+
+    @Column(name = "default_yaw")
+    @Builder.Default
+    private Double defaultYaw = 0.0;
+
+    @Column(name = "default_pitch")
+    @Builder.Default
+    private Double defaultPitch = 0.0;
+
+    @Column(name = "google_place_id")
+    private String googlePlaceId;
 
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)
@@ -62,4 +85,18 @@ public class Point {
 
     @OneToMany(mappedBy = "point", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<UserVisitedPoint> userVisitedPoints;
+
+    @Builder.Default
+    @OneToMany(mappedBy = "point", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<PanoramaHotSpot> panoramaHotSpots = new ArrayList<>();
+
+    @Builder.Default
+    @OneToMany(
+            mappedBy = "point",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    private List<PointHistoryAudio> historyAudios = new ArrayList<>();
+
 }

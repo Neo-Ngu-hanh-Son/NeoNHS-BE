@@ -3,8 +3,7 @@ package fpt.project.NeoNHS.entity;
 import fpt.project.NeoNHS.enums.BlogStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -15,8 +14,8 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class Blog {
+@SuperBuilder
+public class Blog extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -32,7 +31,10 @@ public class Blog {
     private String summary;
 
     @Column(columnDefinition = "TEXT")
-    private String content;
+    private String contentJSON; // Use for web render
+
+    @Column(columnDefinition = "TEXT")
+    private String contentHTML; // Use for mobile render
 
     private String thumbnailUrl;
 
@@ -44,21 +46,16 @@ public class Blog {
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private BlogStatus status = BlogStatus.DRAFT;
 
     private LocalDateTime publishedAt;
 
+    @Column(columnDefinition = "TEXT")
     private String tags;
 
     @Builder.Default
     private Integer viewCount = 0;
-
-    @CreationTimestamp
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
 
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)

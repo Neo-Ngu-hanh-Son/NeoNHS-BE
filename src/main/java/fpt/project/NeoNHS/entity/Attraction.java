@@ -1,12 +1,11 @@
 package fpt.project.NeoNHS.entity;
 
+import fpt.project.NeoNHS.enums.AttractionStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
@@ -17,8 +16,8 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class Attraction {
+@SuperBuilder
+public class Attraction extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -40,7 +39,9 @@ public class Attraction {
     @Column(precision = 10, scale = 7)
     private BigDecimal longitude;
 
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private AttractionStatus status;
 
     private String thumbnailUrl;
 
@@ -52,12 +53,6 @@ public class Attraction {
     @Column(nullable = false)
     private Boolean isActive = true;
 
-    @CreationTimestamp
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
-
     // Relationships
     @OneToMany(mappedBy = "attraction", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Point> points;
@@ -65,3 +60,4 @@ public class Attraction {
     @OneToMany(mappedBy = "attraction", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<TicketCatalog> ticketCatalogs;
 }
+
