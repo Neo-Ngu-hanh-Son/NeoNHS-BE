@@ -412,6 +412,75 @@ public class WorkshopTemplateController {
         // ==================== REGISTER/SUBMIT FOR APPROVAL WORKSHOP TEMPLATE ====================
 
         @Operation(
+                summary = "Toggle publish status of a workshop template (Vendor only)",
+                description = """
+                        Toggles the publish status (isPublished) of a workshop template.
+                        
+                        **Requirements:**
+                        - Vendor role required
+                        - Must be the template owner
+                        - Template must be in ACTIVE status
+                        
+                        **Behavior:**
+                        - If currently published (isPublished=true) → sets to unpublished (isPublished=false)
+                        - If currently unpublished (isPublished=false) → sets to published (isPublished=true)
+                        
+                        **Published templates:**
+                        - Visible to tourists in the public catalog
+                        - Sessions can be booked by tourists
+                        
+                        **Unpublished templates:**
+                        - Hidden from tourists in the public catalog
+                        - Existing sessions and bookings are NOT affected
+                        - Vendor and admin can still see the template
+                        
+                        **Note:**
+                        - Newly approved templates default to isPublished=false
+                        - Vendor must explicitly publish after admin approval
+                        """
+        )
+        @ApiResponses(value = {
+                @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                        responseCode = "200",
+                        description = "Publish status toggled successfully",
+                        content = @Content(mediaType = "application/json",
+                                         schema = @Schema(implementation = WorkshopTemplateResponse.class))
+                ),
+                @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                        responseCode = "400",
+                        description = "Bad Request - Template is not ACTIVE"
+                ),
+                @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                        responseCode = "401",
+                        description = "Unauthorized - Valid JWT token required"
+                ),
+                @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                        responseCode = "403",
+                        description = "Forbidden - Vendor role required or not template owner"
+                ),
+                @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                        responseCode = "404",
+                        description = "Not Found - Template does not exist"
+                )
+        })
+        @PostMapping("/templates/{id}/toggle-publish")
+        @PreAuthorize("hasRole('VENDOR')")
+        public ResponseEntity<ApiResponse<WorkshopTemplateResponse>> togglePublishWorkshopTemplate(
+                        @Parameter(description = "Workshop Template ID", required = true)
+                        @PathVariable UUID id,
+                        Principal principal) {
+                WorkshopTemplateResponse response = workshopTemplateService.togglePublishWorkshopTemplate(
+                                principal.getName(),
+                                id);
+                return ResponseEntity
+                                .ok(ApiResponse.success(HttpStatus.OK,
+                                                "Workshop template publish status toggled successfully",
+                                                response));
+        }
+
+        // ==================== SUBMIT FOR APPROVAL WORKSHOP TEMPLATE ====================
+
+        @Operation(
                 summary = "Submit workshop template for admin approval",
                 description = """
                         Submits a DRAFT or REJECTED workshop template for admin review.

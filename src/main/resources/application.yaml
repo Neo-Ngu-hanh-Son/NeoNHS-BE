@@ -50,3 +50,7 @@ vnpt:
     token-id: ${VNPT_EKYC_TOKEN_ID}
     token-key: ${VNPT_EKYC_TOKEN_KEY}
 
+# NeoNHS Face Verification Service (Python microservice)
+face-service:
+  base-url: ${FACE_SERVICE_URL:http://localhost:8001}
+

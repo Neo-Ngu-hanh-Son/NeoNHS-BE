@@ -14,6 +14,7 @@ import fpt.project.NeoNHS.exception.DuplicatePhonenumberException;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.service.UserService;
+import fpt.project.NeoNHS.service.FaceVerificationService;
 import fpt.project.NeoNHS.service.VnptEkycService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +35,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final VnptEkycService vnptEkycService;
+    private final FaceVerificationService faceVerificationService;
 
     /**
      * Ngưỡng faceMatchScore tối thiểu để xác nhận KYC (85%)
@@ -145,6 +147,18 @@ public class UserServiceImpl implements UserService {
                 user.setKycFullName(nameWithoutDiacritics);
 
                 user.setKycIdNumber(kycResponse.getIdNumber());
+
+                // Extract face embedding from selfie and store for future face verification
+                try {
+                    String embedding = faceVerificationService.extractEmbedding(request.getSelfieImageBase64());
+                    user.setFaceEmbedding(embedding);
+                    log.info("Face embedding extracted and saved for user: {}", userId);
+                } catch (Exception e) {
+                    log.warn("Failed to extract face embedding for user: {}. " +
+                            "KYC still succeeds but face verification for withdrawal won't work. Error: {}",
+                            userId, e.getMessage());
+                }
+
                 userRepository.save(user);
 
                 log.info("KYC successful for user: {}, name: {} (no diacritics: {}), faceScore: {}%",

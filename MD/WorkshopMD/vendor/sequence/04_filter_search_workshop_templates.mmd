@@ -1,0 +1,38 @@
+sequenceDiagram
+    actor Vendor as Vendor
+    participant Page as TemplateSearchPage <<user interaction>>
+    participant Controller as WorkshopTemplateController <<coordinator>>
+    participant Service as WorkshopTemplateService <<service>>
+    participant WorkshopTemplate as WorkshopTemplate <<entity>>
+    participant DB as DB
+
+    Vendor->>Page: 1. Enter filter criteria and search
+    activate Page
+    Page->>Controller: 2. searchWorkshopTemplates(keyword, name, status, vendorId, tagId, minPrice, maxPrice, minDuration, maxDuration, minRating)
+    activate Controller
+    Controller->>Service: 3. searchWorkshopTemplates(filterParams)
+    activate Service
+
+    Service->>Service: 4. Build combined Specification from non-null filter params
+    Service->>WorkshopTemplate: 5. findAll(specification)
+    activate WorkshopTemplate
+    WorkshopTemplate->>DB: 6. SELECT workshop_template with dynamic criteria (JPA Criteria API)
+    activate DB
+    DB-->>WorkshopTemplate: Matching template records
+    deactivate DB
+    WorkshopTemplate-->>Service: List~WorkshopTemplate~
+    deactivate WorkshopTemplate
+
+    alt 6A. No templates match filters
+        Service-->>Controller: 6A1. Empty List~WorkshopTemplateResponse~
+        Controller-->>Page: 6A2. 200 OK + ApiResponse~[]~
+        Page-->>Vendor: 6A3. Show empty state: "No templates found"
+    else 6B. Templates found
+        Service->>Service: 7. Map each template via mapToResponse()
+        Service-->>Controller: 8. List~WorkshopTemplateResponse~
+        deactivate Service
+        Controller-->>Page: 9. 200 OK + ApiResponse~List~WorkshopTemplateResponse~~
+        deactivate Controller
+        Page-->>Vendor: 10. Display filtered template results
+        deactivate Page
+    end
