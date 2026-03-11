@@ -4,6 +4,7 @@ import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.request.admin.BanVendorRequest;
 import fpt.project.NeoNHS.dto.request.admin.CreateVendorByAdminRequest;
 import fpt.project.NeoNHS.dto.request.admin.UpdateVendorByAdminRequest;
+import fpt.project.NeoNHS.dto.request.workshop.ApproveWorkshopTemplateRequest;
 import fpt.project.NeoNHS.dto.request.workshop.RejectWorkshopTemplateRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.auth.VendorProfileResponse;
@@ -389,11 +390,12 @@ public class AdminVendorManagementController {
             )
     })
     public ResponseEntity<ApiResponse<WorkshopTemplateResponse>> approveWorkshopTemplate(
-            @Parameter(description = "Workshop Template ID", required = true)
             @PathVariable UUID id,
-            @Parameter(description = "Optional admin note for approval")
-            @RequestParam(required = false) String adminNote,
+            @RequestBody(required = false) ApproveWorkshopTemplateRequest request,
             Principal principal) {
+
+        String adminNote = request != null ? request.getAdminNote() : null;
+
         WorkshopTemplateResponse response = workshopTemplateService.approveWorkshopTemplate(
                 principal.getName(),
                 id,
