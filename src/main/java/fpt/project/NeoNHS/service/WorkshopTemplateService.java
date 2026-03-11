@@ -67,7 +67,7 @@ public interface WorkshopTemplateService {
     WorkshopTemplateResponse registerWorkshopTemplate(String email, UUID id);
 
     // Approve/Reject (Admin only)
-    WorkshopTemplateResponse approveWorkshopTemplate(String adminEmail, UUID id);
+    WorkshopTemplateResponse approveWorkshopTemplate(String adminEmail, UUID id, String adminNote);
 
     WorkshopTemplateResponse rejectWorkshopTemplate(String adminEmail, UUID id, String adminNote);
 
