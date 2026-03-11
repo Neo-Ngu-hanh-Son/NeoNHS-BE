@@ -1,0 +1,48 @@
+sequenceDiagram
+    actor Vendor as Vendor
+    participant Page as MySessionsPage <<user interaction>>
+    participant Controller as WorkshopSessionController <<coordinator>>
+    participant Service as WorkshopSessionService <<service>>
+    participant VendorProfile as VendorProfile <<entity>>
+    participant WorkshopSession as WorkshopSession <<entity>>
+    participant DB as DB
+
+    Vendor->>Page: 1. Navigate to "My Workshop Sessions" with pagination params
+    activate Page
+    Page->>Controller: 2. getMyWorkshopSessions(principal, page, size, sortBy, sortDir)
+    activate Controller
+    Controller->>Controller: 3. Build Pageable from params (PageRequest.of)
+    Controller->>Service: 4. getMyWorkshopSessions(email, pageable)
+    activate Service
+
+    Service->>VendorProfile: 5. findByUserEmail(email)
+    activate VendorProfile
+    VendorProfile->>DB: 6. SELECT vendor_profile WHERE user.email = ?
+    activate DB
+    DB-->>VendorProfile: Vendor data
+    deactivate DB
+    VendorProfile-->>Service: Optional~VendorProfile~
+    deactivate VendorProfile
+
+    alt 6A. Vendor not found
+        Service-->>Controller: 6A1. ResourceNotFoundException("VendorProfile not found")
+        Controller-->>Page: 6A2. 404 Not Found
+        Page-->>Vendor: 6A3. Show error: "Vendor profile not found"
+    else 6B. Vendor found
+        Service->>WorkshopSession: 7. findByWorkshopTemplateVendorUserEmail(email, pageable)
+        activate WorkshopSession
+        WorkshopSession->>DB: 8. SELECT workshop_session WHERE vendor.email = ? (paginated, sorted)
+        activate DB
+        DB-->>WorkshopSession: Page of sessions
+        deactivate DB
+        WorkshopSession-->>Service: Page~WorkshopSession~
+        deactivate WorkshopSession
+
+        Service->>Service: 9. Map each session via mapToResponse()
+        Service-->>Controller: 10. Page~WorkshopSessionResponse~
+        deactivate Service
+        Controller-->>Page: 11. 200 OK + ApiResponse~Page~WorkshopSessionResponse~~
+        deactivate Controller
+        Page-->>Vendor: 12. Display paginated session list
+        deactivate Page
+    end

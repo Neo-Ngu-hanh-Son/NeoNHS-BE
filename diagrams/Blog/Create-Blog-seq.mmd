@@ -1,0 +1,57 @@
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#ffffff"
+    primaryTextColor: "#000000"
+    primaryBorderColor: "#000000"
+    activationBkgColor: "#eeeeee"
+    activationBorderColor: "#000000"
+    actorBkg: "#ffffff"
+    actorTextColor: "#000000"
+    actorBorder: "#000000"
+    altBackground: "#f5f5f5"
+    altBorder: "#000000"
+  sequence:
+    actorMargin: 0
+    messageMargin: 5
+---
+sequenceDiagram
+    actor Admin as Admin <br/> <<user>>
+    participant AdminScreen as Manage Blog Screen <br/> <<user interaction>>
+    participant AdminBlogController as AdminBlogController <br/> <<controller>>
+    participant BlogService as BlogService <br/> <<service>>
+    participant BlogRepository as BlogRepository <br/> <<repository>>
+    participant DB
+
+    Admin->>+AdminScreen: 1. Input new blog details
+    AdminScreen->>+AdminBlogController: 2. createBlog(blogRequest)
+    AdminBlogController->>+BlogService: 3. createBlog(blogRequest)
+    
+    %% Common Validation Box
+    alt 4A Validation Failed
+        BlogService-->>AdminBlogController: 4A1. Validation failed
+        AdminBlogController-->>AdminScreen: 4A2. Validation failed, please try again later
+        AdminScreen-->>Admin: 4A3. Show validation error
+    else 4B Validation Passed
+        BlogService->>BlogService: 4B1. Validate Category
+        alt 5A Category not found
+            BlogService-->>AdminBlogController: 5A1. Category not found
+            AdminBlogController-->>AdminScreen: 5A2. Category not found, please try again later
+            AdminScreen-->>Admin: 5A3. Show category error
+        else 5B Category found
+            BlogService->>+BlogRepository: 5B1. existsByTitle(title)
+            BlogRepository->>+DB: 5B2. existsByTitle(title)
+            DB-->>-BlogRepository: 5B3. Exist result
+            BlogRepository-->>-BlogService: 5B4. Exist result
+        end
+    end
+        BlogService->>BlogService: 6. Generate Slug
+        BlogService->>+BlogRepository: 7. save(blog)
+        BlogRepository->>+DB: 8. save(blog)
+        DB-->>-BlogRepository: 9. Saved Entity
+        BlogRepository-->>-BlogService: 10. Saved Entity
+    BlogService->>BlogService: 11. Map to Response
+    BlogService-->>-AdminBlogController: 12. BlogResponse
+    AdminBlogController-->>-AdminScreen: 13. Blog created
+    AdminScreen-->>-Admin: 14. Show blog created message

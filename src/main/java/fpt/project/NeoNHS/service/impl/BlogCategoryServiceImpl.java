@@ -40,21 +40,21 @@ public class BlogCategoryServiceImpl implements BlogCategoryService {
         return blogCategoryRepository.findAll(spec, pageable).map(this::mapToResponse);
     }
 
-
     /**
-     * This method performs a HARD delete because blog category is not that important to keep.
+     * This method performs a HARD delete because blog category is not that
+     * important to keep.
+     * 
      * @param categoryId
      */
     @Override
     @Transactional
     public void deleteBlogCategory(UUID categoryId) {
-        UserPrincipal admin = getCurrentUserPrincipal();
         BlogCategory category = blogCategoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Blog category not found"));
 
-//        if (category.getDeletedAt() != null) {
-//            throw new BadRequestException("Blog category is already deleted");
-//        }
+        // if (category.getDeletedAt() != null) {
+        // throw new BadRequestException("Blog category is already deleted");
+        // }
 
         long postCount = blogRepository.countByBlogCategoryId(categoryId);
         if (postCount > 0) {

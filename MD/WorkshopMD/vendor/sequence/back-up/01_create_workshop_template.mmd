@@ -1,0 +1,93 @@
+sequenceDiagram
+    actor Vendor as Vendor
+    participant Page as CreateTemplatePage <<user interaction>>
+    participant Controller as WorkshopTemplateController <<coordinator>>
+    participant Service as WorkshopTemplateService <<service>>
+    participant VendorProfile as VendorProfile <<entity>>
+    participant WTag as WTag <<entity>>
+    participant WorkshopTemplate as WorkshopTemplate <<entity>>
+    participant DB as DB
+
+    Vendor->>Page: 1. Fill in template details and submit
+    activate Page
+    Page->>Controller: 2. createWorkshopTemplate(request, principal)
+    activate Controller
+    Controller->>Service: 3. createWorkshopTemplate(email, request)
+    activate Service
+
+    %% Step 4: Find vendor profile
+    Service->>VendorProfile: 4. findByUserEmail(email)
+    activate VendorProfile
+    VendorProfile->>DB: 5. SELECT vendor_profile WHERE user.email = ?
+    activate DB
+    DB-->>VendorProfile: Vendor data
+    deactivate DB
+    VendorProfile-->>Service: VendorProfile
+    deactivate VendorProfile
+
+    alt 5A. Vendor not found
+        Service-->>Controller: 5A1. ResourceNotFoundException("VendorProfile not found")
+        Controller-->>Page: 5A2. 404 Not Found
+        Page-->>Vendor: 5A3. Show error: "Vendor profile not found"
+    else 5B. Vendor not verified
+        Service->>Service: 5B1. Check vendor.getIsVerified()
+        Service-->>Controller: 5B2. BadRequestException("Only verified vendors can create")
+        Controller-->>Page: 5B3. 400 Bad Request
+        Page-->>Vendor: 5B4. Show error: "Vendor not verified"
+    else 5C. Vendor found and verified
+        Service->>Service: 6. Validate minParticipants <= maxParticipants
+
+        alt 6A. Validation fails
+            Service-->>Controller: 6A1. BadRequestException("Min > Max participants")
+            Controller-->>Page: 6A2. 400 Bad Request
+            Page-->>Vendor: 6A3. Show validation error
+        else 6B. Validation passes
+            %% Step 7: Fetch and validate tags
+            Service->>WTag: 7. findAllByIdIn(tagIds)
+            activate WTag
+            WTag->>DB: 8. SELECT w_tag WHERE id IN (?)
+            activate DB
+            DB-->>WTag: List of WTag
+            deactivate DB
+            WTag-->>Service: List~WTag~
+            deactivate WTag
+
+            alt 8A. Some tag IDs are invalid
+                Service->>Service: 8A1. Check tags.size() != tagIds.size()
+                Service-->>Controller: 8A2. BadRequestException("Invalid tag IDs")
+                Controller-->>Page: 8A3. 400 Bad Request
+                Page-->>Vendor: 8A4. Show error: "Invalid tags"
+            else 8B. All tags valid
+                Service->>Service: 9. Validate thumbnailIndex within bounds
+
+                alt 9A. Thumbnail index out of bounds
+                    Service-->>Controller: 9A1. BadRequestException("Thumbnail index out of bounds")
+                    Controller-->>Page: 9A2. 400 Bad Request
+                    Page-->>Vendor: 9A3. Show validation error
+                else 9B. Thumbnail index valid
+                    %% Build entity graph
+                    Service->>Service: 10. Build WorkshopTemplate entity (status = DRAFT)
+                    Service->>Service: 11. Build WorkshopImage entities with thumbnail flag
+                    Service->>Service: 12. Build WorkshopTag join entities
+
+                    %% Save (cascade)
+                    Service->>WorkshopTemplate: 13. save(workshopTemplate)
+                    activate WorkshopTemplate
+                    WorkshopTemplate->>DB: 14. INSERT workshop_template, images, tags
+                    activate DB
+                    DB-->>WorkshopTemplate: Saved entity with generated ID
+                    deactivate DB
+                    WorkshopTemplate-->>Service: WorkshopTemplate (saved)
+                    deactivate WorkshopTemplate
+
+                    Service->>Service: 15. mapToResponse(savedTemplate, tags)
+                    Service-->>Controller: 16. WorkshopTemplateResponse
+                    deactivate Service
+                    Controller-->>Page: 17. 201 Created + ApiResponse~WorkshopTemplateResponse~
+                    deactivate Controller
+                    Page-->>Vendor: 18. Show success: "Template created in DRAFT status"
+                    deactivate Page
+                end
+            end
+        end
+    end

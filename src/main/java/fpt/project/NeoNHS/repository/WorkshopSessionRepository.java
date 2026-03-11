@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Repository
@@ -21,4 +22,5 @@ public interface WorkshopSessionRepository extends JpaRepository<WorkshopSession
     Page<WorkshopSession> findByWorkshopTemplateVendorUserEmail(String email, Pageable pageable);
 
     Page<WorkshopSession> findByStatusAndStartTimeAfter(SessionStatus status, LocalDateTime startTime, Pageable pageable);
+    List<WorkshopSession> findByStatusAndStartTimeAfter(SessionStatus status, LocalDateTime startTime);
 }

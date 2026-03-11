@@ -1,0 +1,56 @@
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#ffffff"
+    primaryTextColor: "#000000"
+    primaryBorderColor: "#000000"
+    activationBkgColor: "#eeeeee"
+    activationBorderColor: "#000000"
+    actorBkg: "#ffffff"
+    actorTextColor: "#000000"
+    actorBorder: "#000000"
+    altBackground: "#f5f5f5"
+    altBorder: "#000000"
+  sequence:
+    actorMargin: 0
+    messageMargin: 5
+---
+sequenceDiagram
+    actor Admin as Admin <br/> <<user>>
+    participant AdminScreen as Manage Category Screen <br/> <<user interaction>>
+    participant AdminBlogCategoryController as AdminBlogCategoryController <br/> <<controller>>
+    participant BlogCategoryService as BlogCategoryService <br/> <<service>>
+    participant BlogCategoryRepository as BlogCategoryRepository <br/> <<repository>>
+    participant DB
+
+    Admin->>+AdminScreen: 1. Input new category details
+    AdminScreen->>+AdminBlogCategoryController: 2. createCategory(categoryRequest)
+    AdminBlogCategoryController->>+BlogCategoryService: 3. createCategory(categoryRequest)
+    
+    %% Common Validation Box
+    alt 4A Validation Failed
+        BlogCategoryService-->>AdminBlogCategoryController: 4A1. Validation failed
+        AdminBlogCategoryController-->>AdminScreen: 4A2. Validation failed, please try again later
+        AdminScreen-->>Admin: 4A3. Show validation error
+    else 4B Validation Passed
+        BlogCategoryService->>+BlogCategoryRepository: 4B1. existsByName(name)
+        BlogCategoryRepository->>+DB: 4B2. existsByName(name)
+        DB-->>-BlogCategoryRepository: 4B3. Exist result
+        BlogCategoryRepository-->>-BlogCategoryService: 4B4. Exist result
+        
+        alt 5A Name already exists
+            BlogCategoryService-->>AdminBlogCategoryController: 5A1. Category name not unique
+            AdminBlogCategoryController-->>AdminScreen: 5A2. Category name not unique, please try again later
+            AdminScreen-->>Admin: 5A3. Show name exists error
+        else 5B Name is unique
+            BlogCategoryService->>+BlogCategoryRepository: 5B1. save(category)
+            BlogCategoryRepository->>+DB: 5B2. save(category)
+            DB-->>-BlogCategoryRepository: 5B3. Saved Entity
+            BlogCategoryRepository-->>-BlogCategoryService: 5B4. Saved Entity
+        end
+    end
+    BlogCategoryService->>BlogCategoryService: 6. Map to Response
+    BlogCategoryService-->>-AdminBlogCategoryController: 7. CategoryResponse
+    AdminBlogCategoryController-->>-AdminScreen: 8. Category created
+    AdminScreen-->>-Admin: 9. Show category created message

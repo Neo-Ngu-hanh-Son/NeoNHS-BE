@@ -1,15 +1,20 @@
 package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.constants.PaginationConstants;
+import fpt.project.NeoNHS.dto.request.event.EventFilterRequest;
 import fpt.project.NeoNHS.dto.request.point.PointRequest;
+import fpt.project.NeoNHS.dto.response.point.MapPointResponse;
 import fpt.project.NeoNHS.dto.response.point.PointPanoramaResponse;
 import fpt.project.NeoNHS.dto.response.point.PointResponse;
 import fpt.project.NeoNHS.entity.Attraction;
+import fpt.project.NeoNHS.entity.CheckinPoint;
 import fpt.project.NeoNHS.entity.Point;
-import fpt.project.NeoNHS.repository.AttractionRepository;
-import fpt.project.NeoNHS.repository.PointRepository;
+import fpt.project.NeoNHS.enums.EventStatus;
+import fpt.project.NeoNHS.helpers.AuthHelper;
+import fpt.project.NeoNHS.repository.*;
 import fpt.project.NeoNHS.service.PanoramaService;
 import fpt.project.NeoNHS.service.PointService;
+import fpt.project.NeoNHS.specification.EventSpecification;
 import fpt.project.NeoNHS.specification.PointSpecification;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +24,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,6 +37,8 @@ public class PointServiceImpl implements PointService {
     private final PointRepository pointRepository;
     private final AttractionRepository attractionRepository;
     private final PanoramaService panoramaService;
+    private final EventRepository eventRepository;
+    private final WorkshopTemplateRepository workshopTemplateRepository;
 
     @Override
     @Transactional
@@ -40,8 +50,6 @@ public class PointServiceImpl implements PointService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .thumbnailUrl(request.getThumbnailUrl())
-                .history(request.getHistory())
-                .historyAudioUrl(request.getHistoryAudioUrl())
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
                 .orderIndex(request.getOrderIndex())
@@ -66,10 +74,6 @@ public class PointServiceImpl implements PointService {
             point.setDescription(request.getDescription());
         if (request.getThumbnailUrl() != null)
             point.setThumbnailUrl(request.getThumbnailUrl());
-        if (request.getHistory() != null)
-            point.setHistory(request.getHistory());
-        if (request.getHistoryAudioUrl() != null)
-            point.setHistoryAudioUrl(request.getHistoryAudioUrl());
         if (request.getLatitude() != null)
             point.setLatitude(request.getLatitude());
         if (request.getLongitude() != null)
@@ -137,7 +141,7 @@ public class PointServiceImpl implements PointService {
 
     @Override
     public Page<PointResponse> getAllPointsWithPagination(UUID attractionId, int page, int size, String sortBy,
-            String sortDir, String search) {
+                                                          String sortDir, String search) {
         if (!attractionRepository.existsById(attractionId)) {
             throw new RuntimeException("Attraction not found");
         }
@@ -152,10 +156,49 @@ public class PointServiceImpl implements PointService {
                 .map(this::mapToResponse);
     }
 
-    // Get all points and checkin points across all attractions with pagination and search (if needed)
+    // Get all points and checkin points across all attractions with pagination and
+    // search (if needed)
     @Override
     public Page<PointResponse> getAllPoints(int page, int size, String sortBy, String sortDir, String search) {
         return findAllPoints(page, size, sortBy, sortDir, search, true);
+    }
+
+    @Override
+    public List<MapPointResponse> getAllPointsOnMap() {
+        // Points already contain checkin point.
+        var points = pointRepository.findAll(PointSpecification.withFilters(null, true));
+        var eventFilter = EventFilterRequest.builder()
+                .status(EventStatus.UPCOMING)
+                .startDate(LocalDate.from(LocalDateTime.now()))
+                .includeDeleted(false)
+                .build();
+        var events = eventRepository.findAll(EventSpecification.withFilters(eventFilter));
+
+        // For workshops, we will get the workshop template and their session. (For the session we only get the
+        // one that is upcoming and not deleted, order by start time, and get the first one only, since we only want to
+        // show one point for each workshop template)
+        var workshopTemplate = workshopTemplateRepository.findWorkshopTemplatesWithActiveUpcomingWorkshopSessions();
+
+        // List of checkin points - flatted. In here we need to know if user already checked in this point or not.
+//        List<CheckinPoint> checkinPoints = points.stream().flatMap(p -> p.getCheckinPoints().stream()).toList();
+//        var userPrincipalSilent = AuthHelper.getCurrentUserPrincipalSilent();
+        List<MapPointResponse> mapPoints = new ArrayList<>();
+//        if (userPrincipalSilent != null) {
+//            var currentUserId =  userPrincipalSilent.getId();
+//            // user is authenticated, we can check which checkin point the user already checked in, and set the isCheckedIn field accordingly.
+//            checkinPoints.stream().map(cp -> {)
+//                boolean isCheckedIn = cp.getUserCheckIns().stream().anyMatch(uci -> uci.getUser().getId().equals(currentUserId));
+//                return MapPointResponse.fromCheckinPoint(cp, isCheckedIn);
+//            }).forEach(mapPoints::add);
+//        } else {
+//            // This is when user is unauthenticated, then we just use the normal mapping methods.
+//            mapPoints.addAll(points.stream().map(MapPointResponse::fromPoint).toList());
+//        }
+
+        mapPoints.addAll(points.stream().map(MapPointResponse::fromPoint).toList());
+        mapPoints.addAll(events.stream().map(MapPointResponse::fromEventPoint).toList());
+        mapPoints.addAll(workshopTemplate.stream().map(MapPointResponse::fromWorkshopTemplate).toList());
+        return mapPoints;
     }
 
     @Override
@@ -177,15 +220,16 @@ public class PointServiceImpl implements PointService {
     }
 
     private PointResponse mapToResponse(Point entity) {
+        int historyAudioCount = (int) entity.getHistoryAudios().stream()
+                .filter(historyAudio -> historyAudio.getDeletedAt() == null)
+                .count();
         return PointResponse.builder()
                 .id(entity.getId())
                 .name(entity.getName())
                 .description(entity.getDescription())
                 .thumbnailUrl(entity.getThumbnailUrl())
-                .history(entity.getHistory())
-                .historyAudioUrl(entity.getHistoryAudioUrl())
-                .latitude(entity.getLatitude())
-                .longitude(entity.getLongitude())
+                .latitude(entity.getLatitude().doubleValue())
+                .longitude(entity.getLongitude().doubleValue())
                 .orderIndex(entity.getOrderIndex())
                 .estTimeSpent(entity.getEstTimeSpent())
                 .type(entity.getType())
@@ -194,6 +238,7 @@ public class PointServiceImpl implements PointService {
                 .defaultPitch(entity.getDefaultPitch())
                 .defaultYaw(entity.getDefaultYaw())
                 .googlePlaceId(entity.getGooglePlaceId())
+                .historyAudioCount(historyAudioCount)
                 .build();
     }
 

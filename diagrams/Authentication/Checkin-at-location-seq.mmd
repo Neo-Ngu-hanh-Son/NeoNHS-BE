@@ -1,0 +1,55 @@
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#ffffff"
+    primaryTextColor: "#000000"
+    primaryBorderColor: "#000000"
+    activationBkgColor: "#eeeeee"
+    activationBorderColor: "#000000"
+    actorBkg: "#ffffff"
+    actorTextColor: "#000000"
+    actorBorder: "#000000"
+    altBackground: "#f5f5f5"
+    altBorder: "#000000"
+  sequence:
+    actorMargin: 10
+    messageMargin: 0
+---
+sequenceDiagram
+    actor Tourist as Tourist <br/> <<user>>
+    participant MapScreen as MapScreen <br/> <<user interaction>>
+    participant PointController as PointController <br/> <<controller>>
+    participant PointService as PointService <br/> <<service>>
+    participant CheckInPointRepository as CheckInPointRepository <br/> <<repository>>
+    participant UserCheckinPointRepository as UserCheckinPointRepository <br/> <<repository>>
+    participant DB
+
+    Tourist->>+MapScreen: 1. Request check-in at point
+    MapScreen->>+PointController: 2. checkInAtPoint(checkinRequest, pointId)
+    PointController->>+PointService: 3. checkInAtPoint(checkinRequest, pointId)
+    PointService->>+CheckInPointRepository: 4. findPointById(pointId)
+    CheckInPointRepository->>+DB: 5. findPointById(pointId)
+    DB-->>-CheckInPointRepository: 6. Point entity
+    CheckInPointRepository-->>-PointService: 7. Point entity
+    PointService->>PointService: 8.Validate check-in point
+    PointService->>+UserCheckinPointRepository: 9. addUserCheckinPoint(userCheckinData)
+    UserCheckinPointRepository->>+DB: 10. addUserCheckinPoint(userCheckinData)
+    DB-->>-UserCheckinPointRepository: 11. Creation status
+    UserCheckinPointRepository-->>-PointService: 12. Creation status
+    alt 13A Check-in failed
+        PointService-->>PointController: 13A1. Failed to add user checkins
+        PointController-->>MapScreen: 13A2. Failed to add user checkins
+        MapScreen-->>Tourist: 13A3. Show check-in failed message
+    else 13B Check-in success
+        PointService-->>PointController: 13B1. Check-in success
+    end
+    PointService->>+UserCheckinPointRepository: 14. updateUserPoint(userId, point)
+    UserCheckinPointRepository->>+DB: 15. updateUserPoint(userId, point)
+    DB-->>-UserCheckinPointRepository: 16. Updated status
+    UserCheckinPointRepository-->>-PointService: 17. Updated status
+    PointService->>PointService: 18. Map to response
+    PointService-->>-PointController: 19. Show check-in success message
+    PointController-->>-MapScreen: 20. Show check-in success message
+    MapScreen-->>-Tourist: 21. Show check-in success message
+    

@@ -29,70 +29,70 @@ import java.util.List;
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
-        private final JwtAuthenticationFilter jwtAuthenticationFilter;
-        private final CustomUserDetailsService customUserDetailsService;
-        private static final String[] AUTH_APIS = {
-                        "/api/auth/**"
-        };
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CustomUserDetailsService customUserDetailsService;
+    private static final String[] AUTH_APIS = {
+            "/api/auth/**"
+    };
 
-        // Public business APIs
-        private static final String[] PUBLIC_APIS = {
-                        "/api/public/**",
-                        "/api/points/**",
-                        "/api/panorama/**",
-                        "/api/blogs/**",
-                        "/api/attractions/**",
-                        "/api/events/**",
-        };
+    // Public business APIs
+    private static final String[] PUBLIC_APIS = {
+            "/api/public/**",
+            "/api/points/**",
+            "/api/panorama/**",
+            "/api/blogs/**",
+            "/api/attractions/**",
+            "/api/events/**",
+            "/api/wtags/all",
+    };
 
-        // Swagger / docs
-        private static final String[] SWAGGER_APIS = {
-                        "/swagger-ui/**",
-                        "/swagger-ui.html",
-                        "/v3/api-docs/**"
-        };
+    // Swagger / docs
+    private static final String[] SWAGGER_APIS = {
+            "/swagger-ui/**",
+            "/swagger-ui.html",
+            "/v3/api-docs/**"
+    };
 
-        // Admin only
-        private static final String[] ADMIN_APIS = {
-                        "/api/admin/**"
-        };
+    // Admin only
+    private static final String[] ADMIN_APIS = {
+            "/api/admin/**"
+    };
 
-        @Bean
-        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-                http
-                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                                .csrf(AbstractHttpConfigurer::disable)
-                                .sessionManagement(session -> session
-                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                                .authorizeHttpRequests(auth -> auth
-                                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                                                .requestMatchers(AUTH_APIS).permitAll()
-                                                .requestMatchers(PUBLIC_APIS).permitAll()
-                                                .requestMatchers(SWAGGER_APIS).permitAll()
-                                                .requestMatchers(ADMIN_APIS).hasRole("ADMIN")
-                                                .anyRequest().authenticated()
-                                // Careful as unknown endpoints will be blocked (returning forbidden instead of
-                                // 404)
-                                // .anyRequest().authenticated()
-                                )
-                                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                                .requestMatchers(AUTH_APIS).permitAll()
+                                .requestMatchers(PUBLIC_APIS).permitAll()
+                                .requestMatchers(SWAGGER_APIS).permitAll()
+                                .requestMatchers(ADMIN_APIS).hasRole("ADMIN")
+                                .anyRequest().authenticated()
+                        // Careful as unknown endpoints will be blocked (returning forbidden instead of 404)
+                        // .anyRequest().authenticated()
+                )
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
-                return http.build();
-        }
+        return http.build();
+    }
 
-        @Bean
-        public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
-                AuthenticationManagerBuilder authBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);
-                authBuilder
-                                .userDetailsService(customUserDetailsService)
-                                .passwordEncoder(passwordEncoder());
-                return authBuilder.build();
-        }
+    @Bean
+    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
+        AuthenticationManagerBuilder authBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);
+        authBuilder
+                .userDetailsService(customUserDetailsService)
+                .passwordEncoder(passwordEncoder());
+        return authBuilder.build();
+    }
 
-        @Bean
-        public PasswordEncoder passwordEncoder() {
-                return new BCryptPasswordEncoder();
-        }
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
         @Value("${app.be-url-setpassword}")
         private String feWebUrl;
