@@ -1,6 +1,10 @@
 spring:
   application:
     name: NeoNHS
+  servlet:
+    multipart:
+      max-file-size: 30MB
+      max-request-size: 30MB
 
   datasource:
     url: ${DB_URL}
@@ -54,3 +58,8 @@ vnpt:
 face-service:
   base-url: ${FACE_SERVICE_URL:http://localhost:8001}
 
+# Cloudinary Configuration
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}

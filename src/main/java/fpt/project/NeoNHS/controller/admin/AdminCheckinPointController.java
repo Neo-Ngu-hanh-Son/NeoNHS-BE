@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,7 +27,7 @@ public class AdminCheckinPointController {
     private final CheckinPointService checkinPointService;
 
     @PostMapping
-    public ApiResponse<PointCheckinResponse> createCheckinPoint(@RequestBody CheckinPointRequest request) {
+    public ApiResponse<PointCheckinResponse> createCheckinPoint(@Valid @RequestBody CheckinPointRequest request) {
         PointCheckinResponse data = checkinPointService.createCheckinPoint(request);
         return ApiResponse.success(HttpStatus.CREATED, "CheckinPoint created successfully", data);
     }
@@ -50,7 +51,7 @@ public class AdminCheckinPointController {
     }
 
     @PutMapping("/{id}")
-    public ApiResponse<PointCheckinResponse> updateCheckinPoint(@PathVariable UUID id, @RequestBody CheckinPointRequest request) {
+    public ApiResponse<PointCheckinResponse> updateCheckinPoint(@PathVariable UUID id, @Valid @RequestBody CheckinPointRequest request) {
         PointCheckinResponse data = checkinPointService.updateCheckinPoint(id, request);
         return ApiResponse.success("CheckinPoint updated successfully", data);
     }

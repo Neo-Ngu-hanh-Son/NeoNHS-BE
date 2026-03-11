@@ -4,6 +4,7 @@ import fpt.project.NeoNHS.enums.UserCheckinMethod;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 public class UserCheckinRequest {
@@ -13,5 +14,5 @@ public class UserCheckinRequest {
     private UserCheckinMethod method;
     private String note;
     private String checkinPointId;
-    private List<CheckinImageRequest> images;
+    private Map<Integer, String> captionImageOrder; // Ex: 1: "some caption", 2: "", 3: "more caps"
 }

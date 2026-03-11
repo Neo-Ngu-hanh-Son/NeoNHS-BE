@@ -1,6 +1,6 @@
 # NeoNHS-BE — Codebase Index
 
-> **Last updated:** 2026-03-09
+> **Last updated:** 2026-03-11
 > **Project:** RESTful API for Neo-Ngu Hanh Son Tourism Application
 > **FPT University Capstone Project © 2026**
 
@@ -62,7 +62,7 @@ NeoNHS-BE/
 │   │   │   ├── helpers/                     # Utility classes
 │   │   │   ├── repository/                  # (34 files) Spring Data JPA repositories
 │   │   │   ├── security/                    # JWT + UserDetails
-│   │   │   ├── service/                     # (39 interfaces + impl/) Service layer
+│   │   │   ├── service/                     # (42 interfaces + impl/) Service layer
 │   │   │   └── specification/               # JPA Specifications for filtering
 │   │   └── resources/
 │   │       ├── application.yaml             # App config
@@ -167,34 +167,34 @@ All main entities extend **`BaseEntity`** which provides `createdAt`, `updatedAt
 
 ### 4.2 Supporting / Join Entities
 
-| Entity              | Table               | Purpose                                       |
-| ------------------- | ------------------- | --------------------------------------------- |
-| `EventTag`          | composite key       | Event ↔ ETag many-to-many                     |
-| `WorkshopTag`       | composite key       | WorkshopTemplate ↔ WTag M2M                   |
-| `ETag`              | tags                | Tag for events                                |
-| `WTag`              | tags                | Tag for workshops                             |
-| `WorkshopSession`   | workshop_sessions   | Scheduled session of a template               |
-| `WorkshopImage`     | workshop_images     | Image gallery for workshop                    |
-| `ReviewImage`       | review_images       | Image attached to review                      |
-| `CheckinPoint`      | checkin_points      | Checkin location at a point                   |
-| `CheckinImage`      | checkin_images      | Image for a checkin                           |
-| `UserCheckIn`       | user_check_ins      | User ↔ Checkin record                         |
-| `UserVisitedPoint`  | user_visited_points | User ↔ Point visit record                     |
-| `UserVoucher`       | user_vouchers       | User ↔ Voucher assignment                     |
-| `Cart`              | carts               | User's shopping cart                          |
-| `CartItem`          | cart_items          | Item in a cart                                |
-| `OrderDetail`       | order_details       | Line item in an order                         |
-| `Transaction`       | transactions        | Payment transaction for an order              |
-| `Notification`      | notifications       | Push/in-app notification                      |
-| `Report`            | reports             | User report on content                        |
-| `BlogCategory`      | blog_categories     | Category for blogs                            |
-| `PointHistoryAudio` | point_history_audios| Audio guide and history content for a Point   |
-| `PanoramaHotSpot`   | panorama_hot_spots  | 360-degree panorama hotspots for a Point      |
-| `EventImage`        | event_images        | Image gallery for event                       |
+| Entity              | Table                | Purpose                                     |
+| ------------------- | -------------------- | ------------------------------------------- |
+| `EventTag`          | composite key        | Event ↔ ETag many-to-many                   |
+| `WorkshopTag`       | composite key        | WorkshopTemplate ↔ WTag M2M                 |
+| `ETag`              | tags                 | Tag for events                              |
+| `WTag`              | tags                 | Tag for workshops                           |
+| `WorkshopSession`   | workshop_sessions    | Scheduled session of a template             |
+| `WorkshopImage`     | workshop_images      | Image gallery for workshop                  |
+| `ReviewImage`       | review_images        | Image attached to review                    |
+| `CheckinPoint`      | checkin_points       | Checkin location at a point                 |
+| `CheckinImage`      | checkin_images       | Image for a checkin                         |
+| `UserCheckIn`       | user_check_ins       | User ↔ Checkin record                       |
+| `UserVisitedPoint`  | user_visited_points  | User ↔ Point visit record                   |
+| `UserVoucher`       | user_vouchers        | User ↔ Voucher assignment                   |
+| `Cart`              | carts                | User's shopping cart                        |
+| `CartItem`          | cart_items           | Item in a cart                              |
+| `OrderDetail`       | order_details        | Line item in an order                       |
+| `Transaction`       | transactions         | Payment transaction for an order            |
+| `Notification`      | notifications        | Push/in-app notification                    |
+| `Report`            | reports              | User report on content                      |
+| `BlogCategory`      | blog_categories      | Category for blogs                          |
+| `PointHistoryAudio` | point_history_audios | Audio guide and history content for a Point |
+| `PanoramaHotSpot`   | panorama_hot_spots   | 360-degree panorama hotspots for a Point    |
+| `EventImage`        | event_images         | Image gallery for event                     |
 
 ---
 
-## 5. Enums (20 Total)
+## 5. Enums (21 Total)
 
 Key enums defining logic flows:
 `UserRole`, `PointType`, `EventStatus`, `WorkshopStatus`, `AttractionStatus`, `BlogStatus`, `BlogCategoryStatus`, `ReviewStatus`, `TicketType`, `TicketStatus`, `TicketCatalogStatus`, `SessionStatus`, `TransactionStatus`, `OrderStatus`, `ReportStatus`, `VoucherStatus`, `VoucherType`, `VoucherScope`, `DiscountType`, `ApplicableProduct`.
@@ -205,25 +205,32 @@ Key enums defining logic flows:
 
 ### 6.1 Public & User APIs
 
-| Controller                | Base Path             | Key Features                                         |
-| ------------------------- | --------------------- | ---------------------------------------------------- |
-| `AuthController`          | `/api/auth`           | Login, Register, Google OAuth, Refresh, Verify Email |
-| `EventController`         | `/api/events`         | Event listing & details (Filtered, Search)           |
-| `PointController`         | `/api/points`         | Points within attractions, details                   |
-| `UserController`          | `/api/users`          | User profile management                              |
-| `VendorProfileController` | `/api/vendors`        | Vendor registration and basic profile operations     |
-| `WorkshopTemplateController`| `/api/workshops`      | Workshop listings, submission, search              |
-| `PaymentController`       | `/api/payment`        | Payment processing (VNPay support)                   |
-| `CartController`          | `/api/cart`           | User cart management                                 |
-| `OrderController`         | `/api/orders`         | User orders management                               |
-| `BlogController`          | `/api/blogs`          | Viewing published blogs                              |
-| `VoucherController`       | `/api/vouchers`       | Voucher claiming and application lists               |
-| `HistoryAudioController`  | `/api/history-audio`  | Retrieving Point history audio details               |
+| Controller                        | Base Path                | Key Features                                         |
+| --------------------------------- | ------------------------ | ---------------------------------------------------- |
+| `AuthController`                  | `/api/auth`              | Login, Register, Google OAuth, Refresh, Verify Email |
+| `EventController`                 | `/api/events`            | Event listing & details (Filtered, Search)           |
+| `PointController`                 | `/api/points`            | Points within attractions, details                   |
+| `UserController`                  | `/api/users`             | User profile management                              |
+| `VendorProfileController`         | `/api/vendors`           | Vendor registration and basic profile operations     |
+| `WorkshopTemplateController`      | `/api/workshops`         | Workshop listings, submission, search                |
+| `PaymentController`               | `/api/payment`           | Payment processing (VNPay support)                   |
+| `CartController`                  | `/api/cart`              | User cart management                                 |
+| `OrderController`                 | `/api/orders`            | User orders management                               |
+| `BlogController`                  | `/api/blogs`             | Viewing published blogs                              |
+| `VoucherController`               | `/api/vouchers`          | Voucher claiming and application lists               |
+| `HistoryAudioController`          | `/api/history-audio`     | Retrieving Point history audio details               |
+| `CheckinPointController`          | `/api/checkins`          | Check-in locations and logic                         |
+| `PayoutController`                | `/api/payout`            | Payout operations                                    |
+| `UploadController`                | `/api/upload`            | Image and file uploads                               |
+| `UserCheckinController`           | `/api/user-checkins`     | Checking in users to Points                          |
+| `WorkshopSessionController`       | `/api/workshop-sessions` | Managing and booking workshop sessions               |
+| `WorkshopTouristController`       | `/api/tourist/workshops` | Tourist specific workshop interfaces                 |
+| `AdminVendorManagementController` | `/api/admin/vendors`     | Root endpoint variant for vendor management          |
 
 ### 6.2 Admin APIs (`/api/admin/...`)
 
 Comprehensive CRUD and analytical capabilities restricted to `ADMIN` role. Specific controllers exist for:
-`AdminAttractionController`, `AdminBlogCategoryController`, `AdminBlogController`, `AdminDashboardController`, `AdminETagController`, `AdminEventController`, `AdminHistoryAudioController`, `AdminPanoramaController`, `AdminPointController`, `AdminReportController`, `AdminRevenueController`, `AdminTicketCatalogController`, `AdminUserController`, `AdminVoucherController`.
+`AdminAttractionController`, `AdminBlogCategoryController`, `AdminBlogController`, `AdminCheckinPointController`, `AdminDashboardController`, `AdminETagController`, `AdminEventController`, `AdminHistoryAudioController`, `AdminPanoramaController`, `AdminPointController`, `AdminReportController`, `AdminRevenueController`, `AdminTicketCatalogController`, `AdminUserController`, `AdminVoucherController`.
 
 ### 6.3 Vendor APIs (`/api/vendor/...`)
 
@@ -235,22 +242,25 @@ Vendor-specific endpoints like `VendorVoucherController` for managing vendor-iss
 
 ### 7.1 Key Business Services
 
-| Service                         | Key Features                                                                                           |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `AuthServiceImpl`               | Login, register, Google OAuth, OTP verification, password reset, JWT token refresh                     |
-| `AttractionServiceImpl`         | Full CRUD with complex pagination & `AttractionSpecification` filtering                                |
-| `EventServiceImpl`              | Creation, updates, soft delete/restore, advanced search                                                |
-| `CartServiceImpl`               | Shopping cart modifications and calculation logic                                                      |
-| `OrderServiceImpl`              | Checkout process, discount application, order state transitions                                        |
-| `VoucherServiceImpl`            | Claiming limits, validation checks, global/vendor-specific handling                                    |
-| `WorkshopTemplateServiceImpl`   | Full lifecycle (DRAFT, PENDING, ACTIVE), admin approval flow                                           |
-| `PanoramaServiceImpl`           | Management of 360 images and hotspots                                                                  |
-| `PointHistoryAudioServiceImpl`  | History audio text and JSON word playback sync configuration                                           |
-| `DashboardServiceImpl` / `RevenueAnalyticsServiceImpl` | Aggregated statistics, revenue tracking for admins                      |
-| `VnptEkycServiceImpl`           | Integration for eKYC (Know Your Customer) verifications                                                |
-| `MailServiceImpl`               | Asynchronous email service with Thymeleaf parsing                                                      |
+| Service                                                | Key Features                                                                       |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| `AuthServiceImpl`                                      | Login, register, Google OAuth, OTP verification, password reset, JWT token refresh |
+| `AttractionServiceImpl`                                | Full CRUD with complex pagination & `AttractionSpecification` filtering            |
+| `EventServiceImpl`                                     | Creation, updates, soft delete/restore, advanced search                            |
+| `CartServiceImpl`                                      | Shopping cart modifications and calculation logic                                  |
+| `OrderServiceImpl`                                     | Checkout process, discount application, order state transitions                    |
+| `VoucherServiceImpl`                                   | Claiming limits, validation checks, global/vendor-specific handling                |
+| `WorkshopTemplateServiceImpl`                          | Full lifecycle (DRAFT, PENDING, ACTIVE), admin approval flow                       |
+| `PanoramaServiceImpl`                                  | Management of 360 images and hotspots                                              |
+| `PointHistoryAudioServiceImpl`                         | History audio text and JSON word playback sync configuration                       |
+| `DashboardServiceImpl` / `RevenueAnalyticsServiceImpl` | Aggregated statistics, revenue tracking for admins                                 |
+| `VnptEkycServiceImpl`                                  | Integration for eKYC (Know Your Customer) verifications                            |
+| `MailServiceImpl`                                      | Asynchronous email service with Thymeleaf parsing                                  |
+| `CloudinaryImageUploadServiceImpl`                     | Cloudinary Java SDK integration for image uploads                                  |
+| `AdminVendorManagementServiceImpl`                     | Managing and monitoring vendor profiles for admins                                 |
+| `FaceVerificationServiceImpl`                          | NeoNHS Python face verification microservice integration                           |
 
-*(Many other supporting services exist for CartItems, OrderDetails, Reviews, Tags, etc, totaling 39 services.)*
+_(Many other supporting services exist for CartItems, OrderDetails, Reviews, Tags, etc, totaling 42 services.)_
 
 ---
 
@@ -269,26 +279,26 @@ Vendor-specific endpoints like `VendorVoucherController` for managing vendor-iss
 
 ## 9. Configuration
 
-| Config Class         | Purpose                                                  |
-| -------------------- | -------------------------------------------------------- |
-| `SecurityConfig`     | HTTP security, CORS, JWT filter chain                    |
-| `RedisConfig`        | Redis connection (cloud-hosted endpoint)                 |
-| `EmailConfiguration` | JavaMailSender with Gmail SMTP                           |
-| `OpenApiConfig`      | Swagger/OpenAPI metadata configuration + Bearer schema   |
-| `AsyncConfig`        | Async task execution                                     |
+| Config Class         | Purpose                                                |
+| -------------------- | ------------------------------------------------------ |
+| `SecurityConfig`     | HTTP security, CORS, JWT filter chain                  |
+| `RedisConfig`        | Redis connection (cloud-hosted endpoint)               |
+| `EmailConfiguration` | JavaMailSender with Gmail SMTP                         |
+| `OpenApiConfig`      | Swagger/OpenAPI metadata configuration + Bearer schema |
+| `AsyncConfig`        | Async task execution                                   |
 
 ---
 
 ## 10. File Statistics
 
-| Package         | Files | Notes                                                          |
-| --------------- | ----- | -------------------------------------------------------------- |
-| `entity`        | 37    | All JPA entities including newer ones like `PanoramaHotSpot`   |
-| `repository`    | 34    | Spring Data JPA repos                                          |
-| `service`       | 39    | Interface definitions                                          |
-| `service/impl`  | 39    | Concrete class implementations                                 |
-| `controller`    | 41    | 26 root + 14 admin + 1 vendor public/private APIs              |
-| `enums`         | 20    | All status/type definitions                                    |
-| **Total**       | **~210+** | Core Java source files (excluding DTOs/Exceptions/Configs) |
+| Package        | Files     | Notes                                                        |
+| -------------- | --------- | ------------------------------------------------------------ |
+| `entity`       | 37        | All JPA entities including newer ones like `PanoramaHotSpot` |
+| `repository`   | 34        | Spring Data JPA repos                                        |
+| `service`      | 42        | Interface definitions                                        |
+| `service/impl` | 42        | Concrete class implementations                               |
+| `controller`   | 45        | 29 root + 15 admin + 1 vendor public/private APIs            |
+| `enums`        | 21        | All status/type definitions                                  |
+| **Total**      | **~221+** | Core Java source files (excluding DTOs/Exceptions/Configs)   |
 
 ---

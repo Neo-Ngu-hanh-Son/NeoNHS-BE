@@ -1,14 +1,21 @@
 package fpt.project.NeoNHS.controller;
 
+import fpt.project.NeoNHS.constants.PaginationConstants;
+import fpt.project.NeoNHS.dto.request.usercheckin.UpdateUserCheckinRequest;
 import fpt.project.NeoNHS.dto.request.usercheckin.UserCheckinRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
+import fpt.project.NeoNHS.dto.response.checkin.UserCheckinResultResponse;
+import fpt.project.NeoNHS.dto.response.usercheckin.UserCheckinResponse;
 import fpt.project.NeoNHS.service.UserCheckInService;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.data.domain.Page;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/users/check-in")
@@ -18,10 +25,50 @@ public class UserCheckinController {
 
     private final UserCheckInService userCheckInService;
 
-    @PostMapping()
-    public ApiResponse<Void> checkIn(@RequestBody UserCheckinRequest request) {
-        userCheckInService.checkIn(request);
-        return ApiResponse.success("Check-in successful", null);
+    @GetMapping
+    public ApiResponse<Page<UserCheckinResponse>> getUserCheckins(
+            @RequestParam(value = "page", defaultValue = PaginationConstants.DEFAULT_PAGE) int page,
+            @RequestParam(value = "size", defaultValue = PaginationConstants.DEFAULT_SIZE) int size,
+            @RequestParam(value = "sortBy", defaultValue = "checkinTime") String sortBy,
+            @RequestParam(value = "sortDir", defaultValue = PaginationConstants.SORT_DESC) String sortDir) {
+        Page<UserCheckinResponse> data = userCheckInService.getUserCheckins(page, size, sortBy, sortDir);
+        return ApiResponse.success(data);
+    }
+
+    @GetMapping("/{id}")
+    public ApiResponse<UserCheckinResponse> getUserCheckinById(@PathVariable UUID id) {
+        UserCheckinResponse data = userCheckInService.getUserCheckinById(id);
+        return ApiResponse.success(data);
+    }
+
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<UserCheckinResultResponse> checkIn(
+            @RequestPart("metadata") UserCheckinRequest request,
+            @RequestPart("images") MultipartFile[] images) {
+        var res = userCheckInService.checkIn(request, images);
+        return ApiResponse.success("Check-in successful", res);
+    }
+
+    @PutMapping("/{id}")
+    public ApiResponse<UserCheckinResponse> updateUserCheckin(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateUserCheckinRequest request) {
+        UserCheckinResponse data = userCheckInService.updateUserCheckin(id, request);
+        return ApiResponse.success("Check-in updated successfully", data);
+    }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> deleteUserCheckin(@PathVariable UUID id) {
+        userCheckInService.deleteUserCheckin(id);
+        return ApiResponse.success("Check-in deleted successfully", null);
+    }
+
+    @DeleteMapping("/{checkinId}/images/{imageId}")
+    public ApiResponse<Void> deleteCheckinImage(
+            @PathVariable UUID checkinId,
+            @PathVariable UUID imageId) {
+        userCheckInService.deleteCheckinImage(checkinId, imageId);
+        return ApiResponse.success("Check-in image deleted successfully", null);
     }
 
 }
