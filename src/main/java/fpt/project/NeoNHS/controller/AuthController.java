@@ -12,6 +12,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.beans.factory.annotation.Value;
+import java.net.URI;
 
 import java.security.Principal;
 
@@ -102,6 +105,38 @@ public class AuthController {
     public ResponseEntity<ApiResponse<String>> resetPassword(@RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request.getEmail(), request.getNewPassword(), request.getConfirmPassword());
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Password reset successful", "Password reset"));
+    }
+
+    @PostMapping("/set-password")
+    public ResponseEntity<ApiResponse<String>> setPassword(@Valid @RequestBody SetPasswordRequest request) {
+        authService.setPassword(request);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Password set successfully", "Password set"));
+    }
+
+    @GetMapping("/validate-set-password")
+    public ResponseEntity<Void> validateSetPassword(
+            @RequestParam String token,
+            @RequestParam String email,
+            @Value("${app.be-url-setpassword}") String feUrl) {
+        try {
+            authService.validateSetPasswordToken(token, email);
+            String redirectUrl = UriComponentsBuilder.fromUriString(feUrl)
+                    .path("/set-password")
+                    .queryParam("token", token)
+                    .queryParam("email", email)
+                    .build().toUriString();
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create(redirectUrl))
+                    .build();
+        } catch (Exception e) {
+            String errorUrl = UriComponentsBuilder.fromUriString(feUrl)
+                    .path("/login")
+                    .queryParam("error", "invalid_token")
+                    .build().toUriString();
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create(errorUrl))
+                    .build();
+        }
     }
 
     @GetMapping("/me")

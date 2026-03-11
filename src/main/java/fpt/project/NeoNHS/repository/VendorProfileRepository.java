@@ -16,42 +16,43 @@ import java.util.UUID;
 @Repository
 public interface VendorProfileRepository extends JpaRepository<VendorProfile, UUID> {
 
-    Optional<VendorProfile> findByUserEmail(String email);
+        Optional<VendorProfile> findByUserEmail(String email);
 
-    // Filter by verification status
-    Page<VendorProfile> findByIsVerified(Boolean isVerified, Pageable pageable);
+        Optional<VendorProfile> findByUserId(UUID userId);
 
-    // Filter by user banned status
-    Page<VendorProfile> findByUserIsBanned(Boolean isBanned, Pageable pageable);
+        // Filter by verification status
+        Page<VendorProfile> findByIsVerified(Boolean isVerified, Pageable pageable);
 
-    // Filter by user active status
-    Page<VendorProfile> findByUserIsActive(Boolean isActive, Pageable pageable);
+        // Filter by user banned status
+        Page<VendorProfile> findByUserIsBanned(Boolean isBanned, Pageable pageable);
 
-    // Search by keyword (business name, user fullname, user email)
-    @Query("SELECT vp FROM VendorProfile vp WHERE " +
-            "LOWER(vp.businessName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(vp.user.fullname) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(vp.user.email) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-    Page<VendorProfile> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
+        // Filter by user active status
+        Page<VendorProfile> findByUserIsActive(Boolean isActive, Pageable pageable);
 
-    // Advanced search and filter
-    @Query("SELECT vp FROM VendorProfile vp WHERE " +
-            "(:keyword IS NULL OR " +
-            "LOWER(vp.businessName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(vp.user.fullname) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(vp.user.email) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
-            "(:isVerified IS NULL OR vp.isVerified = :isVerified) AND " +
-            "(:isBanned IS NULL OR vp.user.isBanned = :isBanned) AND " +
-            "(:isActive IS NULL OR vp.user.isActive = :isActive)")
-    Page<VendorProfile> advancedSearchAndFilter(
-            @Param("keyword") String keyword,
-            @Param("isVerified") Boolean isVerified,
-            @Param("isBanned") Boolean isBanned,
-            @Param("isActive") Boolean isActive,
-            Pageable pageable
-    );
+        // Search by keyword (business name, user fullname, user email)
+        @Query("SELECT vp FROM VendorProfile vp WHERE " +
+                        "LOWER(vp.businessName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+                        "LOWER(vp.user.fullname) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+                        "LOWER(vp.user.email) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+        Page<VendorProfile> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
-    @Query(value = "SELECT DATE_FORMAT(created_at, '%Y-%m') as period, COUNT(*) as count " +
-            "FROM users GROUP BY period ORDER BY period DESC LIMIT :limit", nativeQuery = true)
-    List<Map<String, Object>> getMonthlyRegistrationStats(@Param("limit") Integer limit);
+        // Advanced search and filter
+        @Query("SELECT vp FROM VendorProfile vp WHERE " +
+                        "(:keyword IS NULL OR " +
+                        "LOWER(vp.businessName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+                        "LOWER(vp.user.fullname) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+                        "LOWER(vp.user.email) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
+                        "(:isVerified IS NULL OR vp.isVerified = :isVerified) AND " +
+                        "(:isBanned IS NULL OR vp.user.isBanned = :isBanned) AND " +
+                        "(:isActive IS NULL OR vp.user.isActive = :isActive)")
+        Page<VendorProfile> advancedSearchAndFilter(
+                        @Param("keyword") String keyword,
+                        @Param("isVerified") Boolean isVerified,
+                        @Param("isBanned") Boolean isBanned,
+                        @Param("isActive") Boolean isActive,
+                        Pageable pageable);
+
+        @Query(value = "SELECT DATE_FORMAT(created_at, '%Y-%m') as period, COUNT(*) as count " +
+                        "FROM users GROUP BY period ORDER BY period DESC LIMIT :limit", nativeQuery = true)
+        List<Map<String, Object>> getMonthlyRegistrationStats(@Param("limit") Integer limit);
 }

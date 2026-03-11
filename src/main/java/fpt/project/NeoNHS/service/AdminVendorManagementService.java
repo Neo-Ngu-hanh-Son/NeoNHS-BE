@@ -47,6 +47,11 @@ public interface AdminVendorManagementService {
     void deleteVendor(UUID id);
 
     /**
+     * Delete vendor account completely from database
+     */
+    void hardDeleteVendor(UUID id);
+
+    /**
      * Search vendors by keyword (name, email, business name)
      */
     Page<VendorProfileResponse> searchVendors(String keyword, Pageable pageable);
@@ -74,6 +79,5 @@ public interface AdminVendorManagementService {
             Boolean isVerified,
             Boolean isBanned,
             Boolean isActive,
-            Pageable pageable
-    );
+            Pageable pageable);
 }

@@ -273,7 +273,7 @@ public class CartServiceImpl implements CartService {
                     .code(v.getCode())
                     .description(v.getDescription())
                     .discountValue(v.getDiscountValue())
-                    .type(v.getDiscountType())
+                    .discountType(v.getDiscountType())
                     .minOrderValue(v.getMinOrderValue())
                     .build();
 
@@ -354,7 +354,7 @@ public class CartServiceImpl implements CartService {
                     .code(v.getCode())
                     .description(v.getDescription())
                     .discountValue(v.getDiscountValue())
-                    .type(v.getDiscountType())
+                    .discountType(v.getDiscountType())
                     .minOrderValue(v.getMinOrderValue())
                     .build());
         }

@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.EmailTemplate;
 import fpt.project.NeoNHS.dto.request.admin.BanVendorRequest;
 import fpt.project.NeoNHS.dto.request.admin.CreateVendorByAdminRequest;
 import fpt.project.NeoNHS.dto.request.admin.UpdateVendorByAdminRequest;
@@ -12,14 +13,18 @@ import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.repository.VendorProfileRepository;
 import fpt.project.NeoNHS.service.AdminVendorManagementService;
+import fpt.project.NeoNHS.service.MailService;
+import fpt.project.NeoNHS.service.RedisAuthService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Random;
 import java.util.UUID;
 
 @Service
@@ -30,39 +35,42 @@ public class AdminVendorManagementServiceImpl implements AdminVendorManagementSe
     private final VendorProfileRepository vendorProfileRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final MailService mailService;
+    private final RedisAuthService redisAuthService;
+
+    @Value("${app.be-url-setpassword}")
+    private String setEmailPassword;
 
     @Override
     @Transactional
     public VendorProfileResponse createVendorByAdmin(CreateVendorByAdminRequest request) {
         log.info("Admin creating vendor account for email: {}", request.getEmail());
 
-        // Check if email already exists
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BadRequestException("Email already exists in the system");
         }
 
-        // Check if phone number already exists
         if (request.getPhoneNumber() != null && !request.getPhoneNumber().isEmpty()) {
             if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
                 throw new BadRequestException("Phone number already exists in the system");
             }
         }
 
-        // Create User
+        // Tạo User
         User user = User.builder()
                 .fullname(request.getFullname())
                 .email(request.getEmail())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .phoneNumber(request.getPhoneNumber())
                 .role(UserRole.VENDOR)
-                .isActive(true)
-                .isVerified(true)
                 .isBanned(false)
+                .isActive(false)
+                .isVerified(false)
+                .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
                 .build();
 
         User savedUser = userRepository.save(user);
 
-        // Create VendorProfile
+        // Tạo VendorProfile
         VendorProfile profile = VendorProfile.builder()
                 .businessName(request.getBusinessName())
                 .description(request.getDescription())
@@ -73,14 +81,25 @@ public class AdminVendorManagementServiceImpl implements AdminVendorManagementSe
                 .bankName(request.getBankName())
                 .bankAccountNumber(request.getBankAccountNumber())
                 .bankAccountName(request.getBankAccountName())
-                .isVerified(request.getIsVerified() != null ? request.getIsVerified() : true)
+                .isVerified(request.getIsVerified() != null ? request.getIsVerified() : false)
                 .user(savedUser)
                 .build();
 
-        VendorProfile savedProfile = vendorProfileRepository.save(profile);
+        vendorProfileRepository.save(profile);
 
-        log.info("Vendor account created successfully for email: {}", request.getEmail());
-        return mapToVendorResponse(savedUser, savedProfile);
+        // Xử lý Token và gửi Email
+        String token = UUID.randomUUID().toString();
+        redisAuthService.saveSetPasswordToken(user.getEmail(), token);
+
+        mailService.sendSetPasswordEmailAsync(
+                savedUser,
+                EmailTemplate.SET_PASSWORD,
+                token,
+                setEmailPassword
+        );
+
+        log.info("Vendor account created and set-password email sent to: {}", request.getEmail());
+        return mapToVendorResponse(savedUser, profile);
     }
 
     @Override
@@ -93,8 +112,8 @@ public class AdminVendorManagementServiceImpl implements AdminVendorManagementSe
     @Override
     public VendorProfileResponse getVendorById(UUID id) {
         log.info("Admin fetching vendor by ID: {}", id);
-        VendorProfile profile = vendorProfileRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("VendorProfile", "id", id));
+        VendorProfile profile = vendorProfileRepository.findByUserId(id)
+                .orElseThrow(() -> new ResourceNotFoundException("VendorProfile", "user_id", id));
         return mapToVendorResponse(profile.getUser(), profile);
     }
 
@@ -103,8 +122,8 @@ public class AdminVendorManagementServiceImpl implements AdminVendorManagementSe
     public VendorProfileResponse updateVendorByAdmin(UUID id, UpdateVendorByAdminRequest request) {
         log.info("Admin updating vendor profile with ID: {}", id);
 
-        VendorProfile profile = vendorProfileRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("VendorProfile", "id", id));
+        VendorProfile profile = vendorProfileRepository.findByUserId(id)
+                .orElseThrow(() -> new ResourceNotFoundException("VendorProfile", "user_id", id));
 
         User user = profile.getUser();
 
@@ -181,8 +200,8 @@ public class AdminVendorManagementServiceImpl implements AdminVendorManagementSe
     public VendorProfileResponse banVendor(UUID id, BanVendorRequest request) {
         log.info("Admin banning vendor with ID: {}", id);
 
-        VendorProfile profile = vendorProfileRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("VendorProfile", "id", id));
+        VendorProfile profile = vendorProfileRepository.findByUserId(id)
+                .orElseThrow(() -> new ResourceNotFoundException("VendorProfile", "user_id", id));
 
         User user = profile.getUser();
 
@@ -203,8 +222,8 @@ public class AdminVendorManagementServiceImpl implements AdminVendorManagementSe
     public VendorProfileResponse unbanVendor(UUID id) {
         log.info("Admin unbanning vendor with ID: {}", id);
 
-        VendorProfile profile = vendorProfileRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("VendorProfile", "id", id));
+        VendorProfile profile = vendorProfileRepository.findByUserId(id)
+                .orElseThrow(() -> new ResourceNotFoundException("VendorProfile", "user_id", id));
 
         User user = profile.getUser();
 
@@ -225,8 +244,8 @@ public class AdminVendorManagementServiceImpl implements AdminVendorManagementSe
     public void deleteVendor(UUID id) {
         log.info("Admin deleting vendor with ID: {}", id);
 
-        VendorProfile profile = vendorProfileRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("VendorProfile", "id", id));
+        VendorProfile profile = vendorProfileRepository.findByUserId(id)
+                .orElseThrow(() -> new ResourceNotFoundException("VendorProfile", "user_id", id));
 
         User user = profile.getUser();
 
@@ -236,6 +255,26 @@ public class AdminVendorManagementServiceImpl implements AdminVendorManagementSe
         userRepository.save(user);
 
         log.info("Vendor deleted (soft delete) successfully: {}", user.getEmail());
+    }
+
+    @Override
+    @Transactional
+    public void hardDeleteVendor(UUID id) {
+        log.info("Admin hard deleting vendor with ID: {}", id);
+
+        VendorProfile profile = vendorProfileRepository.findByUserId(id)
+                .orElseThrow(() -> new ResourceNotFoundException("VendorProfile", "user_id", id));
+
+        User user = profile.getUser();
+
+        // VendorProfile has cascade delete from User? Let's assume we delete manually
+        // if not.
+        // The entity showed: @OneToOne(mappedBy = "user", cascade = CascadeType.ALL,
+        // fetch = FetchType.LAZY)
+        // so deleting user should delete profile.
+        userRepository.delete(user);
+
+        log.info("Vendor hard deleted successfully: {}", user.getEmail());
     }
 
     @Override
@@ -282,14 +321,14 @@ public class AdminVendorManagementServiceImpl implements AdminVendorManagementSe
             Boolean isActive,
             Pageable pageable) {
 
-        log.info("Admin performing advanced search and filter - keyword: {}, isVerified: {}, isBanned: {}, isActive: {}",
+        log.info(
+                "Admin performing advanced search and filter - keyword: {}, isVerified: {}, isBanned: {}, isActive: {}",
                 keyword, isVerified, isBanned, isActive);
 
         String searchKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
 
         Page<VendorProfile> vendorProfiles = vendorProfileRepository.advancedSearchAndFilter(
-                searchKeyword, isVerified, isBanned, isActive, pageable
-        );
+                searchKeyword, isVerified, isBanned, isActive, pageable);
 
         return vendorProfiles.map(vp -> mapToVendorResponse(vp.getUser(), vp));
     }
