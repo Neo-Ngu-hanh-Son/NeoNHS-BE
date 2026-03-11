@@ -197,7 +197,7 @@ public class DashboardServiceImpl implements DashboardService {
                                 .vendorName(w.getVendor().getBusinessName())
                                 .action("APPROVE_WORKSHOP")
                                 .targetName(w.getName())
-                                .time(w.getApprovedAt())
+                                .time(w.getReviewedAt())
                                 .build()
                 ));
 

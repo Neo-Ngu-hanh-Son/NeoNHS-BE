@@ -49,8 +49,8 @@ public interface WorkshopTemplateRepository
         SELECT w
         FROM WorkshopTemplate w
         JOIN FETCH w.vendor
-        WHERE w.approvedAt IS NOT NULL
-        ORDER BY w.approvedAt DESC
+        WHERE w.reviewedAt IS NOT NULL
+        ORDER BY w.reviewedAt DESC
     """)
     List<WorkshopTemplate> findRecentApproved(Pageable pageable);
 }

@@ -391,10 +391,13 @@ public class AdminVendorManagementController {
     public ResponseEntity<ApiResponse<WorkshopTemplateResponse>> approveWorkshopTemplate(
             @Parameter(description = "Workshop Template ID", required = true)
             @PathVariable UUID id,
+            @Parameter(description = "Optional admin note for approval")
+            @RequestParam(required = false) String adminNote,
             Principal principal) {
         WorkshopTemplateResponse response = workshopTemplateService.approveWorkshopTemplate(
                 principal.getName(),
-                id);
+                id,
+                adminNote);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Workshop template approved successfully", response));
     }
 
