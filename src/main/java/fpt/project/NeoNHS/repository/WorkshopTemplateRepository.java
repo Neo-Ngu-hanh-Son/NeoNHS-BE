@@ -53,4 +53,16 @@ public interface WorkshopTemplateRepository
         ORDER BY w.approvedAt DESC
     """)
     List<WorkshopTemplate> findRecentApproved(Pageable pageable);
+
+    @Query("""
+        SELECT wt
+        FROM WorkshopTemplate wt
+        INNER JOIN WorkshopSession ws
+            ON wt.id = ws.workshopTemplate.id
+        WHERE wt.status = 'ACTIVE'
+          AND ws.status = 'SCHEDULED'
+          AND ws.startTime >= NOW()
+        ORDER BY ws.startTime ASC
+""")
+    List<WorkshopTemplate> findWorkshopTemplatesWithActiveUpcomingWorkshopSessions();
 }

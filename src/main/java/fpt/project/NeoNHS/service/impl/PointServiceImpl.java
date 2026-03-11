@@ -1,15 +1,18 @@
 package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.constants.PaginationConstants;
+import fpt.project.NeoNHS.dto.request.event.EventFilterRequest;
 import fpt.project.NeoNHS.dto.request.point.PointRequest;
+import fpt.project.NeoNHS.dto.response.point.MapPointResponse;
 import fpt.project.NeoNHS.dto.response.point.PointPanoramaResponse;
 import fpt.project.NeoNHS.dto.response.point.PointResponse;
 import fpt.project.NeoNHS.entity.Attraction;
 import fpt.project.NeoNHS.entity.Point;
-import fpt.project.NeoNHS.repository.AttractionRepository;
-import fpt.project.NeoNHS.repository.PointRepository;
+import fpt.project.NeoNHS.enums.EventStatus;
+import fpt.project.NeoNHS.repository.*;
 import fpt.project.NeoNHS.service.PanoramaService;
 import fpt.project.NeoNHS.service.PointService;
+import fpt.project.NeoNHS.specification.EventSpecification;
 import fpt.project.NeoNHS.specification.PointSpecification;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +22,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,6 +35,8 @@ public class PointServiceImpl implements PointService {
     private final PointRepository pointRepository;
     private final AttractionRepository attractionRepository;
     private final PanoramaService panoramaService;
+    private final EventRepository eventRepository;
+    private final WorkshopTemplateRepository workshopTemplateRepository;
 
     @Override
     @Transactional
@@ -154,6 +162,29 @@ public class PointServiceImpl implements PointService {
     }
 
     @Override
+    public List<MapPointResponse> getAllPointsOnMap() {
+        // Points already contain checkin point.
+        var points = pointRepository.findAll(PointSpecification.withFilters(null, true));
+        var eventFilter = EventFilterRequest.builder()
+                .status(EventStatus.UPCOMING)
+                .startDate(LocalDate.from(LocalDateTime.now()))
+                .includeDeleted(false)
+                .build();
+        var events = eventRepository.findAll(EventSpecification.withFilters(eventFilter));
+        // For workshops, we will get the workshop template and their session. (For the session we only get the
+        // one that is upcoming and not deleted, order by start time, and get the first one only, since we only want to
+        // show one point for each workshop template)
+        var workshopTemplate = workshopTemplateRepository.findWorkshopTemplatesWithActiveUpcomingWorkshopSessions();
+
+        // Now convert each of them into map points and combine into a single list
+        List<MapPointResponse> mapPoints = new ArrayList<>();
+        mapPoints.addAll(points.stream().map(MapPointResponse::fromPoint).toList());
+        mapPoints.addAll(events.stream().map(MapPointResponse::fromEventPoint).toList());
+        mapPoints.addAll(workshopTemplate.stream().map(MapPointResponse::fromWorkshopTemplate).toList());
+        return mapPoints;
+    }
+
+    @Override
     public Page<PointResponse> getAllPointsForAdmin(int page, int size, String sortBy, String sortDir, String search,
                                                     boolean includeDeleted) {
         return findAllPoints(page, size, sortBy, sortDir, search, !includeDeleted);
@@ -180,8 +211,8 @@ public class PointServiceImpl implements PointService {
                 .name(entity.getName())
                 .description(entity.getDescription())
                 .thumbnailUrl(entity.getThumbnailUrl())
-                .latitude(entity.getLatitude())
-                .longitude(entity.getLongitude())
+                .latitude(entity.getLatitude().doubleValue())
+                .longitude(entity.getLongitude().doubleValue())
                 .orderIndex(entity.getOrderIndex())
                 .estTimeSpent(entity.getEstTimeSpent())
                 .type(entity.getType())

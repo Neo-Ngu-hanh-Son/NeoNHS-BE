@@ -1,6 +1,6 @@
 # NeoNHS-BE — Codebase Index
 
-> **Last updated:** 2026-02-10
+> **Last updated:** 2026-03-09
 > **Project:** RESTful API for Neo-Ngu Hanh Son Tourism Application
 > **FPT University Capstone Project © 2026**
 
@@ -14,7 +14,7 @@
 - Tourist attractions & points of interest management
 - Events management with ticketing
 - Workshop discovery, creation, and approval workflows (Vendor ↔ Admin)
-- Ticket purchasing, orders, and transactions
+- Ticket purchasing, orders, and transactions (VNPay/various payment methods)
 - Reviews, blogs, vouchers, notifications, check-ins
 - Role-based access (Tourist, Vendor, Admin)
 
@@ -41,7 +41,7 @@
 
 ## 3. Project Structure
 
-```
+```text
 NeoNHS-BE/
 ├── .github/workflows/ci.yml         # CI/CD pipeline (Build → Docker → Deploy)
 ├── Dockerfile                        # JRE 21 Alpine image
@@ -52,27 +52,23 @@ NeoNHS-BE/
 │   ├── main/
 │   │   ├── java/fpt/project/NeoNHS/
 │   │   │   ├── NeoNhsApplication.java       # Entry point
-│   │   │   ├── config/                      # (7 files) Configuration classes
-│   │   │   ├── constants/                   # (2 files) Constants
-│   │   │   ├── controller/                  # (18 files + admin/) REST controllers
-│   │   │   │   └── admin/                   # (1 file) Admin-only controllers
-│   │   │   ├── dto/                         # (36 files) Request/Response DTOs
-│   │   │   │   ├── request/                 # auth(11), attraction(2), event(3), point(1), workshop(5)
-│   │   │   │   └── response/               # root(4), attraction(1), auth(3), event(2), point(1), workshop(3)
-│   │   │   ├── entity/                      # (34 files) JPA entities
-│   │   │   ├── enums/                       # (15 files) Enum types
-│   │   │   ├── exception/                   # (9 files) Custom exceptions + GlobalExceptionHandler
-│   │   │   ├── helpers/                     # (4 files) Utility classes
-│   │   │   ├── repository/                  # (31 files) Spring Data JPA repositories
-│   │   │   ├── security/                    # (4 files) JWT + UserDetails
-│   │   │   ├── service/                     # (30 interfaces + impl/) Service layer
-│   │   │   │   └── impl/                    # (30 files) Service implementations
-│   │   │   └── specification/               # (3 files) JPA Specifications for filtering
+│   │   │   ├── config/                      # Configuration classes
+│   │   │   ├── constants/                   # Shared constants
+│   │   │   ├── controller/                  # REST controllers (Root, admin/, vendor/)
+│   │   │   ├── dto/                         # Request/Response DTOs
+│   │   │   ├── entity/                      # (37 files) JPA entities
+│   │   │   ├── enums/                       # (20 files) Enum types
+│   │   │   ├── exception/                   # Custom exceptions + GlobalExceptionHandler
+│   │   │   ├── helpers/                     # Utility classes
+│   │   │   ├── repository/                  # (34 files) Spring Data JPA repositories
+│   │   │   ├── security/                    # JWT + UserDetails
+│   │   │   ├── service/                     # (39 interfaces + impl/) Service layer
+│   │   │   └── specification/               # JPA Specifications for filtering
 │   │   └── resources/
 │   │       ├── application.yaml             # App config
-│   │       └── templates/                   # Thymeleaf email templates (2 files)
+│   │       └── templates/                   # Thymeleaf email templates
 │   └── test/                                # Test sources
-└── MD/WorkshopMD/                           # Workshop documentation (6 files)
+└── MD/WorkshopMD/                           # Workshop documentation
 ```
 
 ---
@@ -81,13 +77,9 @@ NeoNHS-BE/
 
 ### 4.1 Core Entities & Relationships
 
-All main entities extend **`BaseEntity`** which provides:
+All main entities extend **`BaseEntity`** which provides `createdAt`, `updatedAt`, `deletedAt`, `deletedBy`, and UUID IDs.
 
-- `createdAt`, `updatedAt` (auto-timestamps)
-- `deletedAt`, `deletedBy` (soft delete support)
-- All IDs are `UUID` with `@GeneratedValue(strategy = GenerationType.UUID)`
-
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              USER (users)                                   │
 │  id, fullname, email, passwordHash, phoneNumber, avatarUrl,                │
@@ -112,6 +104,7 @@ All main entities extend **`BaseEntity`** which provides:
 │  latitude, longitude, orderIndex, estTimeSpent, type                       │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  N:1  → Attraction             1:N → CheckinPoint, UserVisitedPoint        │
+│                                1:N → PointHistoryAudio, PanoramaHotSpot    │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -120,7 +113,7 @@ All main entities extend **`BaseEntity`** which provides:
 │  latitude, longitude, startTime, endTime, isTicketRequired,                │
 │  price, maxParticipants, currentEnrolled, status                           │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│  1:N  → EventTag, TicketCatalog, Review                                    │
+│  1:N  → EventTag, TicketCatalog, Review, EventImage                        │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -174,98 +167,90 @@ All main entities extend **`BaseEntity`** which provides:
 
 ### 4.2 Supporting / Join Entities
 
-| Entity             | Table               | Purpose                          |
-| ------------------ | ------------------- | -------------------------------- |
-| `EventTag`         | composite key       | Event ↔ ETag many-to-many        |
-| `WorkshopTag`      | composite key       | WorkshopTemplate ↔ WTag M2M      |
-| `ETag`             | tags                | Tag for events                   |
-| `WTag`             | tags                | Tag for workshops                |
-| `WorkshopSession`  | workshop_sessions   | Scheduled session of a template  |
-| `WorkshopImage`    | workshop_images     | Image gallery for workshop       |
-| `ReviewImage`      | review_images       | Image attached to review         |
-| `CheckinPoint`     | checkin_points      | Checkin location at a point      |
-| `CheckinImage`     | checkin_images      | Image for a checkin              |
-| `UserCheckIn`      | user_check_ins      | User ↔ Checkin record            |
-| `UserVisitedPoint` | user_visited_points | User ↔ Point visit record        |
-| `UserVoucher`      | user_vouchers       | User ↔ Voucher assignment        |
-| `Cart`             | carts               | User's shopping cart             |
-| `CartItem`         | cart_items          | Item in a cart                   |
-| `OrderDetail`      | order_details       | Line item in an order            |
-| `Transaction`      | transactions        | Payment transaction for an order |
-| `Notification`     | notifications       | Push/in-app notification         |
-| `Report`           | reports             | User report on content           |
-| `BlogCategory`     | blog_categories     | Category for blogs               |
+| Entity              | Table               | Purpose                                       |
+| ------------------- | ------------------- | --------------------------------------------- |
+| `EventTag`          | composite key       | Event ↔ ETag many-to-many                     |
+| `WorkshopTag`       | composite key       | WorkshopTemplate ↔ WTag M2M                   |
+| `ETag`              | tags                | Tag for events                                |
+| `WTag`              | tags                | Tag for workshops                             |
+| `WorkshopSession`   | workshop_sessions   | Scheduled session of a template               |
+| `WorkshopImage`     | workshop_images     | Image gallery for workshop                    |
+| `ReviewImage`       | review_images       | Image attached to review                      |
+| `CheckinPoint`      | checkin_points      | Checkin location at a point                   |
+| `CheckinImage`      | checkin_images      | Image for a checkin                           |
+| `UserCheckIn`       | user_check_ins      | User ↔ Checkin record                         |
+| `UserVisitedPoint`  | user_visited_points | User ↔ Point visit record                     |
+| `UserVoucher`       | user_vouchers       | User ↔ Voucher assignment                     |
+| `Cart`              | carts               | User's shopping cart                          |
+| `CartItem`          | cart_items          | Item in a cart                                |
+| `OrderDetail`       | order_details       | Line item in an order                         |
+| `Transaction`       | transactions        | Payment transaction for an order              |
+| `Notification`      | notifications       | Push/in-app notification                      |
+| `Report`            | reports             | User report on content                        |
+| `BlogCategory`      | blog_categories     | Category for blogs                            |
+| `PointHistoryAudio` | point_history_audios| Audio guide and history content for a Point   |
+| `PanoramaHotSpot`   | panorama_hot_spots  | 360-degree panorama hotspots for a Point      |
+| `EventImage`        | event_images        | Image gallery for event                       |
 
 ---
 
-## 5. Enums
+## 5. Enums (20 Total)
 
-| Enum                  | Values                                                                                                                                  |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `UserRole`            | `TOURIST`, `VENDOR`, `ADMIN`                                                                                                            |
-| `PointType`           | `PAGODA`, `CAVE`, `VIEWPOINT`, `GENERAL`, `CHECKIN`, `STATUE`, `GATE`, `SHOP`, `ELEVATOR`, `EVENT`, `WORKSHOP`, `ATTRACTION`, `DEFAULT` |
-| `EventStatus`         | `UPCOMING`, `ONGOING`, `COMPLETED`, `CANCELLED`                                                                                         |
-| `WorkshopStatus`      | `DRAFT`, `PENDING`, `ACTIVE`, `REJECTED`                                                                                                |
-| `AttractionStatus`    | (active/inactive status values)                                                                                                         |
-| `BlogStatus`          | `DRAFT`, `PUBLISHED` (+ others)                                                                                                         |
-| `ReviewStatus`        | `VISIBLE`, `HIDDEN`                                                                                                                     |
-| `TicketType`          | Ticket types enum                                                                                                                       |
-| `TicketStatus`        | `ACTIVE` + others                                                                                                                       |
-| `TicketCatalogStatus` | `ACTIVE` + others                                                                                                                       |
-| `SessionStatus`       | Workshop session status                                                                                                                 |
-| `TransactionStatus`   | Payment status                                                                                                                          |
-| `ReportStatus`        | Report lifecycle                                                                                                                        |
-| `VoucherStatus`       | `ACTIVE` + others                                                                                                                       |
-| `DiscountType`        | Discount types (percentage/fixed)                                                                                                       |
+Key enums defining logic flows:
+`UserRole`, `PointType`, `EventStatus`, `WorkshopStatus`, `AttractionStatus`, `BlogStatus`, `BlogCategoryStatus`, `ReviewStatus`, `TicketType`, `TicketStatus`, `TicketCatalogStatus`, `SessionStatus`, `TransactionStatus`, `OrderStatus`, `ReportStatus`, `VoucherStatus`, `VoucherType`, `VoucherScope`, `DiscountType`, `ApplicableProduct`.
 
 ---
 
 ## 6. API Endpoints (Controllers)
 
-### 6.1 Public APIs
+### 6.1 Public & User APIs
 
-| Controller                | Base Path        | Key Endpoints                                                                                                                                                                                                                                     |
-| ------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AuthController`          | `/api/auth`      | `POST /login`, `POST /register`, `POST /google-login`, `GET /me`, `POST /refresh-token`, `POST /logout`, `POST /change-password`, `POST /forgot-password`, `POST /reset-password`, `POST /verify`, `GET /verify-link`, `GET /resend-verify-email` |
-| `EventController`         | `/api/events`    | `GET /` (paginated+filtered), `GET /all` (no pagination), `GET /{id}`                                                                                                                                                                             |
-| `PointController`         | `/api/points`    | `POST /`, `GET /{id}`, `GET /all/{attractionId}`, `GET /attraction/{attractionId}` (paginated), `PUT /{id}`, `DELETE /{id}`                                                                                                                       |
-| `UserController`          | `/api/users`     | `GET /profile`, `PUT /update-profile/{id}`                                                                                                                                                                                                        |
-| `VendorProfileController` | `/api/vendors`   | `POST /register`, `GET /profile`, `PUT /{id}`                                                                                                                                                                                                     |
-| `WorkshopController`      | `/api/workshops` | Full CRUD + lifecycle: create, get, list, filter, update, register (submit for approval), approve, reject, delete                                                                                                                                 |
+| Controller                | Base Path             | Key Features                                         |
+| ------------------------- | --------------------- | ---------------------------------------------------- |
+| `AuthController`          | `/api/auth`           | Login, Register, Google OAuth, Refresh, Verify Email |
+| `EventController`         | `/api/events`         | Event listing & details (Filtered, Search)           |
+| `PointController`         | `/api/points`         | Points within attractions, details                   |
+| `UserController`          | `/api/users`          | User profile management                              |
+| `VendorProfileController` | `/api/vendors`        | Vendor registration and basic profile operations     |
+| `WorkshopTemplateController`| `/api/workshops`      | Workshop listings, submission, search              |
+| `PaymentController`       | `/api/payment`        | Payment processing (VNPay support)                   |
+| `CartController`          | `/api/cart`           | User cart management                                 |
+| `OrderController`         | `/api/orders`         | User orders management                               |
+| `BlogController`          | `/api/blogs`          | Viewing published blogs                              |
+| `VoucherController`       | `/api/vouchers`       | Voucher claiming and application lists               |
+| `HistoryAudioController`  | `/api/history-audio`  | Retrieving Point history audio details               |
 
-### 6.2 Admin APIs
+### 6.2 Admin APIs (`/api/admin/...`)
 
-| Controller             | Base Path           | Key Endpoints                                             |
-| ---------------------- | ------------------- | --------------------------------------------------------- |
-| `AttractionController` | `/api/attractions`  | CRUD (Admin-only via `@PreAuthorize("hasRole('ADMIN')")`) |
-| `AdminEventController` | `/api/admin/events` | CRUD + soft delete + restore (Admin-only)                 |
+Comprehensive CRUD and analytical capabilities restricted to `ADMIN` role. Specific controllers exist for:
+`AdminAttractionController`, `AdminBlogCategoryController`, `AdminBlogController`, `AdminDashboardController`, `AdminETagController`, `AdminEventController`, `AdminHistoryAudioController`, `AdminPanoramaController`, `AdminPointController`, `AdminReportController`, `AdminRevenueController`, `AdminTicketCatalogController`, `AdminUserController`, `AdminVoucherController`.
 
-### 6.3 Stub Controllers (minimal/empty implementations)
+### 6.3 Vendor APIs (`/api/vendor/...`)
 
-`BlogController`, `CartController`, `CheckinController`, `NotificationController`, `OrderController`, `ReportController`, `ReviewController`, `TicketController`, `TransactionController`, `VoucherController`
+Vendor-specific endpoints like `VendorVoucherController` for managing vendor-issued vouchers.
 
 ---
 
 ## 7. Service Layer
 
-### 7.1 Fully Implemented Services
+### 7.1 Key Business Services
 
-| Service                       | Key Features                                                                                          |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `AuthServiceImpl`             | Login, register, Google OAuth, email verification (OTP), password reset, JWT refresh, logout          |
-| `AttractionServiceImpl`       | CRUD with pagination, search, filtering via `AttractionSpecification`                                 |
-| `EventServiceImpl`            | CRUD, pagination, filtering via `EventSpecification`, soft delete/restore                             |
-| `PointServiceImpl`            | CRUD, pagination by attraction, search                                                                |
-| `WorkshopTemplateServiceImpl` | Full lifecycle: CRUD, submit for approval, approve/reject, filter via `WorkshopTemplateSpecification` |
-| `UserServiceImpl`             | Profile retrieval and update                                                                          |
-| `VendorProfileServiceImpl`    | Vendor account creation, profile get/update                                                           |
-| `WTagServiceImpl`             | Workshop tag CRUD                                                                                     |
-| `RedisAuthServiceImpl`        | Redis-backed OTP storage, refresh token management                                                    |
-| `MailServiceImpl`             | Email sending via Thymeleaf templates                                                                 |
+| Service                         | Key Features                                                                                           |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `AuthServiceImpl`               | Login, register, Google OAuth, OTP verification, password reset, JWT token refresh                     |
+| `AttractionServiceImpl`         | Full CRUD with complex pagination & `AttractionSpecification` filtering                                |
+| `EventServiceImpl`              | Creation, updates, soft delete/restore, advanced search                                                |
+| `CartServiceImpl`               | Shopping cart modifications and calculation logic                                                      |
+| `OrderServiceImpl`              | Checkout process, discount application, order state transitions                                        |
+| `VoucherServiceImpl`            | Claiming limits, validation checks, global/vendor-specific handling                                    |
+| `WorkshopTemplateServiceImpl`   | Full lifecycle (DRAFT, PENDING, ACTIVE), admin approval flow                                           |
+| `PanoramaServiceImpl`           | Management of 360 images and hotspots                                                                  |
+| `PointHistoryAudioServiceImpl`  | History audio text and JSON word playback sync configuration                                           |
+| `DashboardServiceImpl` / `RevenueAnalyticsServiceImpl` | Aggregated statistics, revenue tracking for admins                      |
+| `VnptEkycServiceImpl`           | Integration for eKYC (Know Your Customer) verifications                                                |
+| `MailServiceImpl`               | Asynchronous email service with Thymeleaf parsing                                                      |
 
-### 7.2 Stub Services (interface + basic impl)
-
-`BlogService`, `BlogCategoryService`, `CartService`, `CartItemService`, `CheckinImageService`, `CheckinPointService`, `ETagService`, `NotificationService`, `OrderService`, `OrderDetailService`, `ReportService`, `ReviewService`, `ReviewImageService`, `TicketService`, `TicketCatalogService`, `TransactionService`, `UserCheckInService`, `VoucherService`, `WorkshopImageService`, `WorkshopSessionService`
+*(Many other supporting services exist for CartItems, OrderDetails, Reviews, Tags, etc, totaling 39 services.)*
 
 ---
 
@@ -273,22 +258,12 @@ All main entities extend **`BaseEntity`** which provides:
 
 | Component                  | Description                                                       |
 | -------------------------- | ----------------------------------------------------------------- |
-| `SecurityConfig`           | Stateless JWT, CORS (localhost:5173, :3000), BCrypt passwords     |
+| `SecurityConfig`           | Stateless JWT, CORS, BCrypt passwords, Route permissions          |
 | `JwtAuthenticationFilter`  | Extracts JWT from `Authorization` header, validates, sets context |
-| `JwtTokenProvider`         | Generates & validates JWT tokens (24h expiry, HS256)              |
+| `JwtTokenProvider`         | Generates & validates JWT tokens (24h expiry, HS256 algorithm)    |
 | `CustomUserDetailsService` | Loads `User` entity by email for Spring Security                  |
 | `UserPrincipal`            | Implements `UserDetails`, wraps `User` entity                     |
 | `GoogleTokenVerifier`      | Verifies Google OAuth ID tokens                                   |
-
-### Security Rules (SecurityConfig)
-
-- `OPTIONS /**` → permitAll
-- `/api/auth/**` → permitAll (except `/api/auth/test-protected`)
-- `/api/public/**` → permitAll
-- `/api/attractions/**` → ADMIN only
-- `/api/points/**` → permitAll
-- `/swagger-ui/**`, `/v3/api-docs/**` → permitAll
-- Individual methods use `@PreAuthorize` annotations
 
 ---
 
@@ -297,104 +272,23 @@ All main entities extend **`BaseEntity`** which provides:
 | Config Class         | Purpose                                                  |
 | -------------------- | -------------------------------------------------------- |
 | `SecurityConfig`     | HTTP security, CORS, JWT filter chain                    |
-| `RedisConfig`        | Redis connection (cloud-hosted)                          |
+| `RedisConfig`        | Redis connection (cloud-hosted endpoint)                 |
 | `EmailConfiguration` | JavaMailSender with Gmail SMTP                           |
-| `OpenApiConfig`      | Swagger/OpenAPI metadata + JWT security scheme           |
+| `OpenApiConfig`      | Swagger/OpenAPI metadata configuration + Bearer schema   |
 | `AsyncConfig`        | Async task execution                                     |
-| `DataInitializer`    | Seeds admin user + 5 Ngu Hanh Son attractions on startup |
-| `StartupLogger`      | Logs app startup info                                    |
-
-### Environment Variables (`.env.example`)
-
-- `GOOGLE_AUTH_CLIENT_ID`, `GOOGLE_AUTH_CLIENT_SECRET`
-- `REDIS_HOST`, `REDIS_USERNAME`, `REDIS_PASSWORD`
-- `GOOGLE_MAIL_PASSWORD`
 
 ---
 
-## 10. Exception Handling
+## 10. File Statistics
 
-`GlobalExceptionHandler` (`@RestControllerAdvice`) wraps all errors in `ApiResponse<Void>`:
-
-| Exception                         | HTTP Status      |
-| --------------------------------- | ---------------- |
-| `BadRequestException`             | 400              |
-| `HttpMessageNotReadableException` | 400 (JSON parse) |
-| `MethodArgumentNotValidException` | 400 (validation) |
-| `IllegalArgumentException`        | 400              |
-| `OTPException`                    | 400              |
-| `UnauthorizedException`           | 401              |
-| `BadCredentialsException`         | 401              |
-| `AuthenticationException`         | 401              |
-| `InvalidTokenException`           | 401              |
-| `ResourceNotFoundException`       | 404              |
-| `Exception` (catch-all)           | 500              |
+| Package         | Files | Notes                                                          |
+| --------------- | ----- | -------------------------------------------------------------- |
+| `entity`        | 37    | All JPA entities including newer ones like `PanoramaHotSpot`   |
+| `repository`    | 34    | Spring Data JPA repos                                          |
+| `service`       | 39    | Interface definitions                                          |
+| `service/impl`  | 39    | Concrete class implementations                                 |
+| `controller`    | 41    | 26 root + 14 admin + 1 vendor public/private APIs              |
+| `enums`         | 20    | All status/type definitions                                    |
+| **Total**       | **~210+** | Core Java source files (excluding DTOs/Exceptions/Configs) |
 
 ---
-
-## 11. CI/CD Pipeline
-
-**File:** `.github/workflows/ci.yml`
-
-```
-Push/PR to main
-    │
-    ▼
-┌─────────────────┐
-│  Build & Test    │  JDK 21 + MySQL service container
-│  mvn clean       │  → Uploads JAR artifact
-│  package         │
-└────────┬────────┘
-         │ (push to main only)
-         ▼
-┌─────────────────┐
-│  Docker Build    │  Downloads JAR → Builds image
-│  & Push          │  → Pushes to Docker Hub (:latest + :sha)
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Deploy to VPS   │  SSH → docker pull → stop old → run new
-│                  │  → prune old images
-└─────────────────┘
-```
-
----
-
-## 12. API Response Format
-
-All endpoints return a standardized `ApiResponse<T>`:
-
-```json
-{
-  "status": 200,
-  "success": true,
-  "message": "Success",
-  "data": { ... },
-  "timestamp": "2026-02-10T12:00:00"
-}
-```
-
-Paginated responses use `PagedResponse<T>` or Spring's `Page<T>` as the data payload.
-
----
-
-## 13. File Statistics
-
-| Package         | Files    | Notes                            |
-| --------------- | -------- | -------------------------------- |
-| `entity`        | 34       | All JPA entities                 |
-| `repository`    | 31       | Spring Data JPA repos            |
-| `service`       | 30       | Interfaces                       |
-| `service/impl`  | 30       | Implementations                  |
-| `controller`    | 19       | 18 + 1 admin sub-package         |
-| `dto/request`   | 22       | Grouped by domain                |
-| `dto/response`  | 14       | Grouped by domain                |
-| `enums`         | 15       | All status/type enums            |
-| `exception`     | 9        | Custom exceptions + handler      |
-| `config`        | 7        | App configuration                |
-| `security`      | 4        | JWT + auth                       |
-| `helpers`       | 4        | Utilities                        |
-| `specification` | 3        | JPA Specifications for filtering |
-| `constants`     | 2        | Shared constants                 |
-| **Total**       | **~225** | Java source files                |

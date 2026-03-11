@@ -2,10 +2,10 @@ package fpt.project.NeoNHS.controller;
 
 import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
+import fpt.project.NeoNHS.dto.response.point.MapPointResponse;
 import fpt.project.NeoNHS.dto.response.point.PointPanoramaResponse;
 import fpt.project.NeoNHS.dto.response.point.PointResponse;
 import fpt.project.NeoNHS.service.PanoramaService;
-import fpt.project.NeoNHS.security.UserPrincipal;
 import fpt.project.NeoNHS.service.PointService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -56,6 +56,12 @@ public class PointController {
             @RequestParam(value = "sortDir", defaultValue = PaginationConstants.SORT_ASC, required = false) String sortDir,
             @RequestParam(value = "search", required = false) String searc) {
         Page<PointResponse> data = pointService.getAllPoints(page, size, sortBy, sortDir, searc);
+        return ApiResponse.success(data);
+    }
+
+    @GetMapping("/map")
+    public ApiResponse<List<MapPointResponse>> getAllPointsOnMap() {
+        List<MapPointResponse> data = pointService.getAllPointsOnMap();
         return ApiResponse.success(data);
     }
 

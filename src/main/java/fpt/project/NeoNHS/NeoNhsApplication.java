@@ -9,5 +9,4 @@ public class NeoNhsApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(NeoNhsApplication.class, args);
 	}
-	//test up git
 }

@@ -1,0 +1,53 @@
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#ffffff"
+    primaryTextColor: "#000000"
+    primaryBorderColor: "#000000"
+    activationBkgColor: "#eeeeee"
+    activationBorderColor: "#000000"
+    actorBkg: "#ffffff"
+    actorTextColor: "#000000"
+    actorBorder: "#000000"
+    altBackground: "#f5f5f5"
+    altBorder: "#000000"
+  sequence:
+    actorMargin: 10
+    messageMargin: 0
+---
+sequenceDiagram
+    actor Tourist as Tourist <br/> <<user>>
+    participant ViewBlogPage as ViewBlogPage <br/> <<user interaction>>
+    participant BlogController as BlogController <br/> <<coordinator>>
+    participant BlogService as BlogService <br/> <<service>>
+    participant BlogRepository as BlogRepository <br/> <<repository>>
+    participant DB
+
+    Tourist->>+ViewBlogPage: 1. View a blog
+    ViewBlogPage->>+BlogController: 2. viewBlog(blogId)
+    BlogController->>+BlogService: 3. viewBlog(id)
+    
+    BlogService->>BlogService: 4. Validate blog status
+    
+    alt 4A Blog status is not active
+        BlogService-->>BlogController: 4A1. Blog status is not active
+        BlogController-->>ViewBlogPage: 4A2. Not allow to view this blog
+        ViewBlogPage-->>Tourist: 4A3. Not allow to view this blog
+    else 4B Blog status is active
+        BlogService->>+BlogRepository: 4B1. getBlogDetails(id)
+        BlogRepository->>+DB: 4B2. getBlog(blogId)
+        DB-->>-BlogRepository: 4B3. Blog details
+    end
+    alt 5A No blog found
+        BlogRepository-->>BlogService: 5A1. No blog found
+        BlogService-->>BlogController: 5A2. No blog found
+        BlogController-->>ViewBlogPage: 5A3. No blog found
+        ViewBlogPage-->>Tourist: 5A4. No active blog found
+    else 5B Blog found
+        BlogRepository-->>-BlogService: 5B1. Blog details
+        BlogService->>BlogService: 5B2. Map to response
+        BlogService-->>-BlogController: 5B3. Blog details
+        BlogController-->>-ViewBlogPage: 5B4. Blog details
+        ViewBlogPage-->>-Tourist: 5B5. Display blog details
+    end
