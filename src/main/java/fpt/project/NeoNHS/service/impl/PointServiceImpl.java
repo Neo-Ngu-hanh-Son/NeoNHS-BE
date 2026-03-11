@@ -7,8 +7,10 @@ import fpt.project.NeoNHS.dto.response.point.MapPointResponse;
 import fpt.project.NeoNHS.dto.response.point.PointPanoramaResponse;
 import fpt.project.NeoNHS.dto.response.point.PointResponse;
 import fpt.project.NeoNHS.entity.Attraction;
+import fpt.project.NeoNHS.entity.CheckinPoint;
 import fpt.project.NeoNHS.entity.Point;
 import fpt.project.NeoNHS.enums.EventStatus;
+import fpt.project.NeoNHS.helpers.AuthHelper;
 import fpt.project.NeoNHS.repository.*;
 import fpt.project.NeoNHS.service.PanoramaService;
 import fpt.project.NeoNHS.service.PointService;
@@ -171,13 +173,28 @@ public class PointServiceImpl implements PointService {
                 .includeDeleted(false)
                 .build();
         var events = eventRepository.findAll(EventSpecification.withFilters(eventFilter));
+
         // For workshops, we will get the workshop template and their session. (For the session we only get the
         // one that is upcoming and not deleted, order by start time, and get the first one only, since we only want to
         // show one point for each workshop template)
         var workshopTemplate = workshopTemplateRepository.findWorkshopTemplatesWithActiveUpcomingWorkshopSessions();
 
-        // Now convert each of them into map points and combine into a single list
+        // List of checkin points - flatted. In here we need to know if user already checked in this point or not.
+//        List<CheckinPoint> checkinPoints = points.stream().flatMap(p -> p.getCheckinPoints().stream()).toList();
+//        var userPrincipalSilent = AuthHelper.getCurrentUserPrincipalSilent();
         List<MapPointResponse> mapPoints = new ArrayList<>();
+//        if (userPrincipalSilent != null) {
+//            var currentUserId =  userPrincipalSilent.getId();
+//            // user is authenticated, we can check which checkin point the user already checked in, and set the isCheckedIn field accordingly.
+//            checkinPoints.stream().map(cp -> {)
+//                boolean isCheckedIn = cp.getUserCheckIns().stream().anyMatch(uci -> uci.getUser().getId().equals(currentUserId));
+//                return MapPointResponse.fromCheckinPoint(cp, isCheckedIn);
+//            }).forEach(mapPoints::add);
+//        } else {
+//            // This is when user is unauthenticated, then we just use the normal mapping methods.
+//            mapPoints.addAll(points.stream().map(MapPointResponse::fromPoint).toList());
+//        }
+
         mapPoints.addAll(points.stream().map(MapPointResponse::fromPoint).toList());
         mapPoints.addAll(events.stream().map(MapPointResponse::fromEventPoint).toList());
         mapPoints.addAll(workshopTemplate.stream().map(MapPointResponse::fromWorkshopTemplate).toList());

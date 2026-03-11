@@ -38,6 +38,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import static fpt.project.NeoNHS.helpers.AuthHelper.getCurrentUserPrincipal;
+
 @Service
 @RequiredArgsConstructor
 public class UserCheckInServiceImpl implements UserCheckInService {
@@ -105,8 +107,8 @@ public class UserCheckInServiceImpl implements UserCheckInService {
                 .reduce(0, (sum, checkIn) -> sum + checkIn.getEarnedPoints(),
                         (first,second) -> first + second);
         return UserCheckinResultResponse.builder()
-                .earnedPoint(userCheckIn.getEarnedPoints())
-                .userTotalPoint(userTotalPoint)
+                .earnedPoints(userCheckIn.getEarnedPoints())
+                .userTotalPoints(userTotalPoint)
                 .build();
     }
 
@@ -129,16 +131,7 @@ public class UserCheckInServiceImpl implements UserCheckInService {
                 });
     }
 
-    private UserPrincipal getCurrentUserPrincipal() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) {
-            throw new UnauthorizedException("User is not authenticated");
-        }
-        if (!(auth.getPrincipal() instanceof UserPrincipal userPrincipal)) {
-            throw new UnauthorizedException("Invalid authenticated principal");
-        }
-        return userPrincipal;
-    }
+
 
     @Override
     public Page<UserCheckinResponse> getUserCheckins(int page, int size, String sortBy, String sortDir) {
