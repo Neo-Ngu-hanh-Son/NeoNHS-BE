@@ -2,10 +2,13 @@ package fpt.project.NeoNHS.repository;
 
 import fpt.project.NeoNHS.entity.WorkshopSession;
 import fpt.project.NeoNHS.enums.SessionStatus;
+import fpt.project.NeoNHS.repository.projection.VendorCountProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -23,4 +26,14 @@ public interface WorkshopSessionRepository extends JpaRepository<WorkshopSession
 
     Page<WorkshopSession> findByStatusAndStartTimeAfter(SessionStatus status, LocalDateTime startTime, Pageable pageable);
     List<WorkshopSession> findByStatusAndStartTimeAfter(SessionStatus status, LocalDateTime startTime);
+
+    @Query("""
+        SELECT wt.vendor.id AS vendorId, COUNT(ws) AS count
+        FROM WorkshopSession ws
+        JOIN ws.workshopTemplate wt
+        WHERE ws.deletedAt IS NULL
+          AND wt.vendor.id IN :vendorIds
+        GROUP BY wt.vendor.id
+    """)
+    List<VendorCountProjection> countSessionsByVendorIds(@Param("vendorIds") List<UUID> vendorIds);
 }

@@ -30,7 +30,7 @@ public class AdminDashboardController {
         return ResponseEntity.ok(ApiResponse.success("KPI data retrieved successfully", data));
     }
 
-    @Operation(summary = "Get Revenue Trends", description = "Get revenue trends by MONTHLY or WEEKLY")
+    @Operation(summary = "Get Revenue Trends", description = "Get revenue trends by MONTHLY or WEEKLY (WEEKLY uses week-of-month buckets: days 1-7, 8-14, 15-21, 22-28, 29+).")
     @GetMapping("/revenue-trends")
     public ResponseEntity<ApiResponse<RevenueTrendsResponse>> getRevenueTrends(
             @RequestParam(defaultValue = "MONTHLY") String periodType,
@@ -62,13 +62,13 @@ public class AdminDashboardController {
         return ResponseEntity.ok(ApiResponse.success("Top activities retrieved successfully", data));
     }
 
-    @Operation(summary = "Get Registration Stats", description = "Growth stats for Users or Vendors")
+    @Operation(summary = "Get Registration Stats", description = "Growth stats for Users or Vendors (WEEKLY uses week-of-month buckets: days 1-7, 8-14, 15-21, 22-28, 29+).")
     @GetMapping("/registrations")
-    public ResponseEntity<ApiResponse<List<RegistrationStatResponse>>> getRegistrations(
-            @RequestParam String type,
+    public ResponseEntity<ApiResponse<RegistrationGrowthResponse>> getRegistrations(
+            @RequestParam(defaultValue = "ALL") String type,
             @RequestParam(defaultValue = "MONTHLY") String periodType,
             @RequestParam(defaultValue = "6") Integer limit) {
-        List<RegistrationStatResponse> data = dashboardService.getRegistrations(type, periodType, limit);
+        RegistrationGrowthResponse data = dashboardService.getRegistrations(type, periodType, limit);
         return ResponseEntity.ok(ApiResponse.success("Registration statistics retrieved successfully", data));
     }
 

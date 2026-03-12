@@ -41,3 +41,7 @@ build/
 
 ### AI-genrated document files ###
 # diagrams/
+
+### Apache Maven
+.m2/
+target/

@@ -90,9 +90,9 @@ public class RevenueAnalyticsServiceImpl implements RevenueAnalyticsService {
             txDtos.add(TransactionDetailResponse.builder()
                     .date(od.getCreatedAt())
                     .id("#TRX-" + od.getId().toString().substring(0, 8).toUpperCase())
-                    .vendor(isVendorProduct ? od.getWorkshopSession().getWorkshopTemplate().getVendor().getBusinessName() : "Hệ thống Admin")
+                    .vendor(isVendorProduct ? od.getWorkshopSession().getWorkshopTemplate().getVendor().getBusinessName() : "Admin")
                     .item(isVendorProduct ? od.getWorkshopSession().getWorkshopTemplate().getName() :
-                            (od.getTicketCatalog() != null ? od.getTicketCatalog().getEvent().getName() : "Vé Sự kiện"))
+                            (od.getTicketCatalog() != null ? od.getTicketCatalog().getEvent().getName() : "Event Ticket"))
                     .gross(lineGross)
                     .fee(lineFeeDisplay)
                     .net(lineNetDisplay)
@@ -104,7 +104,7 @@ public class RevenueAnalyticsServiceImpl implements RevenueAnalyticsService {
         List<VendorRevenueResponse> vendorList = orderDetailRepository.getRevenueByVendor(start, end)
                 .stream()
                 .map(obj -> new VendorRevenueResponse(
-                        obj[0] != null ? (String) obj[0] : "Hệ thống Admin",
+                        obj[0] != null ? (String) obj[0] : "Admin",
                         (BigDecimal) obj[1]))
                 .collect(Collectors.toList());
 

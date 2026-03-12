@@ -13,21 +13,14 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CreateVendorByAdminRequest {
+public class    CreateVendorByAdminRequest {
 
     @NotBlank(message = "Full name is required")
     @Size(min = 2, max = 100, message = "Full name must be between 2 and 100 characters")
     private String fullname;
 
-    @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
     private String email;
-
-    @NotBlank(message = "Password is required")
-    @Size(min = 8, message = "Password must be at least 8 characters")
-    @Pattern(regexp = "^(?=.*[0-9])(?=.*[a-zA-Z]).+$",
-            message = "Password must contain at least one letter and one number")
-    private String password;
 
     @Pattern(regexp = "^[+]?[0-9]{10,15}$", message = "Invalid phone number format")
     private String phoneNumber;

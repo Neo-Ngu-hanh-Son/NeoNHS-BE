@@ -3,6 +3,7 @@ package fpt.project.NeoNHS.dto.response.auth;
 import lombok.Getter;
 import lombok.experimental.SuperBuilder;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -22,4 +23,8 @@ public class VendorProfileResponse extends UserProfileResponse {
     private Boolean isVerifiedVendor;
     private Boolean isActive;
     private Boolean isBanned;
+    private LocalDateTime createdAt;
+    private Long totalTemplates;
+    private Long activeTemplates;
+    private Long totalSessions;
 }

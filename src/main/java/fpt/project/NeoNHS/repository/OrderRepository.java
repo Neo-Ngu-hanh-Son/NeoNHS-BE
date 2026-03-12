@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public interface OrderRepository extends JpaRepository<Order, UUID> {
@@ -38,12 +39,54 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
                         "GROUP BY period ORDER BY period DESC LIMIT :limit", nativeQuery = true)
         List<Map<String, Object>> getMonthlyRevenueTrends(@Param("limit") Integer limit);
 
+        @Query(value = "SELECT DATE_FORMAT(o.created_at, '%Y-%m') as period, " +
+                        "SUM(o.final_amount) as amount, " +
+                        "COUNT(DISTINCT o.id) as transactionCount " +
+                        "FROM orders o " +
+                        "JOIN transactions t ON o.id = t.order_id " +
+                        "WHERE t.status = 'SUCCESS' " +
+                        "  AND o.created_at >= :start " +
+                        "  AND o.created_at < :end " +
+                        "GROUP BY period", nativeQuery = true)
+        List<Map<String, Object>> getMonthlyRevenueTrendsBetween(
+                        @Param("start") LocalDateTime start,
+                        @Param("end") LocalDateTime end
+        );
+
         @Query(value = "SELECT DATE_FORMAT(o.created_at, '%Y-Week %u') as period, SUM(o.final_amount) as amount " +
                         "FROM orders o " +
                         "JOIN transactions t ON o.id = t.order_id " +
                         "WHERE t.status = 'SUCCESS' " +
                         "GROUP BY period ORDER BY period DESC LIMIT :limit", nativeQuery = true)
         List<Map<String, Object>> getWeeklyRevenueTrends(@Param("limit") Integer limit);
+
+        @Query(value = "SELECT DATE_FORMAT(o.created_at, '%Y-Week %u') as period, " +
+                        "SUM(o.final_amount) as amount, " +
+                        "COUNT(DISTINCT o.id) as transactionCount " +
+                        "FROM orders o " +
+                        "JOIN transactions t ON o.id = t.order_id " +
+                        "WHERE t.status = 'SUCCESS' " +
+                        "  AND o.created_at >= :start " +
+                        "  AND o.created_at < :end " +
+                        "GROUP BY period", nativeQuery = true)
+        List<Map<String, Object>> getWeeklyRevenueTrendsBetween(
+                        @Param("start") LocalDateTime start,
+                        @Param("end") LocalDateTime end
+        );
+
+        @Query(value = "SELECT CONCAT(DATE_FORMAT(o.created_at, '%Y-%m'), '-W', (FLOOR((DAYOFMONTH(o.created_at) - 1) / 7) + 1)) as period, " +
+                        "SUM(o.final_amount) as amount, " +
+                        "COUNT(DISTINCT o.id) as transactionCount " +
+                        "FROM orders o " +
+                        "JOIN transactions t ON o.id = t.order_id " +
+                        "WHERE t.status = 'SUCCESS' " +
+                        "  AND o.created_at >= :start " +
+                        "  AND o.created_at < :end " +
+                        "GROUP BY period", nativeQuery = true)
+        List<Map<String, Object>> getMonthWeekRevenueTrendsBetween(
+                        @Param("start") LocalDateTime start,
+                        @Param("end") LocalDateTime end
+        );
 
         @Query(value = "SELECT " +
                         "CASE WHEN od.ticket_catalog_id IS NOT NULL THEN 'EVENT' ELSE 'WORKSHOP' END as type, " +

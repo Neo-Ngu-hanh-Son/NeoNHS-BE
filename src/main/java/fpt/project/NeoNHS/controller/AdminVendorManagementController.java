@@ -4,8 +4,10 @@ import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.request.admin.BanVendorRequest;
 import fpt.project.NeoNHS.dto.request.admin.CreateVendorByAdminRequest;
 import fpt.project.NeoNHS.dto.request.admin.UpdateVendorByAdminRequest;
+import fpt.project.NeoNHS.dto.request.workshop.ApproveWorkshopTemplateRequest;
 import fpt.project.NeoNHS.dto.request.workshop.RejectWorkshopTemplateRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
+import fpt.project.NeoNHS.dto.response.admin.VendorManagementStatsResponse;
 import fpt.project.NeoNHS.dto.response.auth.VendorProfileResponse;
 import fpt.project.NeoNHS.dto.response.workshop.WorkshopTemplateResponse;
 import fpt.project.NeoNHS.service.AdminVendorManagementService;
@@ -51,20 +53,34 @@ public class AdminVendorManagementController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all vendors", description = "Get all vendors with pagination and sorting")
+    @Operation(summary = "List vendors", description = "List vendors with pagination, search and filters")
     public ResponseEntity<ApiResponse<Page<VendorProfileResponse>>> getAllVendors(
             @Parameter(description = "Page number (1-based)") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "10") int size,
             @Parameter(description = "Sort by field") @RequestParam(defaultValue = "createdAt") String sortBy,
-            @Parameter(description = "Sort direction (ASC/DESC)") @RequestParam(defaultValue = "DESC") String sortDirection) {
+            @Parameter(description = "Sort direction (ASC/DESC)") @RequestParam(defaultValue = "DESC") String sortDirection,
+            @Parameter(description = "Search keyword (fullname, businessName, email)") @RequestParam(required = false) String keyword,
+            @Parameter(description = "Filter by account active status") @RequestParam(required = false) Boolean isActive,
+            @Parameter(description = "Filter by banned status") @RequestParam(required = false) Boolean isBanned,
+            @Parameter(description = "Filter by vendor verification status") @RequestParam(required = false) Boolean isVerified) {
 
+        String mappedSortBy = mapVendorSortBy(sortBy);
         Sort sort = sortDirection.equalsIgnoreCase("ASC")
-                ? Sort.by(sortBy).ascending()
-                : Sort.by(sortBy).descending();
+                ? Sort.by(mappedSortBy).ascending()
+                : Sort.by(mappedSortBy).descending();
         Pageable pageable = PageRequest.of(page - 1, size, sort);
 
-        Page<VendorProfileResponse> vendors = adminVendorManagementService.getAllVendors(pageable);
+        Page<VendorProfileResponse> vendors = adminVendorManagementService.listVendors(
+                keyword, isActive, isBanned, isVerified, pageable
+        );
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Vendors retrieved successfully", vendors));
+    }
+
+    @GetMapping("/stats")
+    @Operation(summary = "Vendor statistics", description = "Get summary statistics for vendor management dashboard")
+    public ResponseEntity<ApiResponse<VendorManagementStatsResponse>> getVendorStats() {
+        VendorManagementStatsResponse stats = adminVendorManagementService.getVendorManagementStats();
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Vendor stats retrieved successfully", stats));
     }
 
     @GetMapping("/{id}")
@@ -103,6 +119,13 @@ public class AdminVendorManagementController {
     public ResponseEntity<ApiResponse<VendorProfileResponse>> unbanVendor(@PathVariable UUID id) {
         VendorProfileResponse vendor = adminVendorManagementService.unbanVendor(id);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Vendor unbanned successfully", vendor));
+    }
+
+    @PostMapping("/{id}/verify")
+    @Operation(summary = "Verify vendor", description = "Verify a vendor profile")
+    public ResponseEntity<ApiResponse<VendorProfileResponse>> verifyVendor(@PathVariable UUID id) {
+        VendorProfileResponse vendor = adminVendorManagementService.verifyVendor(id);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Vendor verified successfully", vendor));
     }
 
     @DeleteMapping("/{id}")
@@ -151,6 +174,20 @@ public class AdminVendorManagementController {
                 keyword, isVerified, isBanned, isActive, pageable
         );
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Filtered results retrieved successfully", vendors));
+    }
+
+    private String mapVendorSortBy(String sortBy) {
+        if (sortBy == null) {
+            return "user.createdAt";
+        }
+
+        return switch (sortBy) {
+            case "createdAt" -> "user.createdAt";
+            case "updatedAt" -> "user.updatedAt";
+            case "fullname" -> "user.fullname";
+            case "businessName" -> "businessName";
+            default -> "user.createdAt";
+        };
     }
 
     @GetMapping("/filter/verified")
@@ -389,11 +426,12 @@ public class AdminVendorManagementController {
             )
     })
     public ResponseEntity<ApiResponse<WorkshopTemplateResponse>> approveWorkshopTemplate(
-            @Parameter(description = "Workshop Template ID", required = true)
             @PathVariable UUID id,
-            @Parameter(description = "Optional admin note for approval")
-            @RequestParam(required = false) String adminNote,
+            @RequestBody(required = false) ApproveWorkshopTemplateRequest request,
             Principal principal) {
+
+        String adminNote = request != null ? request.getAdminNote() : null;
+
         WorkshopTemplateResponse response = workshopTemplateService.approveWorkshopTemplate(
                 principal.getName(),
                 id,

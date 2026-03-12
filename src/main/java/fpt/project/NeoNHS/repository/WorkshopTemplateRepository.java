@@ -2,6 +2,7 @@ package fpt.project.NeoNHS.repository;
 
 import fpt.project.NeoNHS.entity.WorkshopTemplate;
 import fpt.project.NeoNHS.enums.WorkshopStatus;
+import fpt.project.NeoNHS.repository.projection.VendorCountProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -26,7 +27,29 @@ public interface WorkshopTemplateRepository
 
     long countByDeletedAtIsNull();
 
-    @Query(value = "SELECT CAST(wt.id AS CHAR) as id, wt.name as name, SUM(od.quantity) as totalSales " +
+    @Query("""
+        SELECT wt.vendor.id AS vendorId, COUNT(wt) AS count
+        FROM WorkshopTemplate wt
+        WHERE wt.deletedAt IS NULL
+          AND wt.vendor.id IN :vendorIds
+        GROUP BY wt.vendor.id
+    """)
+    List<VendorCountProjection> countTemplatesByVendorIds(@Param("vendorIds") List<UUID> vendorIds);
+
+    @Query("""
+        SELECT wt.vendor.id AS vendorId, COUNT(wt) AS count
+        FROM WorkshopTemplate wt
+        WHERE wt.deletedAt IS NULL
+          AND wt.status = :status
+          AND wt.vendor.id IN :vendorIds
+        GROUP BY wt.vendor.id
+    """)
+    List<VendorCountProjection> countTemplatesByVendorIdsAndStatus(
+            @Param("vendorIds") List<UUID> vendorIds,
+            @Param("status") WorkshopStatus status
+    );
+
+    @Query(value = "SELECT wt.id as id, wt.name as name, SUM(od.quantity) as totalSales " +
             "FROM workshop_templates wt " +
             "JOIN workshop_sessions ws ON wt.id = ws.workshop_id " +
             "JOIN order_details od ON ws.id = od.workshop_session_id " +

@@ -42,6 +42,7 @@ app:
     secret: dGhpc2lzYXZlcnlsb25nc2VjcmV0a2V5Zm9yand0c2lnbmluZ3B1cnBvc2Vz
     expiration-ms: 86400000 # 24 hours
   fe-url: http://localhost:3000
+  be-url-setpassword: ${BE_URL}/api/auth
 
 google-auth:
   client-id: ${GOOGLE_AUTH_CLIENT_ID}

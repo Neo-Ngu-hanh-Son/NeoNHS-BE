@@ -17,4 +17,14 @@ public class GenerateMailTemplateHelper {
         context.setVariable("appUrl", appUrl);
         return templateEngine.process(template, context);
     }
+
+    public String generateSetPasswordEmail(String fullname, String token, String email, String template,
+            String appUrl) {
+        Context context = new Context();
+        context.setVariable("fullname", fullname);
+        context.setVariable("token", token);
+        context.setVariable("email", email);
+        context.setVariable("appUrl", appUrl);
+        return templateEngine.process(template, context);
+    }
 }
