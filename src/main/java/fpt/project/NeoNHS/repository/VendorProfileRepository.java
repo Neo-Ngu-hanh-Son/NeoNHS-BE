@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -53,6 +54,39 @@ public interface VendorProfileRepository extends JpaRepository<VendorProfile, UU
                         Pageable pageable);
 
         @Query(value = "SELECT DATE_FORMAT(created_at, '%Y-%m') as period, COUNT(*) as count " +
-                        "FROM users GROUP BY period ORDER BY period DESC LIMIT :limit", nativeQuery = true)
+                        "FROM vendor_profiles GROUP BY period ORDER BY period DESC LIMIT :limit", nativeQuery = true)
         List<Map<String, Object>> getMonthlyRegistrationStats(@Param("limit") Integer limit);
+
+        @Query(value = "SELECT DATE_FORMAT(created_at, '%Y-%m') as period, COUNT(*) as count " +
+                        "FROM vendor_profiles " +
+                        "WHERE created_at >= :start " +
+                        "  AND created_at < :end " +
+                        "GROUP BY period", nativeQuery = true)
+        List<Map<String, Object>> getMonthlyRegistrationStatsBetween(
+                        @Param("start") LocalDateTime start,
+                        @Param("end") LocalDateTime end
+        );
+
+        @Query(value = "SELECT DATE_FORMAT(created_at, '%Y-Week %u') as period, COUNT(*) as count " +
+                        "FROM vendor_profiles " +
+                        "WHERE created_at >= :start " +
+                        "  AND created_at < :end " +
+                        "GROUP BY period", nativeQuery = true)
+        List<Map<String, Object>> getWeeklyRegistrationStatsBetween(
+                        @Param("start") LocalDateTime start,
+                        @Param("end") LocalDateTime end
+        );
+
+        @Query(value = "SELECT CONCAT(DATE_FORMAT(created_at, '%Y-%m'), '-W', (FLOOR((DAYOFMONTH(created_at) - 1) / 7) + 1)) as period, " +
+                        "COUNT(*) as count " +
+                        "FROM vendor_profiles " +
+                        "WHERE created_at >= :start " +
+                        "  AND created_at < :end " +
+                        "GROUP BY period", nativeQuery = true)
+        List<Map<String, Object>> getMonthWeekRegistrationStatsBetween(
+                        @Param("start") LocalDateTime start,
+                        @Param("end") LocalDateTime end
+        );
+
+        long countByUserIsActiveTrueAndUserIsBannedFalse();
 }

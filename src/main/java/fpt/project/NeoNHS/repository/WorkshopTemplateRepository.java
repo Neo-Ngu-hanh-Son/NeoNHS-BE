@@ -26,7 +26,7 @@ public interface WorkshopTemplateRepository
 
     long countByDeletedAtIsNull();
 
-    @Query(value = "SELECT CAST(wt.id AS CHAR) as id, wt.name as name, SUM(od.quantity) as totalSales " +
+    @Query(value = "SELECT wt.id as id, wt.name as name, SUM(od.quantity) as totalSales " +
             "FROM workshop_templates wt " +
             "JOIN workshop_sessions ws ON wt.id = ws.workshop_id " +
             "JOIN order_details od ON ws.id = od.workshop_session_id " +

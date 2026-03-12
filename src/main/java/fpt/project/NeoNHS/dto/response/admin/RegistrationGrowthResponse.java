@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @Getter
@@ -14,11 +13,10 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class RevenueTrendsResponse {
+public class RegistrationGrowthResponse {
 
     private Summary summary;
     private List<TrendPoint> trends;
-    private Metadata metadata;
 
     @Getter
     @Setter
@@ -26,12 +24,10 @@ public class RevenueTrendsResponse {
     @NoArgsConstructor
     @Builder
     public static class Summary {
-        private BigDecimal currentTotal;
-        private BigDecimal previousTotal;
+        private long totalJoined;
+        private long previousTotal;
         private Double growthRate;
-        private BigDecimal averageValue;
-        private BigDecimal peakValue;
-        private String peakPeriod;
+        private Double activePercentage;
     }
 
     @Getter
@@ -42,9 +38,9 @@ public class RevenueTrendsResponse {
     public static class TrendPoint {
         private String periodKey;
         private String period;
-        private BigDecimal revenue;
-        private BigDecimal previousRevenue;
-        private long transactionCount;
+        private long count;
+        private long previousCount;
+        private Breakdown breakdown;
     }
 
     @Getter
@@ -52,10 +48,9 @@ public class RevenueTrendsResponse {
     @AllArgsConstructor
     @NoArgsConstructor
     @Builder
-    public static class Metadata {
-        private String currency;
-        private String periodType;
-        private int pointCount;
+    public static class Breakdown {
+        private long individual;
+        private long organization;
     }
 }
 
