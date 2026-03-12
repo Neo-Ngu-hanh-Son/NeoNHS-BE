@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -81,7 +82,8 @@ public class Point extends BaseEntity {
     private Attraction attraction;
 
     @OneToMany(mappedBy = "point", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<CheckinPoint> checkinPoints;
+    @Builder.Default
+    private List<CheckinPoint> checkinPoints = new ArrayList<>();
 
     @OneToMany(mappedBy = "point", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<UserVisitedPoint> userVisitedPoints;
@@ -90,6 +92,7 @@ public class Point extends BaseEntity {
     @OneToMany(mappedBy = "point", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<PanoramaHotSpot> panoramaHotSpots = new ArrayList<>();
 
+    @BatchSize(size = 25)
     @Builder.Default
     @OneToMany(
             mappedBy = "point",

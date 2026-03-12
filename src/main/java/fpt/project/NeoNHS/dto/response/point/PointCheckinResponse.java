@@ -29,6 +29,8 @@ public class PointCheckinResponse {
     private Double defaultPitch;
 
     private Boolean isUserCheckedIn; // Indicates if the user has checked in at this point
+    private String parentPointId;
+    private String parentPointName;
 
     /**
      * Factory method to create a PointCheckinResponse from a CheckinPoint entity and user's check-in status. <br/>
@@ -56,6 +58,8 @@ public class PointCheckinResponse {
                 .defaultYaw(checkinPoint.getDefaultYaw())
                 .defaultPitch(checkinPoint.getDefaultPitch())
                 .isUserCheckedIn(isUserCheckedIn)
+                .parentPointId(checkinPoint.getPoint() != null ? checkinPoint.getPoint().getId().toString() : null)
+                .parentPointName(checkinPoint.getPoint() != null ? checkinPoint.getPoint().getName() : null)
                 .build();
     }
 }

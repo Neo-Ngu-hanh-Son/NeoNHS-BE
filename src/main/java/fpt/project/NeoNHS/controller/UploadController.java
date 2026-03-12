@@ -7,17 +7,15 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
+import java.util.List;
 
 @RestController
-@RequestMapping("/api/public/upload")
+@RequestMapping("/api/upload")
 @RequiredArgsConstructor
 @Tag(name = "Upload resource", description = "Test upload resource with cloudinary")
-@PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
 public class UploadController {
     private final CloudinaryImageUploadServiceImpl cloudinaryImageUploadServiceImpl;
 
@@ -30,8 +28,7 @@ public class UploadController {
                         .message("Upload successful")
                         .success(true)
                         .build(),
-                HttpStatus.CREATED
-        );
+                HttpStatus.CREATED);
     }
 
     @PostMapping(value = "/video", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -43,7 +40,18 @@ public class UploadController {
                         .message("Upload successful")
                         .success(true)
                         .build(),
-                HttpStatus.CREATED
-        );
+                HttpStatus.CREATED);
+    }
+
+    @PostMapping(value = "/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<List<String>>> uploadImages(@RequestParam MultipartFile[] imageFiles) {
+        var res = cloudinaryImageUploadServiceImpl.uploadImages(imageFiles);
+        return new ResponseEntity<>(
+                ApiResponse.<List<String>>builder()
+                        .data(res)
+                        .message("Batch upload successful")
+                        .success(true)
+                        .build(),
+                HttpStatus.CREATED);
     }
 }

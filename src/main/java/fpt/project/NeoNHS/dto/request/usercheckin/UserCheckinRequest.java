@@ -14,5 +14,5 @@ public class UserCheckinRequest {
     private UserCheckinMethod method;
     private String note;
     private String checkinPointId;
-    private Map<Integer, String> captionImageOrder; // Ex: 1: "some caption", 2: "", 3: "more caps"
+    private List<CheckinImageRequest> checkinImageRequest; // Ex: 1: "some caption", 2: "", 3: "more caps"
 }

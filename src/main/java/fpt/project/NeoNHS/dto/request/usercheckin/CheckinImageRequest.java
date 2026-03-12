@@ -8,6 +8,6 @@ import java.util.UUID;
 @Data
 public class CheckinImageRequest {
     private UUID id;
-    private String imageUrl;
+    private String imageUrl; // Front end only send image URLs (which is uploaded separately)
     private String caption;
 }
