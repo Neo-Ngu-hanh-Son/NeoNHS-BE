@@ -16,7 +16,7 @@ import java.util.UUID;
 public interface EventRepository extends JpaRepository<Event, UUID>, JpaSpecificationExecutor<Event> {
   long countByDeletedAtIsNull();
 
-  @Query(value = "SELECT CAST(e.id AS CHAR) as id, e.name as name, SUM(od.quantity) as totalSales " +
+  @Query(value = "SELECT e.id as id, e.name as name, SUM(od.quantity) as totalSales " +
           "FROM events e " +
           "JOIN ticket_catalogs tc ON e.id = tc.event_id " +
           "JOIN order_details od ON tc.id = od.ticket_catalog_id " +

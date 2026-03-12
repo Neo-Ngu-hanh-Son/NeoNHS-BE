@@ -5,4 +5,6 @@ import fpt.project.NeoNHS.entity.User;
 
 public interface MailService {
     void sendVerifyEmailAsync(User user, EmailTemplate template, String code, String appUrl);
+
+    void sendSetPasswordEmailAsync(User user, EmailTemplate template, String token, String appUrl);
 }

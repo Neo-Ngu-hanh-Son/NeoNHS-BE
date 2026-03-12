@@ -5,6 +5,7 @@ import fpt.project.NeoNHS.dto.request.auth.ChangePasswordRequest;
 import fpt.project.NeoNHS.constants.EmailTemplate;
 import fpt.project.NeoNHS.dto.request.auth.LoginRequest;
 import fpt.project.NeoNHS.dto.request.auth.RegisterRequest;
+import fpt.project.NeoNHS.dto.request.auth.SetPasswordRequest;
 import fpt.project.NeoNHS.dto.response.AuthResponse;
 import fpt.project.NeoNHS.dto.response.auth.UserInfoResponse;
 import fpt.project.NeoNHS.entity.User;
@@ -256,6 +257,39 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new BadRequestException("User not found"));
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public void setPassword(SetPasswordRequest request) {
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new BadRequestException("Passwords do not match");
+        }
+
+        String email = redisAuthService.getEmailFromSetPasswordToken(request.getToken());
+        if (email == null || !email.equalsIgnoreCase(request.getEmail())) {
+            throw new BadRequestException("Invalid or expired token");
+        }
+
+        validatePassword(request.getNewPassword());
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("User not found"));
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.setIsActive(true);
+        user.setIsVerified(true);
+        userRepository.save(user);
+
+        redisAuthService.deleteSetPasswordToken(request.getToken());
+    }
+
+    @Override
+    public void validateSetPasswordToken(String token, String email) {
+        String storedEmail = redisAuthService.getEmailFromSetPasswordToken(token);
+        if (storedEmail == null || !storedEmail.equalsIgnoreCase(email)) {
+            throw new BadRequestException("Invalid or expired token");
+        }
     }
 
     @Override

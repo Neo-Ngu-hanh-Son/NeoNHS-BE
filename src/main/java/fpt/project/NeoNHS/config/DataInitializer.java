@@ -10,6 +10,7 @@ import fpt.project.NeoNHS.repository.AttractionRepository;
 import fpt.project.NeoNHS.repository.BlogCategoryRepository;
 import fpt.project.NeoNHS.repository.BlogRepository;
 import fpt.project.NeoNHS.repository.VendorProfileRepository;
+import fpt.project.NeoNHS.service.GeoService;
 import fpt.project.NeoNHS.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,12 +33,14 @@ public class DataInitializer implements CommandLineRunner {
         private final VendorProfileRepository vendorProfileRepository;
         private final AttractionRepository attractionRepository;
         private final BlogCategoryRepository blogCategoryRepository;
+        private final GeoService geoService;
 
         @Override
         public void run(String... args) {
                 initializeAdminUser();
                 initializeAttractions();
                 initializeBlogs();
+                initCheckinPointForRedis();
         }
 
         private void initializeAdminUser() {
@@ -211,6 +214,10 @@ public class DataInitializer implements CommandLineRunner {
                                 .build();
 
                 return Arrays.asList(thuySon, mocSon, hoaSon, kimSon, thoSon);
+        }
+
+        private void initCheckinPointForRedis() {
+            geoService.syncCheckinsToRedis();
         }
 
         // init the categories: export const BLOG_CATEGORY_CONST = {
