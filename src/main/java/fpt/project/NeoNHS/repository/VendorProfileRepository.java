@@ -89,4 +89,12 @@ public interface VendorProfileRepository extends JpaRepository<VendorProfile, UU
         );
 
         long countByUserIsActiveTrueAndUserIsBannedFalse();
+
+        long countByUserIsActiveTrue();
+
+        long countByIsVerifiedTrue();
+
+        long countByUserIsBannedTrue();
+
+        long countByIsVerifiedFalseAndUserIsActiveTrueAndUserIsBannedFalse();
 }
