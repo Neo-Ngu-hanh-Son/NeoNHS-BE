@@ -65,6 +65,8 @@ public class VendorVoucherController {
             @RequestParam(required = false) String code,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) Boolean deleted,
+            @RequestParam(defaultValue = "false") Boolean includeDeleted,
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_BY) String sortBy,
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_DIR) String sortDir) {
 
@@ -75,6 +77,8 @@ public class VendorVoucherController {
                 .code(code)
                 .startDate(startDate)
                 .endDate(endDate)
+                .deleted(deleted)
+                .includeDeleted(includeDeleted)
                 .build();
 
         Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
@@ -108,5 +112,29 @@ public class VendorVoucherController {
             @Parameter(description = "Voucher ID") @PathVariable UUID id) {
         voucherService.deleteVendorVoucher(id);
         return ResponseEntity.ok(ApiResponse.success("Voucher deleted successfully", null));
+    }
+
+    @Operation(
+            summary = "Restore voucher (Vendor)",
+            description = "Restore a soft-deleted voucher owned by current vendor"
+    )
+    @PatchMapping("/{id}/restore")
+    public ResponseEntity<ApiResponse<VoucherResponse>> restoreVoucher(
+            @Parameter(description = "Voucher ID") @PathVariable UUID id) {
+        VoucherResponse response = voucherService.restoreVendorVoucher(id);
+        return ResponseEntity.ok(ApiResponse.success("Voucher restored successfully", response));
+    }
+
+    @Operation(
+            summary = "Permanently delete voucher (Vendor)",
+            description = "Permanently delete a voucher owned by current vendor. " +
+                    "Only allowed if no user has used this voucher in an order. " +
+                    "Unused user-voucher records will be removed. This action cannot be undone."
+    )
+    @DeleteMapping("/{id}/permanent")
+    public ResponseEntity<ApiResponse<Void>> hardDeleteVoucher(
+            @Parameter(description = "Voucher ID") @PathVariable UUID id) {
+        voucherService.hardDeleteVendorVoucher(id);
+        return ResponseEntity.ok(ApiResponse.success("Voucher permanently deleted successfully", null));
     }
 }

@@ -26,4 +26,8 @@ public interface UserVoucherRepository extends JpaRepository<UserVoucher, UUID> 
     long countByUser_IdAndVoucher_IdAndIsUsedTrue(UUID userId, UUID voucherId);
 
     boolean existsByUser_IdAndVoucher_Id(UUID userId, UUID voucherId);
+
+    boolean existsByVoucher_IdAndIsUsedTrue(UUID voucherId);
+
+    void deleteByVoucher_Id(UUID voucherId);
 }

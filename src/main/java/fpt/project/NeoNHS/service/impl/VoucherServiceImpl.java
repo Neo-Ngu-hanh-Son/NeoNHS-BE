@@ -92,6 +92,37 @@ public class VoucherServiceImpl implements VoucherService {
         voucherRepository.save(voucher);
     }
 
+    @Override
+    @Transactional
+    public void hardDeleteVoucher(UUID id) {
+        Voucher voucher = voucherRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Voucher not found"));
+
+        if (userVoucherRepository.existsByVoucher_IdAndIsUsedTrue(id)) {
+            throw new BadRequestException(
+                    "Cannot permanently delete voucher that has been used in orders");
+        }
+
+        userVoucherRepository.deleteByVoucher_Id(id);
+        voucherRepository.delete(voucher);
+    }
+
+    @Override
+    @Transactional
+    public VoucherResponse restoreVoucher(UUID id) {
+        Voucher voucher = voucherRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Voucher not found"));
+
+        if (voucher.getDeletedAt() == null) {
+            throw new BadRequestException("Voucher is not deleted");
+        }
+
+        voucher.setDeletedAt(null);
+        voucher.setDeletedBy(null);
+        voucher.setStatus(VoucherStatus.ACTIVE);
+        return VoucherResponse.fromEntity(voucherRepository.save(voucher));
+    }
+
     // ==================== VENDOR ====================
 
     @Override
@@ -149,6 +180,39 @@ public class VoucherServiceImpl implements VoucherService {
         voucher.setDeletedBy(principal.getId());
         voucher.setStatus(VoucherStatus.INACTIVE);
         voucherRepository.save(voucher);
+    }
+
+    @Override
+    @Transactional
+    public void hardDeleteVendorVoucher(UUID id) {
+        Voucher voucher = voucherRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Voucher not found"));
+        validateVendorOwnership(voucher);
+
+        if (userVoucherRepository.existsByVoucher_IdAndIsUsedTrue(id)) {
+            throw new BadRequestException(
+                    "Cannot permanently delete voucher that has been used in orders");
+        }
+
+        userVoucherRepository.deleteByVoucher_Id(id);
+        voucherRepository.delete(voucher);
+    }
+
+    @Override
+    @Transactional
+    public VoucherResponse restoreVendorVoucher(UUID id) {
+        Voucher voucher = voucherRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Voucher not found"));
+        validateVendorOwnership(voucher);
+
+        if (voucher.getDeletedAt() == null) {
+            throw new BadRequestException("Voucher is not deleted");
+        }
+
+        voucher.setDeletedAt(null);
+        voucher.setDeletedBy(null);
+        voucher.setStatus(VoucherStatus.ACTIVE);
+        return VoucherResponse.fromEntity(voucherRepository.save(voucher));
     }
 
     // ==================== TOURIST ====================
