@@ -57,7 +57,7 @@ vnpt:
 
 # NeoNHS Face Verification Service (Python microservice)
 face-service:
-  base-url: ${FACE_SERVICE_URL:http://localhost:8001}
+  base-url: ${FACE_SERVICE_URL:https://huydoan961-neonhs-face-service.hf.space}
 
 # Cloudinary Configuration
 cloudinary:
