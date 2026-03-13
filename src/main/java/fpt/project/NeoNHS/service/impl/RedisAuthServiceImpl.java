@@ -27,8 +27,7 @@ public class RedisAuthServiceImpl implements RedisAuthService {
                 RedisAuthKeys.otp(email),
                 otp,
                 OTP_TTL_MINUTES,
-                TimeUnit.MINUTES
-        );
+                TimeUnit.MINUTES);
     }
 
     public void verifyOtp(String email, String otp) {
@@ -39,7 +38,8 @@ public class RedisAuthServiceImpl implements RedisAuthService {
         String key = RedisAuthKeys.otp(email);
         String stored = redis.opsForValue().get(key);
 
-        if (stored == null) throw new OTPException("OTP has expired. Please request a new one.");
+        if (stored == null)
+            throw new OTPException("OTP has expired. Please request a new one.");
 
         // Clear both keys and attempts
         if (stored.equals(otp)) {
@@ -96,8 +96,7 @@ public class RedisAuthServiceImpl implements RedisAuthService {
         Map<String, String> data = Map.of(
                 "userId", userId,
                 "sessionId", sessionId,
-                "issuedAt", String.valueOf(System.currentTimeMillis())
-        );
+                "issuedAt", String.valueOf(System.currentTimeMillis()));
 
         redis.opsForHash().putAll(key, data);
         redis.expire(key, REFRESH_TOKEN_TTL_DAYS, TimeUnit.DAYS);
@@ -105,5 +104,24 @@ public class RedisAuthServiceImpl implements RedisAuthService {
 
     public void deleteRefreshToken(String token) {
         redis.delete(getRefreshTokenKey(HashingHelper.sha256(token)));
+    }
+
+    @Override
+    public void saveSetPasswordToken(String email, String token) {
+        redis.opsForValue().set(
+                RedisAuthKeys.setPasswordToken(token),
+                email,
+                24,
+                TimeUnit.HOURS);
+    }
+
+    @Override
+    public String getEmailFromSetPasswordToken(String token) {
+        return redis.opsForValue().get(RedisAuthKeys.setPasswordToken(token));
+    }
+
+    @Override
+    public void deleteSetPasswordToken(String token) {
+        redis.delete(RedisAuthKeys.setPasswordToken(token));
     }
 }

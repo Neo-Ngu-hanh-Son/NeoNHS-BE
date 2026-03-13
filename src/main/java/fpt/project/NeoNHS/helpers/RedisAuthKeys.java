@@ -19,6 +19,8 @@ public final class RedisAuthKeys {
         return "auth:reset:" + token;
     }
 
+    public static String setPasswordToken(String token) {return "auth:set_password:" + token;}
+
     public static String refreshToken(String token) {
         return "auth:refresh_token:" + token;
     }

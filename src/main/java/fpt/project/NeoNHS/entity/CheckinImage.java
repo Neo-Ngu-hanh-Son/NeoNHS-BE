@@ -14,7 +14,6 @@ import java.util.UUID;
 @AllArgsConstructor
 @SuperBuilder
 public class CheckinImage extends BaseEntity {
-
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;

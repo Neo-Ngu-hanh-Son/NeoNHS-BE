@@ -8,11 +8,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PointSpecification {
-    public static Specification<Point> withFilters(String search, boolean deletedOnlyExcluded) {
+    public static Specification<Point> withFilters(String search, boolean isActive) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            if (deletedOnlyExcluded) {
+            // isActive = true => only return points that are not deleted (deletedAt is null)
+            if (isActive) {
                 predicates.add(criteriaBuilder.isNull(root.get("deletedAt")));
             }
 

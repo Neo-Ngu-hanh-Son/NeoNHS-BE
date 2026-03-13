@@ -152,7 +152,13 @@
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
-
+        <!-- Cloudinary for Image Upload -->
+        <dependency>
+            <groupId>com.cloudinary</groupId>
+            <artifactId>cloudinary-http44</artifactId>
+            <version>1.39.0</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <build>
