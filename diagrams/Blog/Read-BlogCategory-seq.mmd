@@ -1,0 +1,46 @@
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#ffffff"
+    primaryTextColor: "#000000"
+    primaryBorderColor: "#000000"
+    activationBkgColor: "#eeeeee"
+    activationBorderColor: "#000000"
+    actorBkg: "#ffffff"
+    actorTextColor: "#000000"
+    actorBorder: "#000000"
+    altBackground: "#f5f5f5"
+    altBorder: "#000000"
+  sequence:
+    actorMargin: 0
+    messageMargin: 5
+---
+sequenceDiagram
+    actor Admin as Admin <br/> <<user>>
+    participant AdminScreen as AdminScreen <br/> <<user interaction>>
+    participant AdminBlogCategoryController as AdminBlogCategoryController <br/> <<controller>>
+    participant BlogCategoryService as BlogCategoryService <br/> <<service>>
+    participant BlogCategoryRepository as BlogCategoryRepository <br/> <<repository>>
+    participant DB
+
+    Admin->>+AdminScreen: 1. User views categories
+    AdminScreen->>+AdminBlogCategoryController: 2. getCategories()
+    AdminBlogCategoryController->>+BlogCategoryService: 3. getCategories()
+    
+    BlogCategoryService->>+BlogCategoryRepository: 4. findAll()
+    BlogCategoryRepository->>+DB: 5. findAll()
+    DB-->>-BlogCategoryRepository: 6. List of BlogCategory
+    BlogCategoryRepository-->>-BlogCategoryService: 7. List of BlogCategory
+    
+    %% Validation
+    alt 8A Category not found
+        BlogCategoryService-->>AdminBlogCategoryController: 8A1. Exception (Not Found)
+        AdminBlogCategoryController-->>AdminScreen: 8A2. Category not found, please try again later
+        AdminScreen-->>Admin: 8A3. Show Category not found error
+    else 8B Category found
+        BlogCategoryService->>BlogCategoryService: 8B1. Map to Response
+    end
+        BlogCategoryService-->>-AdminBlogCategoryController: 9. List of CategoryResponse
+        AdminBlogCategoryController-->>-AdminScreen: 10. List of categories
+        AdminScreen-->>-Admin: 11. Show categories list

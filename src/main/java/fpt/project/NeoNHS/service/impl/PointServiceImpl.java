@@ -1,26 +1,34 @@
 package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.constants.PaginationConstants;
+import fpt.project.NeoNHS.dto.request.event.EventFilterRequest;
 import fpt.project.NeoNHS.dto.request.point.PointRequest;
+import fpt.project.NeoNHS.dto.response.point.MapPointResponse;
+import fpt.project.NeoNHS.dto.response.point.PointCheckinResponse;
 import fpt.project.NeoNHS.dto.response.point.PointPanoramaResponse;
 import fpt.project.NeoNHS.dto.response.point.PointResponse;
 import fpt.project.NeoNHS.entity.Attraction;
+import fpt.project.NeoNHS.entity.CheckinPoint;
 import fpt.project.NeoNHS.entity.Point;
-import fpt.project.NeoNHS.repository.AttractionRepository;
-import fpt.project.NeoNHS.repository.PointRepository;
+import fpt.project.NeoNHS.enums.EventStatus;
+import fpt.project.NeoNHS.helpers.AuthHelper;
+import fpt.project.NeoNHS.repository.*;
 import fpt.project.NeoNHS.service.PanoramaService;
 import fpt.project.NeoNHS.service.PointService;
+import fpt.project.NeoNHS.specification.EventSpecification;
 import fpt.project.NeoNHS.specification.PointSpecification;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.UUID;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +37,9 @@ public class PointServiceImpl implements PointService {
     private final PointRepository pointRepository;
     private final AttractionRepository attractionRepository;
     private final PanoramaService panoramaService;
+    private final EventRepository eventRepository;
+    private final WorkshopTemplateRepository workshopTemplateRepository;
+    private final UserCheckInRepository userCheckInRepository;
 
     @Override
     @Transactional
@@ -40,13 +51,12 @@ public class PointServiceImpl implements PointService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .thumbnailUrl(request.getThumbnailUrl())
-                .history(request.getHistory())
-                .historyAudioUrl(request.getHistoryAudioUrl())
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
                 .orderIndex(request.getOrderIndex())
                 .estTimeSpent(request.getEstTimeSpent())
                 .type(request.getType())
+                .googlePlaceId(request.getGooglePlaceId())
                 .attraction(attraction)
                 .build();
 
@@ -65,10 +75,6 @@ public class PointServiceImpl implements PointService {
             point.setDescription(request.getDescription());
         if (request.getThumbnailUrl() != null)
             point.setThumbnailUrl(request.getThumbnailUrl());
-        if (request.getHistory() != null)
-            point.setHistory(request.getHistory());
-        if (request.getHistoryAudioUrl() != null)
-            point.setHistoryAudioUrl(request.getHistoryAudioUrl());
         if (request.getLatitude() != null)
             point.setLatitude(request.getLatitude());
         if (request.getLongitude() != null)
@@ -79,6 +85,8 @@ public class PointServiceImpl implements PointService {
             point.setEstTimeSpent(request.getEstTimeSpent());
         if (request.getType() != null)
             point.setType(request.getType());
+        if (request.getGooglePlaceId() != null)
+            point.setGooglePlaceId(request.getGooglePlaceId());
 
         if (request.getAttractionId() != null) {
             Attraction attraction = attractionRepository.findById(request.getAttractionId())
@@ -134,7 +142,7 @@ public class PointServiceImpl implements PointService {
 
     @Override
     public Page<PointResponse> getAllPointsWithPagination(UUID attractionId, int page, int size, String sortBy,
-            String sortDir, String search) {
+                                                          String sortDir, String search) {
         if (!attractionRepository.existsById(attractionId)) {
             throw new RuntimeException("Attraction not found");
         }
@@ -149,10 +157,66 @@ public class PointServiceImpl implements PointService {
                 .map(this::mapToResponse);
     }
 
-    // Get all points and checkin points across all attractions with pagination and search (if needed)
+    // Get all points and checkin points across all attractions with pagination and
+    // search (if needed)
     @Override
     public Page<PointResponse> getAllPoints(int page, int size, String sortBy, String sortDir, String search) {
         return findAllPoints(page, size, sortBy, sortDir, search, true);
+    }
+
+    @Override
+    public List<MapPointResponse> getAllPointsOnMap() {
+        // Points already contain checkin point.
+        var points = pointRepository.findAll(PointSpecification.withFilters(null, true));
+        var eventFilter = EventFilterRequest.builder()
+                .status(EventStatus.UPCOMING)
+                .startDate(LocalDate.from(LocalDateTime.now()))
+                .includeDeleted(false)
+                .build();
+        var events = eventRepository.findAll(EventSpecification.withFilters(eventFilter));
+        var workshopTemplate = workshopTemplateRepository.findWorkshopTemplatesWithActiveUpcomingWorkshopSessions();
+
+        var currentUser = AuthHelper.getCurrentUserPrincipalSilent();
+        Set<UUID> userCheckedInIds;
+        if (currentUser != null) {
+            userCheckedInIds = userCheckInRepository.findCheckedInPointIdsFromUser(currentUser.getId());
+        } else {
+            userCheckedInIds = Collections.emptySet();
+        }
+
+        List<MapPointResponse> userMappedPoints = getMapPointWithUserCheckinDefined(points, userCheckedInIds);
+        List<MapPointResponse> mapPoints = new ArrayList<>();
+        mapPoints.addAll(userMappedPoints);
+        mapPoints.addAll(events.stream().map(MapPointResponse::fromEventPoint).toList());
+        mapPoints.addAll(workshopTemplate.stream().map(MapPointResponse::fromWorkshopTemplate).toList());
+        return mapPoints;
+    }
+
+    @NotNull
+    private List<MapPointResponse> getMapPointWithUserCheckinDefined(List<Point> points, Set<UUID> userCheckedInIds) {
+        List<MapPointResponse> userMappedPoints = new ArrayList<>();
+        for (var p : points) {
+            // Note some props are not mapped because no need.
+            var userCheckinPoint = MapPointResponse.builder()
+                    .id(p.getId())
+                    .name(p.getName())
+                    .description(p.getDescription())
+                    .thumbnailUrl(p.getThumbnailUrl())
+                    .latitude(p.getLatitude().doubleValue())
+                    .longitude(p.getLongitude().doubleValue())
+                    .type(p.getType())
+                    .attractionId(p.getAttraction() != null ? p.getAttraction().getId() : null)
+                    .googlePlaceId(p.getGooglePlaceId())
+                    .checkinPoints(p.getCheckinPoints().stream()
+                            .map(cp -> {
+                                boolean isUserCheckedInHere = userCheckedInIds.contains(cp.getId());
+                                return PointCheckinResponse.fromEntity(cp, isUserCheckedInHere);
+                            })
+                            .toList())
+                    .build();
+            userMappedPoints.add(userCheckinPoint);
+        }
+        return userMappedPoints;
     }
 
     @Override
@@ -174,15 +238,16 @@ public class PointServiceImpl implements PointService {
     }
 
     private PointResponse mapToResponse(Point entity) {
+        int historyAudioCount = (int) entity.getHistoryAudios().stream()
+                .filter(historyAudio -> historyAudio.getDeletedAt() == null)
+                .count();
         return PointResponse.builder()
                 .id(entity.getId())
                 .name(entity.getName())
                 .description(entity.getDescription())
                 .thumbnailUrl(entity.getThumbnailUrl())
-                .history(entity.getHistory())
-                .historyAudioUrl(entity.getHistoryAudioUrl())
-                .latitude(entity.getLatitude())
-                .longitude(entity.getLongitude())
+                .latitude(entity.getLatitude().doubleValue())
+                .longitude(entity.getLongitude().doubleValue())
                 .orderIndex(entity.getOrderIndex())
                 .estTimeSpent(entity.getEstTimeSpent())
                 .type(entity.getType())
@@ -190,6 +255,8 @@ public class PointServiceImpl implements PointService {
                 .panoramaImageUrl(entity.getPanoramaImageUrl())
                 .defaultPitch(entity.getDefaultPitch())
                 .defaultYaw(entity.getDefaultYaw())
+                .googlePlaceId(entity.getGooglePlaceId())
+                .historyAudioCount(historyAudioCount)
                 .build();
     }
 

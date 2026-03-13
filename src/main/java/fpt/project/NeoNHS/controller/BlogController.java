@@ -57,4 +57,10 @@ public class BlogController {
         var blog = blogService.getBlogById(id);
         return ApiResponse.success("Blog retrieved successfully", blog);
     }
+
+    @PostMapping("/{id}/view")
+    public ResponseEntity<ApiResponse> incrementViewCount(@PathVariable UUID id) {
+        blogService.incrementViewCount(id);
+        return ResponseEntity.ok(ApiResponse.success("Ok"));
+    }
 }

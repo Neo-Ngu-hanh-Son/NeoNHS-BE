@@ -3,6 +3,7 @@ package fpt.project.NeoNHS.service;
 import fpt.project.NeoNHS.dto.request.admin.BanVendorRequest;
 import fpt.project.NeoNHS.dto.request.admin.CreateVendorByAdminRequest;
 import fpt.project.NeoNHS.dto.request.admin.UpdateVendorByAdminRequest;
+import fpt.project.NeoNHS.dto.response.admin.VendorManagementStatsResponse;
 import fpt.project.NeoNHS.dto.response.auth.VendorProfileResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,6 +21,17 @@ public interface AdminVendorManagementService {
      * Get all vendors with pagination
      */
     Page<VendorProfileResponse> getAllVendors(Pageable pageable);
+
+    /**
+     * List vendors with pagination, search and filters.
+     */
+    Page<VendorProfileResponse> listVendors(
+            String keyword,
+            Boolean isActive,
+            Boolean isBanned,
+            Boolean isVerified,
+            Pageable pageable
+    );
 
     /**
      * Get vendor by ID
@@ -42,9 +54,19 @@ public interface AdminVendorManagementService {
     VendorProfileResponse unbanVendor(UUID id);
 
     /**
+     * Verify vendor profile
+     */
+    VendorProfileResponse verifyVendor(UUID id);
+
+    /**
      * Delete vendor account (soft delete)
      */
     void deleteVendor(UUID id);
+
+    /**
+     * Delete vendor account completely from database
+     */
+    void hardDeleteVendor(UUID id);
 
     /**
      * Search vendors by keyword (name, email, business name)
@@ -74,6 +96,7 @@ public interface AdminVendorManagementService {
             Boolean isVerified,
             Boolean isBanned,
             Boolean isActive,
-            Pageable pageable
-    );
+            Pageable pageable);
+
+    VendorManagementStatsResponse getVendorManagementStats();
 }

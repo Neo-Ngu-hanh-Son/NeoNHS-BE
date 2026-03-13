@@ -112,11 +112,12 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
 
     @Override
     public Page<WorkshopSessionResponse> getAllUpcomingSessions(Pageable pageable) {
-        // Get all SCHEDULED sessions that start in the future
-        Page<WorkshopSession> sessions = workshopSessionRepository.findByStatusAndStartTimeAfter(
-                SessionStatus.SCHEDULED,
-                LocalDateTime.now(),
-                pageable);
+        // Get all SCHEDULED sessions that start in the future, only from published templates
+        Specification<WorkshopSession> spec = Specification
+                .where(WorkshopSessionSpecification.hasStatus(SessionStatus.SCHEDULED))
+                .and(WorkshopSessionSpecification.hasStartTimeAfter(LocalDateTime.now()))
+                .and(WorkshopSessionSpecification.hasPublishedTemplate());
+        Page<WorkshopSession> sessions = workshopSessionRepository.findAll(spec, pageable);
         return sessions.map(this::mapToResponse);
     }
 
@@ -141,6 +142,21 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
         return sessions.map(this::mapToResponse);
     }
 
+    @Override
+    public Page<WorkshopSessionResponse> getUpcomingSessionsByTemplateId(UUID templateId, Pageable pageable) {
+        WorkshopTemplate template = workshopTemplateRepository.findById(templateId)
+                .orElseThrow(() -> new ResourceNotFoundException("WorkshopTemplate", "id", templateId));
+        // C1: Direct link accessible — only check ACTIVE status, NOT isPublished
+        if (template.getStatus() != WorkshopStatus.ACTIVE) {
+            throw new ResourceNotFoundException("WorkshopTemplate", "id", templateId);
+        }
+        Specification<WorkshopSession> spec = Specification
+                .where(WorkshopSessionSpecification.hasTemplateId(templateId))
+                .and(WorkshopSessionSpecification.hasStatus(SessionStatus.SCHEDULED))
+                .and(WorkshopSessionSpecification.hasStartTimeAfter(LocalDateTime.now()));
+        return workshopSessionRepository.findAll(spec, pageable).map(this::mapToResponse);
+    }
+
     // ==================== SEARCH & FILTER ====================
 
     @Override
@@ -154,8 +170,10 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
             BigDecimal minPrice,
             BigDecimal maxPrice,
             Boolean availableOnly,
-            Pageable pageable) {
-        Specification<WorkshopSession> spec = Specification.where((root, query, cb) -> cb.conjunction());
+            Pageable pageable
+    ) {
+        // Only show sessions from published templates in public search
+        Specification<WorkshopSession> spec = Specification.where(WorkshopSessionSpecification.hasPublishedTemplate());
 
         if (keyword != null && !keyword.isEmpty()) {
             spec = spec.and(WorkshopSessionSpecification.searchByKeyword(keyword));
@@ -367,7 +385,7 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
                 .fullDescription(template.getFullDescription())
                 .estimatedDuration(template.getEstimatedDuration())
                 .averageRating(template.getAverageRating())
-                .totalReview(template.getTotalReview())
+                .totalRatings(template.getTotalRatings())
                 // Vendor information
                 .vendorId(template.getVendor().getId())
                 .vendorName(template.getVendor().getBusinessName())

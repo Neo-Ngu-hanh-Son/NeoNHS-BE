@@ -1,0 +1,121 @@
+classDiagram
+    %% Controllers
+    class AdminBlogController {
+        -BlogService blogService
+        +getBlogs(int, int, String, BlogStatus, List~String~, String, String, boolean, String) ResponseEntity~ApiResponse~Page~BlogResponse~~~
+        +getBlogById(UUID id) ResponseEntity~ApiResponse~BlogResponse~~
+        +createBlog(BlogRequest request) ResponseEntity~ApiResponse~BlogResponse~~
+        +updateBlog(UUID id, BlogRequest request) ResponseEntity~ApiResponse~BlogResponse~~
+        +deleteBlog(UUID id) ResponseEntity~ApiResponse~Void~~
+    }
+
+    class BlogController {
+        -BlogService blogService
+        +getBlogs(int, int, String, BlogStatus, List~String~, String, String, boolean, String) ResponseEntity~ApiResponse~Page~BlogResponse~~~
+        +getBlogBySlug(String slug) ApiResponse~BlogResponse~
+        +getBlogById(UUID id) ApiResponse~BlogResponse~
+        +incrementViewCount(UUID id) ResponseEntity~ApiResponse~
+    }
+
+    %% Services
+    class BlogService {
+        <<interface>>
+        +getBlogs(String, BlogStatus, List~String~, Pageable, boolean, String) Page~BlogResponse~
+        +getActiveBlogs(String, BlogStatus, List~String~, Pageable, boolean, String) Page~BlogResponse~
+        +getBlogById(UUID id) BlogResponse
+        +getBlogBySlug(String slug) BlogResponse
+        +createBlog(BlogRequest request) BlogResponse
+        +updateBlog(UUID id, BlogRequest request) BlogResponse
+        +deleteBlog(UUID id) void
+        +incrementViewCount(UUID id) void
+    }
+
+    class BlogServiceImpl {
+        <<service>>
+    }
+
+    %% Repositories
+    class BlogRepository {
+        <<interface>>
+    }
+
+    %% Entities & DTOs
+    class Blog {
+        <<entity>>
+        -UUID id
+        -String title
+        -String slug
+        -String summary
+        -String contentJSON
+        -String contentHTML
+        -String thumbnailUrl
+        -String bannerUrl
+        -Boolean isFeatured
+        -BlogStatus status
+        -LocalDateTime publishedAt
+        -String tags
+        -Integer viewCount
+        -BlogCategory blogCategory
+        -User user
+        -LocalDateTime createdAt
+        -LocalDateTime updatedAt
+    }
+
+    class BlogRequest {
+        <<dto>>
+        -String title
+        -String summary
+        -String contentJSON
+        -String contentHTML
+        -String thumbnailUrl
+        -String bannerUrl
+        -Boolean isFeatured
+        -BlogStatus status
+        -String tags
+        -UUID blogCategoryId
+    }
+
+    class BlogResponse {
+        <<dto>>
+        -UUID id
+        -String title
+        -String slug
+        -String summary
+        -String contentJSON
+        -String contentHTML
+        -String thumbnailUrl
+        -String bannerUrl
+        -Boolean isFeatured
+        -BlogStatus status
+        -LocalDateTime publishedAt
+        -LocalDateTime createdAt
+        -LocalDateTime updatedAt
+        -String tags
+        -Integer viewCount
+        -BlogCategoryResponse blogCategory
+        -UserInfoResponse user
+    }
+
+    class BlogStatus {
+        <<enumeration>>
+        DRAFT
+        PUBLISHED
+        ARCHIVED
+    }
+
+    %% Relationships
+    AdminBlogController ..> BlogService
+    BlogController ..> BlogService
+    
+    BlogService <|.. BlogServiceImpl
+    BlogServiceImpl ..> BlogRepository
+    
+    BlogRepository ..> Blog
+    
+    BlogService ..> BlogRequest
+    BlogService ..> BlogResponse
+    BlogService ..> BlogStatus
+
+    BlogRequest --> BlogStatus
+    BlogResponse --> BlogStatus
+    Blog --> BlogStatus

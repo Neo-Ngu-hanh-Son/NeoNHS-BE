@@ -32,6 +32,8 @@
 @SET __MVNW_ERROR__=
 @SET __MVNW_PSMODULEP_SAVE=%PSModulePath%
 @SET PSModulePath=
+@IF "%MAVEN_USER_HOME%"=="" (SET "MAVEN_USER_HOME=%~dp0.m2")
+@IF "%MAVEN_OPTS%"=="" (SET "MAVEN_OPTS=-Dmaven.repo.local=%MAVEN_USER_HOME%\\repository") ELSE (SET "MAVEN_OPTS=%MAVEN_OPTS% -Dmaven.repo.local=%MAVEN_USER_HOME%\\repository")
 @FOR /F "usebackq tokens=1* delims==" %%A IN (`powershell -noprofile "& {$scriptDir='%~dp0'; $script='%__MVNW_ARG0_NAME__%'; icm -ScriptBlock ([Scriptblock]::Create((Get-Content -Raw '%~f0'))) -NoNewScope}"`) DO @(
   IF "%%A"=="MVN_CMD" (set __MVNW_CMD__=%%B) ELSE IF "%%B"=="" (echo %%A) ELSE (echo %%A=%%B)
 )
@@ -79,20 +81,31 @@ if ($env:MVNW_REPOURL) {
 $distributionUrlName = $distributionUrl -replace '^.*/',''
 $distributionUrlNameMain = $distributionUrlName -replace '\.[^.]*$','' -replace '-bin$',''
 
-$MAVEN_M2_PATH = "$HOME/.m2"
-if ($env:MAVEN_USER_HOME) {
-  $MAVEN_M2_PATH = "$env:MAVEN_USER_HOME"
+$DEFAULT_MAVEN_USER_HOME = "$scriptDir/.m2"
+if (-not $env:MAVEN_USER_HOME) {
+  $env:MAVEN_USER_HOME = $DEFAULT_MAVEN_USER_HOME
 }
+$MAVEN_M2_PATH = "$env:MAVEN_USER_HOME"
 
 if (-not (Test-Path -Path $MAVEN_M2_PATH)) {
     New-Item -Path $MAVEN_M2_PATH -ItemType Directory | Out-Null
 }
 
 $MAVEN_WRAPPER_DISTS = $null
-if ((Get-Item $MAVEN_M2_PATH).Target[0] -eq $null) {
+$m2Item = Get-Item $MAVEN_M2_PATH
+$m2Target0 = $null
+try {
+  if ($m2Item.PSObject.Properties.Match('Target').Count -gt 0 -and $m2Item.Target) {
+    $m2Target0 = @($m2Item.Target)[0]
+  }
+} catch {
+  $m2Target0 = $null
+}
+
+if (-not $m2Target0) {
   $MAVEN_WRAPPER_DISTS = "$MAVEN_M2_PATH/wrapper/dists"
 } else {
-  $MAVEN_WRAPPER_DISTS = (Get-Item $MAVEN_M2_PATH).Target[0] + "/wrapper/dists"
+  $MAVEN_WRAPPER_DISTS = $m2Target0 + "/wrapper/dists"
 }
 
 $MAVEN_HOME_PARENT = "$MAVEN_WRAPPER_DISTS/$distributionUrlNameMain"

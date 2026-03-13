@@ -29,6 +29,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import static fpt.project.NeoNHS.helpers.AuthHelper.getCurrentUserPrincipal;
+
 @Service
 @RequiredArgsConstructor
 public class BlogServiceImpl implements BlogService {
@@ -36,6 +38,7 @@ public class BlogServiceImpl implements BlogService {
     private final BlogRepository blogRepository;
     private final UserRepository userRepository;
     private final BlogCategoryRepository blogCategoryRepository;
+    private final RedisBlogServiceImpl redisBlogService;
 
     @Override
     @Transactional(readOnly = true)
@@ -148,6 +151,15 @@ public class BlogServiceImpl implements BlogService {
         return BlogResponse.fromEntity(blog);
     }
 
+    @Override
+    public void incrementViewCount(UUID id) {
+        redisBlogService.incrementTempViewCount(id);
+    }
+
+    public void addTotalViewCount(UUID blogId, int count) {
+        blogRepository.incrementViews(blogId, count);
+    }
+
     private void validateBlogStatus(Blog blog) {
         if (blog.getStatus().equals(BlogStatus.ARCHIVED) || blog.getStatus().equals(BlogStatus.DRAFT)) {
             // Only allow owner or admin to view archived / draft blog
@@ -160,16 +172,6 @@ public class BlogServiceImpl implements BlogService {
         }
     }
 
-    private UserPrincipal getCurrentUserPrincipal() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) {
-            throw new UnauthorizedException("User is not authenticated");
-        }
-        if (!(auth.getPrincipal() instanceof UserPrincipal userPrincipal)) {
-            throw new UnauthorizedException("Invalid authenticated principal");
-        }
-        return userPrincipal;
-    }
 
     private Blog getActiveBlogById(UUID id) {
         return blogRepository.findByIdAndDeletedAtIsNull(id)

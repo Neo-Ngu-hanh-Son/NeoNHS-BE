@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -37,11 +38,6 @@ public class Point extends BaseEntity {
 
     private String thumbnailUrl;
 
-    @Column(columnDefinition = "TEXT")
-    private String history;
-
-    private String historyAudioUrl;
-
     @Column(precision = 10, scale = 7)
     private BigDecimal latitude;
 
@@ -51,6 +47,9 @@ public class Point extends BaseEntity {
     private Integer orderIndex;
 
     private Integer estTimeSpent;
+
+    @Column(columnDefinition = "TEXT")
+    private String historyText;
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
@@ -63,7 +62,6 @@ public class Point extends BaseEntity {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-    // ─── Panorama fields ───
     @Column(name = "panorama_image_url", length = 2048)
     private String panoramaImageUrl;
 
@@ -75,13 +73,17 @@ public class Point extends BaseEntity {
     @Builder.Default
     private Double defaultPitch = 0.0;
 
+    @Column(name = "google_place_id")
+    private String googlePlaceId;
+
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "attraction_id", nullable = false)
     private Attraction attraction;
 
     @OneToMany(mappedBy = "point", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<CheckinPoint> checkinPoints;
+    @Builder.Default
+    private List<CheckinPoint> checkinPoints = new ArrayList<>();
 
     @OneToMany(mappedBy = "point", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<UserVisitedPoint> userVisitedPoints;
@@ -89,5 +91,15 @@ public class Point extends BaseEntity {
     @Builder.Default
     @OneToMany(mappedBy = "point", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<PanoramaHotSpot> panoramaHotSpots = new ArrayList<>();
+
+    @BatchSize(size = 25)
+    @Builder.Default
+    @OneToMany(
+            mappedBy = "point",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    private List<PointHistoryAudio> historyAudios = new ArrayList<>();
 
 }

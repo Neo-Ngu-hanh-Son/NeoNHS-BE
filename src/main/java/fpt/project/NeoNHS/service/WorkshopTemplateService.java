@@ -29,7 +29,24 @@ public interface WorkshopTemplateService {
 
     Page<WorkshopTemplateResponse> getWorkshopTemplatesByVendorId(UUID vendorId, Pageable pageable);
 
-    // Search & Filter
+    // ==================== TOURIST ====================
+
+    WorkshopTemplateResponse getActiveWorkshopTemplateById(UUID id);
+
+    Page<WorkshopTemplateResponse> getActiveWorkshopTemplates(Pageable pageable);
+
+    Page<WorkshopTemplateResponse> searchAndFilterActiveTemplates(
+            String keyword,
+            UUID tagId,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            Integer minDuration,
+            Integer maxDuration,
+            BigDecimal minRating,
+            Pageable pageable
+    );
+
+    // Search & Filter (internal/admin)
     List<WorkshopTemplateResponse> searchWorkshopTemplates(
             String keyword,
             String name,
@@ -50,9 +67,12 @@ public interface WorkshopTemplateService {
     WorkshopTemplateResponse registerWorkshopTemplate(String email, UUID id);
 
     // Approve/Reject (Admin only)
-    WorkshopTemplateResponse approveWorkshopTemplate(String adminEmail, UUID id);
+    WorkshopTemplateResponse approveWorkshopTemplate(String adminEmail, UUID id, String adminNote);
 
-    WorkshopTemplateResponse rejectWorkshopTemplate(String adminEmail, UUID id, String rejectReason);
+    WorkshopTemplateResponse rejectWorkshopTemplate(String adminEmail, UUID id, String adminNote);
+
+    // Toggle Publish
+    WorkshopTemplateResponse togglePublishWorkshopTemplate(String email, UUID id);
 
     // Delete
     void deleteWorkshopTemplate(String email, UUID id);

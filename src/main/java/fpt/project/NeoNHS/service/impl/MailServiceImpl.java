@@ -1,6 +1,5 @@
 package fpt.project.NeoNHS.service.impl;
 
-
 import fpt.project.NeoNHS.constants.EmailTemplate;
 import fpt.project.NeoNHS.entity.User;
 import fpt.project.NeoNHS.exception.EmailException;
@@ -29,10 +28,27 @@ public class MailServiceImpl implements MailService {
         try {
             helper = new MimeMessageHelper(message, true);
 
-        helper.setTo(user.getEmail());
-        helper.setSubject(template.getSubject());
-        helper.setText(mailTemplateHelper
-            .generateVerificationEmail(user.getFullname(), code, template.getTemplateFile(), appUrl), true);
+            helper.setTo(user.getEmail());
+            helper.setSubject(template.getSubject());
+            helper.setText(mailTemplateHelper
+                    .generateVerificationEmail(user.getFullname(), code, template.getTemplateFile(), appUrl), true);
+        } catch (MessagingException e) {
+            throw new EmailException("Failed to send email: " + e.getMessage());
+        }
+        emailSender.send(message);
+    }
+
+    @Override
+    @Async
+    public void sendSetPasswordEmailAsync(User user, EmailTemplate template, String token, String appUrl) {
+        MimeMessage message = emailSender.createMimeMessage();
+        MimeMessageHelper helper;
+        try {
+            helper = new MimeMessageHelper(message, true);
+            helper.setTo(user.getEmail());
+            helper.setSubject(template.getSubject());
+            helper.setText(mailTemplateHelper.generateSetPasswordEmail(
+                    user.getFullname(), token, user.getEmail(), template.getTemplateFile(), appUrl), true);
         } catch (MessagingException e) {
             throw new EmailException("Failed to send email: " + e.getMessage());
         }

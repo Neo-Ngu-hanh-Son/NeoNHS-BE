@@ -1,30 +1,45 @@
 package fpt.project.NeoNHS.dto.response.point;
 
 import jakarta.persistence.Column;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import fpt.project.NeoNHS.enums.PointType;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
+
+/**
+ * Response DTO for Point entity, used to send point details to clients.
+ * NOTE that both workshops and events will also be represented as points, so the type field is used to distinguish between them.
+ */
 @Data
-@Builder
+@SuperBuilder
+@NoArgsConstructor
+@AllArgsConstructor
 public class PointResponse {
-    private UUID id;
-    private String name;
-    private String description;
-    private String thumbnailUrl;
-    private String history;
-    private String historyAudioUrl;
-    private BigDecimal latitude;
-    private BigDecimal longitude;
-    private Integer orderIndex;
-    private Integer estTimeSpent;
-    private PointType type;
-    private UUID attractionId;
-    private String panoramaImageUrl;
-    private Double defaultYaw = 0.0;
-    private Double defaultPitch = 0.0;
+    protected UUID id;
+    protected String name;
+    protected String description;
+    protected String thumbnailUrl;
+    protected Double latitude;
+    protected Double longitude;
+    protected Integer orderIndex;
+    protected Integer estTimeSpent;
+    protected PointType type;
+    protected UUID attractionId;
+    protected String panoramaImageUrl;
+    @Builder.Default
+    protected Double defaultYaw = 0.0;
+    @Builder.Default
+    protected Double defaultPitch = 0.0;
+    protected String googlePlaceId;
+    protected Integer historyAudioCount;
+    private List<PointCheckinResponse> checkinPoints;
 }

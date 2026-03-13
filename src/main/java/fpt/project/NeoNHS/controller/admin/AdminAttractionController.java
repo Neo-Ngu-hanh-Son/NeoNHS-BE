@@ -38,13 +38,10 @@ public class AdminAttractionController {
             @RequestParam(value = "sortBy", defaultValue = PaginationConstants.DEFAULT_SORT_BY, required = false) String sortBy,
             @RequestParam(value = "sortDir", defaultValue = PaginationConstants.DEFAULT_SORT_DIR, required = false) String sortDir,
             @RequestParam(value = "search", required = false) String search,
-            @RequestParam(value = "includeInactive", defaultValue = "true", required = false) boolean includeInactive
-    ) {
+            @RequestParam(value = "includeInactive", defaultValue = "true", required = false) boolean includeInactive) {
         return ApiResponse.success(
                 attractionService.getAllAttractionsWithPaginationForAdmin(
-                        page, size, sortBy, sortDir, search, includeInactive
-                )
-        );
+                        page, size, sortBy, sortDir, search, includeInactive));
     }
 
     @GetMapping("/{id}")
@@ -54,7 +51,8 @@ public class AdminAttractionController {
     }
 
     @PutMapping("/{id}")
-    public ApiResponse<AttractionResponse> updateAttraction(@PathVariable UUID id, @RequestBody AttractionRequest request) {
+    public ApiResponse<AttractionResponse> updateAttraction(@PathVariable UUID id,
+            @RequestBody AttractionRequest request) {
         AttractionResponse data = attractionService.updateAttraction(id, request);
         return ApiResponse.success("Attraction updated successfully!", data);
     }
@@ -62,8 +60,7 @@ public class AdminAttractionController {
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deleteAttraction(
             @PathVariable UUID id,
-            @AuthenticationPrincipal UserPrincipal currentUser
-    ) {
+            @AuthenticationPrincipal UserPrincipal currentUser) {
         attractionService.deleteAttraction(id, currentUser.getId());
         return ApiResponse.success("Attraction deleted successfully!", null);
     }

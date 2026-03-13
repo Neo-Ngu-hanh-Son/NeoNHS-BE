@@ -15,7 +15,6 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class UserCheckIn {
-
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -39,6 +38,6 @@ public class UserCheckIn {
     @JoinColumn(name = "checkin_id", nullable = false)
     private CheckinPoint checkinPoint;
 
-    @OneToMany(mappedBy = "userCheckIn", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "userCheckIn", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     private List<CheckinImage> checkinImages;
 }
