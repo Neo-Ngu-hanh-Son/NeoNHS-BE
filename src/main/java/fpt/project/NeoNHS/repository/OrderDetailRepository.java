@@ -28,7 +28,7 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, UUID> 
     List<OrderDetail> findRevenueDetails(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     // Thống kê doanh thu theo từng Vendor (cho biểu đồ thanh)
-    @Query("SELECT COALESCE(v.businessName, 'Hệ thống Admin'), SUM(od.unitPrice * od.quantity) " +
+    @Query("SELECT COALESCE(v.businessName, 'Admin'), SUM(od.unitPrice * od.quantity) " +
             "FROM OrderDetail od " +
             "LEFT JOIN od.workshopSession ws " + // Dùng LEFT JOIN để không mất record Admin Event
             "LEFT JOIN ws.workshopTemplate wt " +

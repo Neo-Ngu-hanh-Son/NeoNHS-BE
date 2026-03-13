@@ -1,0 +1,50 @@
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#ffffff"
+    primaryTextColor: "#000000"
+    primaryBorderColor: "#000000"
+    activationBkgColor: "#eeeeee"
+    activationBorderColor: "#000000"
+    actorBkg: "#ffffff"
+    actorTextColor: "#000000"
+    actorBorder: "#000000"
+    altBackground: "#f5f5f5"
+    altBorder: "#000000"
+  sequence:
+    actorMargin: 5
+    messageMargin: 5
+---
+sequenceDiagram
+    actor Admin as Admin <br/> <<user>>
+    participant AdminScreen as AdminScreen <br/> <<user interaction>>
+    participant AdminBlogController as AdminBlogController <br/> <<controller>>
+    participant BlogService as BlogService <br/> <<service>>
+    participant BlogRepository as BlogRepository <br/> <<repository>>
+    participant DB
+
+    Admin->>+AdminScreen: 1. Click delete blog
+    AdminScreen->>+AdminBlogController: 2. deleteBlog(blogId)
+    AdminBlogController->>+BlogService: 3. deleteBlog(blogId)
+    
+    BlogService->>+BlogRepository: 4. findById(blogId)
+    BlogRepository->>+DB: 5. findById(blogId)
+    DB-->>-BlogRepository: 6. Blog result
+    BlogRepository-->>-BlogService: 7. Blog result
+    
+    %% Validation
+    alt 8A Blog not found
+        BlogService-->>AdminBlogController: 8A1. Blog not found
+        AdminBlogController-->>AdminScreen: 8A2. Blog not found, please try again later
+        AdminScreen-->>Admin: 8A3. Show Blog not found error
+    else 8B Blog exists
+        BlogService->>BlogService: 8B1. Soft delete blog
+        BlogService->>+BlogRepository: 8B2. save(blog)
+        BlogRepository->>+DB: 8B3. save(blog)
+        DB-->>-BlogRepository: 8B4. Saved Entity
+        BlogRepository-->>-BlogService: 8B5. Saved Entity
+    end
+    BlogService-->>-AdminBlogController: 9. Blog deleted successfully
+    AdminBlogController-->>-AdminScreen: 10. Blog deleted successfully
+    AdminScreen-->>-Admin: 11. Show success message

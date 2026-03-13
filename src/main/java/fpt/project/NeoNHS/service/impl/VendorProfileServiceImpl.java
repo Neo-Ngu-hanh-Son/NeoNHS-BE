@@ -13,8 +13,6 @@ import fpt.project.NeoNHS.repository.VendorProfileRepository;
 import fpt.project.NeoNHS.service.VendorProfileService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -129,6 +127,7 @@ public class VendorProfileServiceImpl implements VendorProfileService {
     private VendorProfileResponse mapToVendorResponse(User user, VendorProfile vp) {
         return VendorProfileResponse.builder()
                 .id(user.getId())
+                .userId(vp.getId())
                 .email(user.getEmail())
                 .fullname(user.getFullname())
                 .phoneNumber(user.getPhoneNumber())
@@ -146,6 +145,7 @@ public class VendorProfileServiceImpl implements VendorProfileService {
                 .isVerifiedVendor(vp.getIsVerified())
                 .isActive(user.getIsActive())
                 .isBanned(user.getIsBanned())
+                .createdAt(user.getCreatedAt())
                 .build();
     }
 }

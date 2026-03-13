@@ -30,6 +30,8 @@ public class CheckinPoint extends BaseEntity {
 
     private String position;
 
+    private String thumbnailUrl;
+
     @Builder.Default
     @Column(nullable = false)
     private Boolean isActive = true;

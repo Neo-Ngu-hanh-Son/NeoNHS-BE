@@ -526,7 +526,7 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
 
     @Override
     @Transactional
-    public WorkshopTemplateResponse approveWorkshopTemplate(String adminEmail, UUID id) {
+    public WorkshopTemplateResponse approveWorkshopTemplate(String adminEmail, UUID id, String adminNote) {
         // 1. Find the admin user
         User admin = userRepository.findByEmail(adminEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "email", adminEmail));
@@ -546,8 +546,8 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
         template.setReviewedBy(admin.getId());
         template.setReviewedAt(LocalDateTime.now());
 
-        // Clear any previous admin note on re-approval
-        template.setAdminNote(null);
+        // Set admin note (optional)
+        template.setAdminNote(adminNote);
 
         // 5. Save and return
         WorkshopTemplate approvedTemplate = workshopTemplateRepository.save(template);

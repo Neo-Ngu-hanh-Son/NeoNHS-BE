@@ -3,6 +3,7 @@ package fpt.project.NeoNHS.service;
 import fpt.project.NeoNHS.dto.request.auth.ChangePasswordRequest;
 import fpt.project.NeoNHS.dto.request.auth.LoginRequest;
 import fpt.project.NeoNHS.dto.request.auth.RegisterRequest;
+import fpt.project.NeoNHS.dto.request.auth.SetPasswordRequest;
 import fpt.project.NeoNHS.dto.response.AuthResponse;
 import fpt.project.NeoNHS.dto.response.auth.UserInfoResponse;
 
@@ -24,6 +25,10 @@ public interface AuthService {
     void sendResetPasswordOtp(String email);
 
     void resetPassword(String email, String newPassword, String confirmPassword);
+
+    void setPassword(SetPasswordRequest request);
+
+    void validateSetPasswordToken(String token, String email);
 
     UserInfoResponse getCurrentUser(String email);
 
