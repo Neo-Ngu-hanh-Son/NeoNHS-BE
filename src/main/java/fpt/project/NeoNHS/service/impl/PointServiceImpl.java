@@ -4,11 +4,10 @@ import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.request.event.EventFilterRequest;
 import fpt.project.NeoNHS.dto.request.point.PointRequest;
 import fpt.project.NeoNHS.dto.response.point.MapPointResponse;
-import fpt.project.NeoNHS.dto.response.point.PointCheckinResponse;
+import fpt.project.NeoNHS.dto.response.point.CheckinPointResponse;
 import fpt.project.NeoNHS.dto.response.point.PointPanoramaResponse;
 import fpt.project.NeoNHS.dto.response.point.PointResponse;
 import fpt.project.NeoNHS.entity.Attraction;
-import fpt.project.NeoNHS.entity.CheckinPoint;
 import fpt.project.NeoNHS.entity.Point;
 import fpt.project.NeoNHS.enums.EventStatus;
 import fpt.project.NeoNHS.helpers.AuthHelper;
@@ -210,7 +209,7 @@ public class PointServiceImpl implements PointService {
                     .checkinPoints(p.getCheckinPoints().stream()
                             .map(cp -> {
                                 boolean isUserCheckedInHere = userCheckedInIds.contains(cp.getId());
-                                return PointCheckinResponse.fromEntity(cp, isUserCheckedInHere);
+                                return CheckinPointResponse.fromEntity(cp, isUserCheckedInHere);
                             })
                             .toList())
                     .build();

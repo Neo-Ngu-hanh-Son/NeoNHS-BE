@@ -3,7 +3,7 @@ package fpt.project.NeoNHS.controller.admin;
 import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.request.point.CheckinPointRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
-import fpt.project.NeoNHS.dto.response.point.PointCheckinResponse;
+import fpt.project.NeoNHS.dto.response.point.CheckinPointResponse;
 import fpt.project.NeoNHS.security.UserPrincipal;
 import fpt.project.NeoNHS.service.CheckinPointService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,32 +27,32 @@ public class AdminCheckinPointController {
     private final CheckinPointService checkinPointService;
 
     @PostMapping
-    public ApiResponse<PointCheckinResponse> createCheckinPoint(@Valid @RequestBody CheckinPointRequest request) {
-        PointCheckinResponse data = checkinPointService.createCheckinPoint(request);
+    public ApiResponse<CheckinPointResponse> createCheckinPoint(@Valid @RequestBody CheckinPointRequest request) {
+        CheckinPointResponse data = checkinPointService.createCheckinPoint(request);
         return ApiResponse.success(HttpStatus.CREATED, "CheckinPoint created successfully", data);
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<PointCheckinResponse> getCheckinPointById(@PathVariable UUID id) {
-        PointCheckinResponse data = checkinPointService.getCheckinPointByIdForAdmin(id);
+    public ApiResponse<CheckinPointResponse> getCheckinPointById(@PathVariable UUID id) {
+        CheckinPointResponse data = checkinPointService.getCheckinPointByIdForAdmin(id);
         return ApiResponse.success(data);
     }
 
     @GetMapping("/all")
-    public ApiResponse<Page<PointCheckinResponse>> getAllCheckinPoints(
+    public ApiResponse<Page<CheckinPointResponse>> getAllCheckinPoints(
             @RequestParam(value = "page", defaultValue = PaginationConstants.DEFAULT_PAGE, required = false) int page,
             @RequestParam(value = "size", defaultValue = PaginationConstants.DEFAULT_SIZE, required = false) int size,
             @RequestParam(value = "sortBy", defaultValue = PaginationConstants.DEFAULT_SORT_BY, required = false) String sortBy,
             @RequestParam(value = "sortDir", defaultValue = PaginationConstants.SORT_ASC, required = false) String sortDir,
             @RequestParam(value = "search", required = false) String search,
             @RequestParam(value = "includeDeleted", defaultValue = "true", required = false) boolean includeDeleted) {
-        Page<PointCheckinResponse> data = checkinPointService.getAllCheckinPointsForAdmin(page, size, sortBy, sortDir, search, includeDeleted);
+        Page<CheckinPointResponse> data = checkinPointService.getAllCheckinPointsForAdmin(page, size, sortBy, sortDir, search, includeDeleted);
         return ApiResponse.success(data);
     }
 
     @PutMapping("/{id}")
-    public ApiResponse<PointCheckinResponse> updateCheckinPoint(@PathVariable UUID id, @Valid @RequestBody CheckinPointRequest request) {
-        PointCheckinResponse data = checkinPointService.updateCheckinPoint(id, request);
+    public ApiResponse<CheckinPointResponse> updateCheckinPoint(@PathVariable UUID id, @Valid @RequestBody CheckinPointRequest request) {
+        CheckinPointResponse data = checkinPointService.updateCheckinPoint(id, request);
         return ApiResponse.success("CheckinPoint updated successfully", data);
     }
 

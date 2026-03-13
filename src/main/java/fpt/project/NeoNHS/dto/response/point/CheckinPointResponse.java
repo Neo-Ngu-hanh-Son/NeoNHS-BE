@@ -1,19 +1,14 @@
 package fpt.project.NeoNHS.dto.response.point;
 
-import fpt.project.NeoNHS.dto.response.auth.UserInfoResponse;
-import fpt.project.NeoNHS.dto.response.blog.BlogCategoryResponse;
-import fpt.project.NeoNHS.dto.response.blog.BlogResponse;
-import fpt.project.NeoNHS.entity.Blog;
 import fpt.project.NeoNHS.entity.CheckinPoint;
 import lombok.Builder;
 import lombok.Data;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
 @Data
 @Builder
-public class PointCheckinResponse {
+public class CheckinPointResponse {
     private UUID id;
     private String name;
     private String description;
@@ -39,11 +34,11 @@ public class PointCheckinResponse {
      * @param isUserCheckedIn
      * @return
      */
-    public static PointCheckinResponse fromEntity(CheckinPoint checkinPoint, Boolean isUserCheckedIn) {
+    public static CheckinPointResponse fromEntity(CheckinPoint checkinPoint, Boolean isUserCheckedIn) {
         if (isUserCheckedIn == null) {
             isUserCheckedIn = false;
         }
-        return PointCheckinResponse.builder()
+        return CheckinPointResponse.builder()
                 .id(checkinPoint.getId())
                 .name(checkinPoint.getName())
                 .description(checkinPoint.getDescription())

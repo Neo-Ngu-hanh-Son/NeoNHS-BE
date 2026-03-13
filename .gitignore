@@ -45,3 +45,5 @@ build/
 ### Apache Maven
 .m2/
 target/
+
+# /private/
