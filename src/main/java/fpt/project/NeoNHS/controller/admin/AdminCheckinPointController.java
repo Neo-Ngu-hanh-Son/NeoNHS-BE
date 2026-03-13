@@ -42,7 +42,7 @@ public class AdminCheckinPointController {
     public ApiResponse<Page<PointCheckinResponse>> getAllCheckinPoints(
             @RequestParam(value = "page", defaultValue = PaginationConstants.DEFAULT_PAGE, required = false) int page,
             @RequestParam(value = "size", defaultValue = PaginationConstants.DEFAULT_SIZE, required = false) int size,
-            @RequestParam(value = "sortBy", defaultValue = "name", required = false) String sortBy,
+            @RequestParam(value = "sortBy", defaultValue = PaginationConstants.DEFAULT_SORT_BY, required = false) String sortBy,
             @RequestParam(value = "sortDir", defaultValue = PaginationConstants.SORT_ASC, required = false) String sortDir,
             @RequestParam(value = "search", required = false) String search,
             @RequestParam(value = "includeDeleted", defaultValue = "true", required = false) boolean includeDeleted) {

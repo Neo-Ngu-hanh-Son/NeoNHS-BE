@@ -4,6 +4,7 @@ import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.request.event.EventFilterRequest;
 import fpt.project.NeoNHS.dto.request.point.PointRequest;
 import fpt.project.NeoNHS.dto.response.point.MapPointResponse;
+import fpt.project.NeoNHS.dto.response.point.PointCheckinResponse;
 import fpt.project.NeoNHS.dto.response.point.PointPanoramaResponse;
 import fpt.project.NeoNHS.dto.response.point.PointResponse;
 import fpt.project.NeoNHS.entity.Attraction;
@@ -18,6 +19,7 @@ import fpt.project.NeoNHS.specification.EventSpecification;
 import fpt.project.NeoNHS.specification.PointSpecification;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -26,9 +28,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +39,7 @@ public class PointServiceImpl implements PointService {
     private final PanoramaService panoramaService;
     private final EventRepository eventRepository;
     private final WorkshopTemplateRepository workshopTemplateRepository;
+    private final UserCheckInRepository userCheckInRepository;
 
     @Override
     @Transactional
@@ -173,32 +174,49 @@ public class PointServiceImpl implements PointService {
                 .includeDeleted(false)
                 .build();
         var events = eventRepository.findAll(EventSpecification.withFilters(eventFilter));
-
-        // For workshops, we will get the workshop template and their session. (For the session we only get the
-        // one that is upcoming and not deleted, order by start time, and get the first one only, since we only want to
-        // show one point for each workshop template)
         var workshopTemplate = workshopTemplateRepository.findWorkshopTemplatesWithActiveUpcomingWorkshopSessions();
 
-        // List of checkin points - flatted. In here we need to know if user already checked in this point or not.
-//        List<CheckinPoint> checkinPoints = points.stream().flatMap(p -> p.getCheckinPoints().stream()).toList();
-//        var userPrincipalSilent = AuthHelper.getCurrentUserPrincipalSilent();
-        List<MapPointResponse> mapPoints = new ArrayList<>();
-//        if (userPrincipalSilent != null) {
-//            var currentUserId =  userPrincipalSilent.getId();
-//            // user is authenticated, we can check which checkin point the user already checked in, and set the isCheckedIn field accordingly.
-//            checkinPoints.stream().map(cp -> {)
-//                boolean isCheckedIn = cp.getUserCheckIns().stream().anyMatch(uci -> uci.getUser().getId().equals(currentUserId));
-//                return MapPointResponse.fromCheckinPoint(cp, isCheckedIn);
-//            }).forEach(mapPoints::add);
-//        } else {
-//            // This is when user is unauthenticated, then we just use the normal mapping methods.
-//            mapPoints.addAll(points.stream().map(MapPointResponse::fromPoint).toList());
-//        }
+        var currentUser = AuthHelper.getCurrentUserPrincipalSilent();
+        Set<UUID> userCheckedInIds;
+        if (currentUser != null) {
+            userCheckedInIds = userCheckInRepository.findCheckedInPointIdsFromUser(currentUser.getId());
+        } else {
+            userCheckedInIds = Collections.emptySet();
+        }
 
-        mapPoints.addAll(points.stream().map(MapPointResponse::fromPoint).toList());
+        List<MapPointResponse> userMappedPoints = getMapPointWithUserCheckinDefined(points, userCheckedInIds);
+        List<MapPointResponse> mapPoints = new ArrayList<>();
+        mapPoints.addAll(userMappedPoints);
         mapPoints.addAll(events.stream().map(MapPointResponse::fromEventPoint).toList());
         mapPoints.addAll(workshopTemplate.stream().map(MapPointResponse::fromWorkshopTemplate).toList());
         return mapPoints;
+    }
+
+    @NotNull
+    private List<MapPointResponse> getMapPointWithUserCheckinDefined(List<Point> points, Set<UUID> userCheckedInIds) {
+        List<MapPointResponse> userMappedPoints = new ArrayList<>();
+        for (var p : points) {
+            // Note some props are not mapped because no need.
+            var userCheckinPoint = MapPointResponse.builder()
+                    .id(p.getId())
+                    .name(p.getName())
+                    .description(p.getDescription())
+                    .thumbnailUrl(p.getThumbnailUrl())
+                    .latitude(p.getLatitude().doubleValue())
+                    .longitude(p.getLongitude().doubleValue())
+                    .type(p.getType())
+                    .attractionId(p.getAttraction() != null ? p.getAttraction().getId() : null)
+                    .googlePlaceId(p.getGooglePlaceId())
+                    .checkinPoints(p.getCheckinPoints().stream()
+                            .map(cp -> {
+                                boolean isUserCheckedInHere = userCheckedInIds.contains(cp.getId());
+                                return PointCheckinResponse.fromEntity(cp, isUserCheckedInHere);
+                            })
+                            .toList())
+                    .build();
+            userMappedPoints.add(userCheckinPoint);
+        }
+        return userMappedPoints;
     }
 
     @Override

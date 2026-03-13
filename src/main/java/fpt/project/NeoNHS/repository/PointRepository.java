@@ -5,6 +5,7 @@ import fpt.project.NeoNHS.entity.Point;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -36,4 +37,11 @@ public interface PointRepository extends JpaRepository<Point, UUID>, JpaSpecific
     Page<Point> findAll(Specification<Point> spec, Pageable pageable);
 
     boolean existsByIdAndDeletedAtIsNull(UUID id);
+
+    @Query("""
+            SELECT DISTINCT p
+            FROM Point p
+            LEFT JOIN FETCH p.checkinPoints
+            """)
+    List<Point> findAllWithCheckinPoints();
 }

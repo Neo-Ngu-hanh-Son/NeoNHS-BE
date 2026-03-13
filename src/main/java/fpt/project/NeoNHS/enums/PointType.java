@@ -13,5 +13,6 @@ public enum PointType {
     EVENT,
     WORKSHOP,
     ATTRACTION,
-    DEFAULT
+    DEFAULT,
+    USER_CHECKIN // This one is only used by front end to determine which point is the current user checked in.
 }
