@@ -23,6 +23,10 @@ public interface VoucherService {
 
     void deleteVoucher(UUID id);
 
+    void hardDeleteVoucher(UUID id);
+
+    VoucherResponse restoreVoucher(UUID id);
+
     // ===== Vendor =====
     VoucherResponse createVendorVoucher(CreateVoucherRequest request);
 
@@ -31,6 +35,10 @@ public interface VoucherService {
     VoucherResponse updateVendorVoucher(UUID id, UpdateVoucherRequest request);
 
     void deleteVendorVoucher(UUID id);
+
+    void hardDeleteVendorVoucher(UUID id);
+
+    VoucherResponse restoreVendorVoucher(UUID id);
 
     // ===== Tourist =====
     Page<VoucherResponse> getAvailablePlatformVouchers(Pageable pageable);
