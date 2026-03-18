@@ -50,7 +50,7 @@ public class AdminVendorManagementServiceImpl implements AdminVendorManagementSe
     private final RedisAuthService redisAuthService;
 
     @Value("${app.be-url-setpassword}")
-    private String setEmailPassword;
+    private String feUrl;
 
     @Override
     @Transactional
@@ -106,8 +106,7 @@ public class AdminVendorManagementServiceImpl implements AdminVendorManagementSe
                 savedUser,
                 EmailTemplate.SET_PASSWORD,
                 token,
-                setEmailPassword
-        );
+                feUrl);
 
         log.info("Vendor account created and set-password email sent to: {}", request.getEmail());
         return mapToVendorResponse(savedUser, profile);
@@ -119,23 +118,20 @@ public class AdminVendorManagementServiceImpl implements AdminVendorManagementSe
     }
 
     @Override
-    public Page<VendorProfileResponse>  listVendors(
+    public Page<VendorProfileResponse> listVendors(
             String keyword,
             Boolean isActive,
             Boolean isBanned,
             Boolean isVerified,
-            Pageable pageable
-    ) {
+            Pageable pageable) {
         log.info(
                 "Admin listing vendors - keyword: {}, isActive: {}, isBanned: {}, isVerified: {}, page: {}, size: {}",
-                keyword, isActive, isBanned, isVerified, pageable.getPageNumber(), pageable.getPageSize()
-        );
+                keyword, isActive, isBanned, isVerified, pageable.getPageNumber(), pageable.getPageSize());
 
         String searchKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
 
         Page<VendorProfile> vendorProfiles = vendorProfileRepository.advancedSearchAndFilter(
-                searchKeyword, isVerified, isBanned, isActive, pageable
-        );
+                searchKeyword, isVerified, isBanned, isActive, pageable);
 
         List<VendorProfile> content = vendorProfiles.getContent();
         if (content.isEmpty()) {
@@ -145,14 +141,11 @@ public class AdminVendorManagementServiceImpl implements AdminVendorManagementSe
         List<UUID> vendorIds = content.stream().map(VendorProfile::getId).toList();
 
         Map<UUID, Long> totalTemplatesByVendorId = toCountMap(
-                workshopTemplateRepository.countTemplatesByVendorIds(vendorIds)
-        );
+                workshopTemplateRepository.countTemplatesByVendorIds(vendorIds));
         Map<UUID, Long> activeTemplatesByVendorId = toCountMap(
-                workshopTemplateRepository.countTemplatesByVendorIdsAndStatus(vendorIds, WorkshopStatus.ACTIVE)
-        );
+                workshopTemplateRepository.countTemplatesByVendorIdsAndStatus(vendorIds, WorkshopStatus.ACTIVE));
         Map<UUID, Long> totalSessionsByVendorId = toCountMap(
-                workshopSessionRepository.countSessionsByVendorIds(vendorIds)
-        );
+                workshopSessionRepository.countSessionsByVendorIds(vendorIds));
 
         List<VendorProfileResponse> responses = content.stream()
                 .map(vp -> mapToVendorResponseWithStats(
@@ -160,8 +153,7 @@ public class AdminVendorManagementServiceImpl implements AdminVendorManagementSe
                         vp,
                         totalTemplatesByVendorId.getOrDefault(vp.getId(), 0L),
                         activeTemplatesByVendorId.getOrDefault(vp.getId(), 0L),
-                        totalSessionsByVendorId.getOrDefault(vp.getId(), 0L)
-                ))
+                        totalSessionsByVendorId.getOrDefault(vp.getId(), 0L)))
                 .toList();
 
         return new PageImpl<>(responses, pageable, vendorProfiles.getTotalElements());
@@ -462,8 +454,7 @@ public class AdminVendorManagementServiceImpl implements AdminVendorManagementSe
             VendorProfile vp,
             long totalTemplates,
             long activeTemplates,
-            long totalSessions
-    ) {
+            long totalSessions) {
         return VendorProfileResponse.builder()
                 .id(user.getId())
                 .userId(vp.getId())
@@ -501,7 +492,6 @@ public class AdminVendorManagementServiceImpl implements AdminVendorManagementSe
                 .collect(Collectors.toMap(
                         VendorCountProjection::getVendorId,
                         VendorCountProjection::getCount,
-                        Long::sum
-                ));
+                        Long::sum));
     }
 }
