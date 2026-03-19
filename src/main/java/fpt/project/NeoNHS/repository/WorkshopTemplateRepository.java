@@ -75,7 +75,7 @@ public interface WorkshopTemplateRepository
         WHERE w.reviewedAt IS NOT NULL
         ORDER BY w.reviewedAt DESC
     """)
-    List<WorkshopTemplate> findRecentApprovedReviews(Pageable pageable);
+    List<WorkshopTemplate> findRecentApproved(Pageable pageable);
 
     @Query("""
         SELECT wt
