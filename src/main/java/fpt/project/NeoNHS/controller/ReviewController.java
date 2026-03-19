@@ -1,11 +1,11 @@
 package fpt.project.NeoNHS.controller;
 
 import fpt.project.NeoNHS.dto.request.review.CreateReviewRequest;
+import fpt.project.NeoNHS.dto.request.review.UpdateReviewRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.PagedResponse;
 import fpt.project.NeoNHS.dto.response.review.ReviewResponse;
 import fpt.project.NeoNHS.entity.User;
-
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.service.ReviewService;
@@ -34,7 +34,7 @@ public class ReviewController {
     private final UserRepository userRepository;
 
     @PostMapping
-    @PreAuthorize("hasAuthority('TOURIST')")
+    @PreAuthorize("hasAuthority('ROLE_TOURIST')")
     @Operation(summary = "Create a review for a workshop template", description = "Only TOURIST can create reviews")
     public ResponseEntity<ApiResponse<ReviewResponse>> createReview(
             Principal principal,
@@ -47,6 +47,22 @@ public class ReviewController {
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(HttpStatus.CREATED, "Review created successfully", response));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_TOURIST')")
+    @Operation(summary = "Update an existing review", description = "Only the owner of the review can update it. Only TOURIST can review.")
+    public ResponseEntity<ApiResponse<ReviewResponse>> updateReview(
+            Principal principal,
+            @PathVariable UUID id,
+            @RequestBody @Valid UpdateReviewRequest request) {
+
+        User user = userRepository.findByEmail(principal.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", principal.getName()));
+
+        ReviewResponse response = reviewService.updateReview(user.getId(), id, request);
+
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Review updated successfully", response));
     }
 
     @GetMapping("/workshops/{workshopTemplateId}")
