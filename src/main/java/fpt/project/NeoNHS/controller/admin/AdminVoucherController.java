@@ -128,4 +128,28 @@ public class AdminVoucherController {
         voucherService.deleteVoucher(id);
         return ResponseEntity.ok(ApiResponse.success("Voucher deleted successfully", null));
     }
+
+    @Operation(
+            summary = "Restore voucher (Admin)",
+            description = "Restore a soft-deleted voucher by clearing deletedAt/deletedBy and setting status back to ACTIVE"
+    )
+    @PatchMapping("/{id}/restore")
+    public ResponseEntity<ApiResponse<VoucherResponse>> restoreVoucher(
+            @Parameter(description = "Voucher ID") @PathVariable UUID id) {
+        VoucherResponse response = voucherService.restoreVoucher(id);
+        return ResponseEntity.ok(ApiResponse.success("Voucher restored successfully", response));
+    }
+
+    @Operation(
+            summary = "Permanently delete voucher (Admin)",
+            description = "Permanently delete a voucher from the database. " +
+                    "Only allowed if no user has used this voucher in an order. " +
+                    "Unused user-voucher records will be removed. This action cannot be undone."
+    )
+    @DeleteMapping("/{id}/permanent")
+    public ResponseEntity<ApiResponse<Void>> hardDeleteVoucher(
+            @Parameter(description = "Voucher ID") @PathVariable UUID id) {
+        voucherService.hardDeleteVoucher(id);
+        return ResponseEntity.ok(ApiResponse.success("Voucher permanently deleted successfully", null));
+    }
 }

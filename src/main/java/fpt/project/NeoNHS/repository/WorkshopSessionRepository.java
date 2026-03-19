@@ -36,4 +36,39 @@ public interface WorkshopSessionRepository extends JpaRepository<WorkshopSession
         GROUP BY wt.vendor.id
     """)
     List<VendorCountProjection> countSessionsByVendorIds(@Param("vendorIds") List<UUID> vendorIds);
+
+    @Query("""
+        SELECT ws FROM WorkshopSession ws
+        JOIN FETCH ws.workshopTemplate wt
+        WHERE wt.vendor.id = :vendorId
+          AND ws.startTime >= :from
+          AND ws.startTime < :to
+          AND ws.deletedAt IS NULL
+        ORDER BY ws.startTime ASC
+    """)
+    List<WorkshopSession> findByVendorIdAndStartTimeBetween(
+            @Param("vendorId") UUID vendorId,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
+
+    @Query("""
+        SELECT COUNT(ws) FROM WorkshopSession ws
+        JOIN ws.workshopTemplate wt
+        WHERE wt.vendor.id = :vendorId
+          AND ws.deletedAt IS NULL
+          AND ws.status IN (fpt.project.NeoNHS.enums.SessionStatus.SCHEDULED, fpt.project.NeoNHS.enums.SessionStatus.ONGOING)
+          AND ws.currentEnrolled > 0
+    """)
+    long countBookingsByVendorId(@Param("vendorId") UUID vendorId);
+
+    @Query("""
+        SELECT COUNT(ws) FROM WorkshopSession ws
+        JOIN ws.workshopTemplate wt
+        WHERE wt.vendor.id = :vendorId
+          AND ws.deletedAt IS NULL
+          AND ws.status IN (fpt.project.NeoNHS.enums.SessionStatus.SCHEDULED, fpt.project.NeoNHS.enums.SessionStatus.ONGOING)
+          AND ws.currentEnrolled > 0
+          AND ws.createdAt >= :since
+    """)
+    long countBookingsByVendorIdSince(@Param("vendorId") UUID vendorId, @Param("since") LocalDateTime since);
 }

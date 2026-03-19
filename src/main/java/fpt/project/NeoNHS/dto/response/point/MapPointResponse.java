@@ -42,7 +42,7 @@ public class MapPointResponse extends PointResponse {
                 .googlePlaceId(p.getGooglePlaceId())
                 .historyAudioCount(p.getHistoryAudios() != null ? p.getHistoryAudios().size() : 0)
                 .checkinPoints(p.getCheckinPoints() != null ? p.getCheckinPoints().stream()
-                        .map(cp -> PointCheckinResponse.fromEntity(cp, null))
+                        .map(cp -> CheckinPointResponse.fromEntity(cp, null))
                         .toList() : null)
                 .build();
     }

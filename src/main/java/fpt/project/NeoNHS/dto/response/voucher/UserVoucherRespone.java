@@ -40,6 +40,8 @@ public class UserVoucherRespone {
     private LocalDateTime endDate;
     private VoucherStatus status;
 
+    private Boolean isAvailable;
+
     // Vendor info (for VENDOR scope)
     private UUID vendorId;
     private String vendorName;
@@ -66,7 +68,8 @@ public class UserVoucherRespone {
                 .bonusPointsValue(voucher.getBonusPointsValue())
                 .startDate(voucher.getStartDate())
                 .endDate(voucher.getEndDate())
-                .status(voucher.getStatus());
+                .status(voucher.getStatus())
+                .isAvailable(computeAvailability(uv));
 
         if (voucher.getVendor() != null) {
             builder.vendorId(voucher.getVendor().getId());
@@ -74,5 +77,17 @@ public class UserVoucherRespone {
         }
 
         return builder.build();
+    }
+
+    private static boolean computeAvailability(UserVoucher uv) {
+        if (Boolean.TRUE.equals(uv.getIsUsed())) return false;
+
+        var voucher = uv.getVoucher();
+        if (voucher.getDeletedAt() != null) return false;
+        if (voucher.getStatus() != VoucherStatus.ACTIVE) return false;
+        if (voucher.getEndDate() != null && voucher.getEndDate().isBefore(LocalDateTime.now())) return false;
+        if (voucher.getUsageLimit() != null && voucher.getUsageCount() >= voucher.getUsageLimit()) return false;
+
+        return true;
     }
 }

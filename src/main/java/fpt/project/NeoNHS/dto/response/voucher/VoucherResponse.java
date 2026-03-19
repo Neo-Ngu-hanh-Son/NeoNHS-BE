@@ -59,6 +59,7 @@ public class VoucherResponse {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private LocalDateTime deletedAt;
 
     public static VoucherResponse fromEntity(Voucher voucher) {
         VoucherResponseBuilder builder = VoucherResponse.builder()
@@ -82,7 +83,8 @@ public class VoucherResponse {
                 .maxUsagePerUser(voucher.getMaxUsagePerUser())
                 .status(voucher.getStatus())
                 .createdAt(voucher.getCreatedAt())
-                .updatedAt(voucher.getUpdatedAt());
+                .updatedAt(voucher.getUpdatedAt())
+                .deletedAt(voucher.getDeletedAt());
 
         if (voucher.getCreatedByUser() != null) {
             builder.createdByUserId(voucher.getCreatedByUser().getId());

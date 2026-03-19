@@ -100,6 +100,7 @@ public class UserCheckInServiceImpl implements UserCheckInService {
         int userTotalPoint = user.getCheckIns().stream()
                 .reduce(0, (sum, checkIn) -> sum + checkIn.getEarnedPoints(),
                         (first, second) -> first + second);
+        userTotalPoint += checkinPoint.getRewardPoints();
         return UserCheckinResultResponse.builder()
                 .earnedPoints(userCheckIn.getEarnedPoints())
                 .userTotalPoints(userTotalPoint)
