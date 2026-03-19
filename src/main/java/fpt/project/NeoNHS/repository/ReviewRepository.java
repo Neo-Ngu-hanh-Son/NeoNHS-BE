@@ -23,6 +23,8 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
     @Query("SELECT AVG(r.rating) FROM Review r WHERE r.workshopTemplate.id = :workshopTemplateId AND r.status = :status")
     Double getAverageRatingByWorkshopTemplateId(@Param("workshopTemplateId") UUID workshopTemplateId, @Param("status") ReviewStatus status);
 
+    boolean existsByUser_IdAndWorkshopTemplate_IdAndDeletedAtIsNull(UUID userId, UUID workshopTemplateId);
+
     @Query("""
         SELECT wt.id, wt.name, COUNT(r), COALESCE(AVG(r.rating), 0),
                SUM(CASE WHEN r.createdAt >= :since THEN 1 ELSE 0 END)
