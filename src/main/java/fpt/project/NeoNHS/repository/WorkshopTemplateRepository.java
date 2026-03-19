@@ -88,4 +88,10 @@ public interface WorkshopTemplateRepository
         ORDER BY ws.startTime ASC
 """)
     List<WorkshopTemplate> findWorkshopTemplatesWithActiveUpcomingWorkshopSessions();
+
+    long countByVendorIdAndDeletedAtIsNull(UUID vendorId);
+
+    long countByVendorIdAndStatusAndDeletedAtIsNull(UUID vendorId, WorkshopStatus status);
+
+    boolean existsByVendorIdAndName(UUID vendorId, String name);
 }
