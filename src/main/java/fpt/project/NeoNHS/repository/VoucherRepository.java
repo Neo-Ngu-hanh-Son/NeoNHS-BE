@@ -49,4 +49,8 @@ public interface VoucherRepository extends JpaRepository<Voucher, UUID>, JpaSpec
             @Param("status") VoucherStatus status,
             @Param("now") LocalDateTime now,
             Pageable pageable);
+
+    long countByVendorIdAndDeletedAtIsNull(UUID vendorId);
+
+    long countByVendorIdAndDeletedAtIsNullAndCreatedAtAfter(UUID vendorId, LocalDateTime since);
 }

@@ -135,6 +135,13 @@ public class AdminVendorManagementController {
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Vendor deleted successfully", null));
     }
 
+    @DeleteMapping("/hard-delete/{id}")
+    @Operation(summary = "Hard delete vendor", description = "Hard delete a vendor account (remove from db)")
+    public ResponseEntity<ApiResponse<Void>> HardDeleteVendor(@PathVariable UUID id) {
+        adminVendorManagementService.hardDeleteVendor(id);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Vendor deleted successfully", null));
+    }
+
     @GetMapping("/search")
     @Operation(summary = "Search vendors", description = "Search vendors by keyword (name, email, business name)")
     public ResponseEntity<ApiResponse<Page<VendorProfileResponse>>> searchVendors(

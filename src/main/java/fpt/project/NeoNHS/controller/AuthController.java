@@ -121,7 +121,6 @@ public class AuthController {
         try {
             authService.validateSetPasswordToken(token, email);
             String redirectUrl = UriComponentsBuilder.fromUriString(feUrl)
-                    .path("/set-password")
                     .queryParam("token", token)
                     .queryParam("email", email)
                     .build().toUriString();
@@ -130,7 +129,6 @@ public class AuthController {
                     .build();
         } catch (Exception e) {
             String errorUrl = UriComponentsBuilder.fromUriString(feUrl)
-                    .path("/login")
                     .queryParam("error", "invalid_token")
                     .build().toUriString();
             return ResponseEntity.status(HttpStatus.FOUND)

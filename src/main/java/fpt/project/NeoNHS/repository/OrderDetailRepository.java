@@ -36,4 +36,53 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, UUID> 
             "WHERE od.createdAt BETWEEN :start AND :end " +
             "GROUP BY v.businessName")
     List<Object[]> getRevenueByVendor(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query(value = "SELECT COALESCE(SUM(od.unit_price * od.quantity), 0) " +
+            "FROM order_details od " +
+            "JOIN workshop_sessions ws ON od.workshop_session_id = ws.id " +
+            "JOIN workshop_templates wt ON ws.workshop_id = wt.id " +
+            "JOIN orders o ON od.order_id = o.id " +
+            "JOIN transactions t ON o.id = t.order_id " +
+            "WHERE wt.vendor_id = :vendorId " +
+            "AND t.status = 'SUCCESS' " +
+            "AND od.created_at >= :start " +
+            "AND od.created_at < :end", nativeQuery = true)
+    java.math.BigDecimal sumRevenueByVendorIdBetween(
+            @Param("vendorId") UUID vendorId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
+
+    @Query(value = "SELECT DATE(od.created_at) as day, COALESCE(SUM(od.unit_price * od.quantity), 0) as revenue " +
+            "FROM order_details od " +
+            "JOIN workshop_sessions ws ON od.workshop_session_id = ws.id " +
+            "JOIN workshop_templates wt ON ws.workshop_id = wt.id " +
+            "JOIN orders o ON od.order_id = o.id " +
+            "JOIN transactions t ON o.id = t.order_id " +
+            "WHERE wt.vendor_id = :vendorId " +
+            "AND t.status = 'SUCCESS' " +
+            "AND od.created_at >= :start " +
+            "AND od.created_at < :end " +
+            "GROUP BY DATE(od.created_at) " +
+            "ORDER BY day", nativeQuery = true)
+    List<Object[]> getDailyRevenueByVendorId(
+            @Param("vendorId") UUID vendorId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
+
+    @Query(value = "SELECT DATE_FORMAT(od.created_at, '%Y-%m') as month, COALESCE(SUM(od.unit_price * od.quantity), 0) as revenue " +
+            "FROM order_details od " +
+            "JOIN workshop_sessions ws ON od.workshop_session_id = ws.id " +
+            "JOIN workshop_templates wt ON ws.workshop_id = wt.id " +
+            "JOIN orders o ON od.order_id = o.id " +
+            "JOIN transactions t ON o.id = t.order_id " +
+            "WHERE wt.vendor_id = :vendorId " +
+            "AND t.status = 'SUCCESS' " +
+            "AND od.created_at >= :start " +
+            "AND od.created_at < :end " +
+            "GROUP BY DATE_FORMAT(od.created_at, '%Y-%m') " +
+            "ORDER BY month", nativeQuery = true)
+    List<Object[]> getMonthlyRevenueByVendorId(
+            @Param("vendorId") UUID vendorId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
 }
