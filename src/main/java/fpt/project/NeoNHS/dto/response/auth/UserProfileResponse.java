@@ -26,4 +26,7 @@ public class UserProfileResponse {
     private Boolean kycVerified;
     private String kycFullName;
     private String kycIdNumber;
+
+    // Point for later vouchers
+    private int userPoint;
 }
