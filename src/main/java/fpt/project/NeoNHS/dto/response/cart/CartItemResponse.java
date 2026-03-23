@@ -15,4 +15,12 @@ public class CartItemResponse {
     private BigDecimal price;
     private Integer quantity;
     private BigDecimal totalPrice;
+
+    // Event info (for event tickets)
+    private UUID eventId;
+    private String eventName;
+
+    // Workshop info (for workshop sessions)
+    private UUID workshopSessionId;
+    private String workshopName;
 }

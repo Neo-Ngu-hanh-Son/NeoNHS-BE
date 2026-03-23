@@ -166,11 +166,34 @@ public class CartServiceImpl implements CartService {
                 BigDecimal itemPrice = BigDecimal.ZERO;
                 String itemName = "";
                 UUID ticketId = null;
+                UUID eventId = null;
+                String eventName = null;
+                UUID workshopSessionId = null;
+                String workshopName = null;
 
                 if (item.getTicketCatalog() != null) {
                     itemPrice = item.getTicketCatalog().getPrice();
                     itemName = item.getTicketCatalog().getName();
                     ticketId = item.getTicketCatalog().getId();
+
+                    // Extract event info
+                    Event event = item.getTicketCatalog().getEvent();
+                    if (event != null) {
+                        eventId = event.getId();
+                        eventName = event.getName();
+                    }
+                }
+
+                // Extract workshop info
+                if (item.getWorkshopSession() != null) {
+                    workshopSessionId = item.getWorkshopSession().getId();
+                    workshopName = item.getWorkshopSession().getWorkshopTemplate() != null
+                            ? item.getWorkshopSession().getWorkshopTemplate().getName()
+                            : null;
+                    if (itemPrice.compareTo(BigDecimal.ZERO) == 0 && item.getWorkshopSession().getPrice() != null) {
+                        itemPrice = item.getWorkshopSession().getPrice();
+                        itemName = workshopName != null ? workshopName : itemName;
+                    }
                 }
 
                 BigDecimal subTotal = itemPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
@@ -183,6 +206,10 @@ public class CartServiceImpl implements CartService {
                         .price(itemPrice)
                         .quantity(item.getQuantity())
                         .totalPrice(subTotal)
+                        .eventId(eventId)
+                        .eventName(eventName)
+                        .workshopSessionId(workshopSessionId)
+                        .workshopName(workshopName)
                         .build());
             }
         }
@@ -222,17 +249,47 @@ public class CartServiceImpl implements CartService {
             // Re-validate availability at pre-checkout
             validateTicketAvailability(item.getTicketCatalog(), item.getQuantity());
 
-            BigDecimal itemPrice = item.getTicketCatalog().getPrice();
+            BigDecimal itemPrice = item.getTicketCatalog() != null
+                    ? item.getTicketCatalog().getPrice()
+                    : (item.getWorkshopSession() != null && item.getWorkshopSession().getPrice() != null
+                            ? item.getWorkshopSession().getPrice()
+                            : BigDecimal.ZERO);
             BigDecimal subTotal = itemPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
             totalPrice = totalPrice.add(subTotal);
 
+            // Extract event info
+            UUID eventId = null;
+            String eventName = null;
+            if (item.getTicketCatalog() != null && item.getTicketCatalog().getEvent() != null) {
+                eventId = item.getTicketCatalog().getEvent().getId();
+                eventName = item.getTicketCatalog().getEvent().getName();
+            }
+
+            // Extract workshop info
+            UUID workshopSessionId = null;
+            String workshopName = null;
+            if (item.getWorkshopSession() != null) {
+                workshopSessionId = item.getWorkshopSession().getId();
+                workshopName = item.getWorkshopSession().getWorkshopTemplate() != null
+                        ? item.getWorkshopSession().getWorkshopTemplate().getName()
+                        : null;
+            }
+
+            String itemName = item.getTicketCatalog() != null
+                    ? item.getTicketCatalog().getName()
+                    : (workshopName != null ? workshopName : "Unknown item");
+
             itemResponses.add(CartItemResponse.builder()
                     .id(item.getId())
-                    .ticketCatalogId(item.getTicketCatalog().getId())
-                    .itemName(item.getTicketCatalog().getName())
+                    .ticketCatalogId(item.getTicketCatalog() != null ? item.getTicketCatalog().getId() : null)
+                    .itemName(itemName)
                     .price(itemPrice)
                     .quantity(item.getQuantity())
                     .totalPrice(subTotal)
+                    .eventId(eventId)
+                    .eventName(eventName)
+                    .workshopSessionId(workshopSessionId)
+                    .workshopName(workshopName)
                     .build());
         }
 
@@ -368,13 +425,19 @@ public class CartServiceImpl implements CartService {
         }
 
         // 2. Check Date Validity
-        /*LocalDateTime now = LocalDateTime.now();
-            if (ticketCatalog.getValidFromDate() != null && now.isBefore(ticketCatalog.getValidFromDate())) {
-                throw new BadRequestException("Ticket sale has not started yet: " + ticketCatalog.getName());
-        }
-        if (ticketCatalog.getValidToDate() != null && now.isAfter(ticketCatalog.getValidToDate())) {
-            throw new BadRequestException("Ticket sale has ended: " + ticketCatalog.getName());
-        }*/
+        /*
+         * LocalDateTime now = LocalDateTime.now();
+         * if (ticketCatalog.getValidFromDate() != null &&
+         * now.isBefore(ticketCatalog.getValidFromDate())) {
+         * throw new BadRequestException("Ticket sale has not started yet: " +
+         * ticketCatalog.getName());
+         * }
+         * if (ticketCatalog.getValidToDate() != null &&
+         * now.isAfter(ticketCatalog.getValidToDate())) {
+         * throw new BadRequestException("Ticket sale has ended: " +
+         * ticketCatalog.getName());
+         * }
+         */
 
         // 3. Check Ticket Quota
         int currentSold = ticketCatalog.getSoldQuantity() != null ? ticketCatalog.getSoldQuantity() : 0;
