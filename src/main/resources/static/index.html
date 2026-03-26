@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeoNHS Chat Test Client</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 2rem;
+        }
+        .container {
+            width: 100%;
+            max-width: 700px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            border: 1px solid #334155;
+        }
+        .card h2 {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #94a3b8;
+            margin-bottom: 0.75rem;
+        }
+        .form-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .form-row:last-child { margin-bottom: 0; }
+        input, textarea {
+            flex: 1;
+            padding: 0.6rem 0.75rem;
+            border-radius: 8px;
+            border: 1px solid #475569;
+            background: #0f172a;
+            color: #e2e8f0;
+            font-size: 0.875rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus, textarea:focus { border-color: #38bdf8; }
+        textarea { resize: vertical; min-height: 60px; }
+        button {
+            padding: 0.6rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .btn-connect {
+            background: #22c55e;
+            color: #fff;
+        }
+        .btn-connect:hover { background: #16a34a; }
+        .btn-disconnect {
+            background: #ef4444;
+            color: #fff;
+        }
+        .btn-disconnect:hover { background: #dc2626; }
+        .btn-send {
+            background: #3b82f6;
+            color: #fff;
+        }
+        .btn-send:hover { background: #2563eb; }
+        .btn-send:disabled, .btn-disconnect:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.8rem;
+            margin-bottom: 0.75rem;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+        .status-dot.connected { background: #22c55e; }
+        #log {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 0.75rem;
+            height: 350px;
+            overflow-y: auto;
+            font-family: 'Fira Code', 'Cascadia Code', monospace;
+            font-size: 0.8rem;
+            line-height: 1.6;
+        }
+        .log-entry { padding: 2px 0; }
+        .log-info { color: #38bdf8; }
+        .log-sent { color: #a78bfa; }
+        .log-received { color: #34d399; }
+        .log-error { color: #f87171; }
+        .log-time { color: #64748b; margin-right: 0.5rem; }
+        .warning-banner {
+            background: #78350f;
+            border: 1px solid #a16207;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
+            color: #fef08a;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>⚡ NeoNHS Chat Test Client</h1>
+
+    <div class="warning-banner">
+        ⚠️ This is a development-only test page. Remove <code>/index.html</code> access before deploying to production.
+    </div>
+
+    <!-- Connection -->
+    <div class="card">
+        <h2>Connection</h2>
+        <div class="status">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">Disconnected</span>
+        </div>
+        <div class="form-row">
+            <input type="text" id="jwtToken" placeholder="Paste your JWT token here..." />
+        </div>
+        <div class="form-row">
+            <button class="btn-connect" id="btnConnect" onclick="connect()">Connect</button>
+            <button class="btn-disconnect" id="btnDisconnect" onclick="disconnect()" disabled>Disconnect</button>
+        </div>
+    </div>
+
+    <!-- Send Message -->
+    <div class="card">
+        <h2>Send Message</h2>
+        <div class="form-row">
+            <input type="text" id="receiverId" placeholder="Receiver UUID" />
+        </div>
+        <div class="form-row">
+            <textarea id="messageContent" placeholder="Type your message..."></textarea>
+        </div>
+        <div class="form-row">
+            <button class="btn-send" id="btnSend" onclick="sendMessage()" disabled>Send Message</button>
+        </div>
+    </div>
+
+    <!-- Message Log -->
+    <div class="card">
+        <h2>Message Log</h2>
+        <div id="log"></div>
+    </div>
+</div>
+
+<!-- SockJS and STOMP -->
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+<script>
+    let stompClient = null;
+    let connected = false;
+
+    function getTime() {
+        return new Date().toLocaleTimeString('en-GB', { hour12: false });
+    }
+
+    function appendLog(message, type = 'info') {
+        const log = document.getElementById('log');
+        const entry = document.createElement('div');
+        entry.className = 'log-entry log-' + type;
+        entry.innerHTML = '<span class="log-time">[' + getTime() + ']</span>' + message;
+        log.appendChild(entry);
+        log.scrollTop = log.scrollHeight;
+    }
+
+    function setConnected(isConnected) {
+        connected = isConnected;
+        document.getElementById('statusDot').classList.toggle('connected', isConnected);
+        document.getElementById('statusText').textContent = isConnected ? 'Connected' : 'Disconnected';
+        document.getElementById('btnConnect').disabled = isConnected;
+        document.getElementById('btnDisconnect').disabled = !isConnected;
+        document.getElementById('btnSend').disabled = !isConnected;
+    }
+
+    function connect() {
+        const token = document.getElementById('jwtToken').value.trim();
+        if (!token) {
+            appendLog('Please enter a JWT token.', 'error');
+            return;
+        }
+
+        appendLog('Connecting to WebSocket...', 'info');
+
+        const socket = new SockJS('/ws?token=' + encodeURIComponent(token));
+        stompClient = Stomp.over(socket);
+
+        // Disable STOMP debug logging in console (optional: remove for verbose)
+        stompClient.debug = function(str) {
+            // Uncomment next line for debug output:
+            // console.log('STOMP: ' + str);
+        };
+
+        stompClient.connect({}, function(frame) {
+            setConnected(true);
+            appendLog('Connected! Frame: ' + frame, 'info');
+
+            // Subscribe to personal message queue
+            stompClient.subscribe('/user/queue/messages', function(message) {
+                const msg = JSON.parse(message.body);
+                const direction = msg.senderId === getCurrentUserId() ? 'sent' : 'received';
+                const label = direction === 'sent' ? '➡️ SENT' : '⬅️ RECEIVED';
+                const type = direction === 'sent' ? 'sent' : 'received';
+                appendLog(
+                    '<strong>' + label + '</strong> | ' +
+                    'From: <em>' + msg.senderId.substring(0, 8) + '...</em> → ' +
+                    'To: <em>' + msg.receiverId.substring(0, 8) + '...</em> | ' +
+                    msg.content,
+                    type
+                );
+            });
+
+            appendLog('Subscribed to /user/queue/messages', 'info');
+
+        }, function(error) {
+            setConnected(false);
+            appendLog('Connection error: ' + error, 'error');
+        });
+    }
+
+    function disconnect() {
+        if (stompClient !== null) {
+            stompClient.disconnect(function() {
+                setConnected(false);
+                appendLog('Disconnected.', 'info');
+            });
+        }
+    }
+
+    function sendMessage() {
+        const receiverId = document.getElementById('receiverId').value.trim();
+        const content = document.getElementById('messageContent').value.trim();
+
+        if (!receiverId || !content) {
+            appendLog('Please fill in both Receiver ID and Message.', 'error');
+            return;
+        }
+
+        const payload = JSON.stringify({ receiverId: receiverId, content: content });
+
+        stompClient.send('/app/chat.send', {}, payload);
+        appendLog('Message sent to /app/chat.send: ' + content, 'info');
+
+        // Clear the message field
+        document.getElementById('messageContent').value = '';
+    }
+
+    // Helper: extract user ID from JWT payload (for display purposes only)
+    function getCurrentUserId() {
+        try {
+            const token = document.getElementById('jwtToken').value.trim();
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            return payload.sub || 'unknown';
+        } catch {
+            return 'unknown';
+        }
+    }
+
+    // Allow Enter key to send messages
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('messageContent').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    });
+</script>
+</body>
+</html>
