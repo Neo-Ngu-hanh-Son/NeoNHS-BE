@@ -1,19 +1,36 @@
 package fpt.project.NeoNHS.service;
 
-import fpt.project.NeoNHS.dto.chat.ChatMessageDTO;
-import fpt.project.NeoNHS.dto.chat.ChatMessageRequest;
+import fpt.project.NeoNHS.dto.chat.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+
+import java.util.List;
 
 public interface ChatService {
 
     /**
-     * Save a chat message to MongoDB and return the DTO for broadcasting.
+     * Create a new chat room. If a room with the exact same participants
+     * already exists, return the existing one instead.
+     */
+    ChatRoomDTO createChatRoom(String creatorId, CreateChatRoomRequest request);
+
+    /**
+     * Get all chat rooms for a user, ordered by most recent activity.
+     */
+    List<ChatRoomDTO> getUserChatRooms(String userId);
+
+    /**
+     * Send a message to a chat room. Validates that the sender is a participant.
      */
     ChatMessageDTO sendMessage(String senderId, ChatMessageRequest request);
 
     /**
-     * Retrieve paginated chat history between two users.
+     * Get paginated messages for a specific chat room.
      */
-    Page<ChatMessageDTO> getChatHistory(String userId1, String userId2, Pageable pageable);
+    Page<ChatMessageDTO> getRoomMessages(String chatRoomId, Pageable pageable);
+
+    /**
+     * Get the participant list for a room (used by controller for broadcasting).
+     */
+    List<String> getRoomParticipants(String chatRoomId);
 }

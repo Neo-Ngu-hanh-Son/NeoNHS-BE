@@ -9,7 +9,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDateTime;
 
 @Document(collection = "chat_messages")
-@CompoundIndex(name = "chat_participants_idx", def = "{'senderId': 1, 'receiverId': 1, 'timestamp': -1}")
+@CompoundIndex(name = "room_timestamp_idx", def = "{'chatRoomId': 1, 'timestamp': -1}")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -20,8 +20,9 @@ public class ChatMessage {
     @Id
     private String id;
 
+    private String chatRoomId; // References ChatRoom document
+
     private String senderId; // UUID string from MySQL User table
-    private String receiverId; // UUID string from MySQL User table
 
     private String content;
 

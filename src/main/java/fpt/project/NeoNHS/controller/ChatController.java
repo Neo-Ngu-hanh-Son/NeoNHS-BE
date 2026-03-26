@@ -11,6 +11,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
+import java.util.List;
 
 @Controller
 @RequiredArgsConstructor
@@ -23,26 +24,25 @@ public class ChatController {
     /**
      * Handle incoming chat messages via STOMP.
      * Client sends to: /app/chat.send
-     * Message is saved to MongoDB, then broadcast to both sender and receiver.
+     * Message is saved to MongoDB, then broadcast to ALL participants in the room.
      */
     @MessageMapping("/chat.send")
     public void sendMessage(@Payload ChatMessageRequest request, Principal principal) {
         String senderId = principal.getName();
-        log.info("Message from {} to {}: {}", senderId, request.getReceiverId(), request.getContent());
+        log.info("Message in room {} from {}: {}", request.getChatRoomId(), senderId, request.getContent());
 
         // Save to MongoDB and get the DTO
         ChatMessageDTO savedMessage = chatService.sendMessage(senderId, request);
 
-        // Send to the receiver's personal queue
-        messagingTemplate.convertAndSendToUser(
-                request.getReceiverId(),
-                "/queue/messages",
-                savedMessage);
+        // Get all participants in the room
+        List<String> participants = chatService.getRoomParticipants(request.getChatRoomId());
 
-        // Also send back to the sender's queue (for multi-device sync / confirmation)
-        messagingTemplate.convertAndSendToUser(
-                senderId,
-                "/queue/messages",
-                savedMessage);
+        // Broadcast to ALL participants (including sender for multi-device sync)
+        for (String participantId : participants) {
+            messagingTemplate.convertAndSendToUser(
+                    participantId,
+                    "/queue/messages",
+                    savedMessage);
+        }
     }
 }

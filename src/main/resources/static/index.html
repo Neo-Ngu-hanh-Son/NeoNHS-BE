@@ -1,11 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NeoNHS Chat Test Client</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background: #0f172a;
@@ -13,13 +19,14 @@
             min-height: 100vh;
             display: flex;
             justify-content: center;
-            align-items: flex-start;
             padding: 2rem;
         }
+
         .container {
             width: 100%;
-            max-width: 700px;
+            max-width: 800px;
         }
+
         h1 {
             text-align: center;
             margin-bottom: 1.5rem;
@@ -28,6 +35,7 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+
         .card {
             background: #1e293b;
             border-radius: 12px;
@@ -35,6 +43,7 @@
             margin-bottom: 1rem;
             border: 1px solid #334155;
         }
+
         .card h2 {
             font-size: 0.875rem;
             text-transform: uppercase;
@@ -42,13 +51,19 @@
             color: #94a3b8;
             margin-bottom: 0.75rem;
         }
+
         .form-row {
             display: flex;
             gap: 0.5rem;
             margin-bottom: 0.5rem;
         }
-        .form-row:last-child { margin-bottom: 0; }
-        input, textarea {
+
+        .form-row:last-child {
+            margin-bottom: 0;
+        }
+
+        input,
+        textarea {
             flex: 1;
             padding: 0.6rem 0.75rem;
             border-radius: 8px;
@@ -59,8 +74,17 @@
             outline: none;
             transition: border-color 0.2s;
         }
-        input:focus, textarea:focus { border-color: #38bdf8; }
-        textarea { resize: vertical; min-height: 60px; }
+
+        input:focus,
+        textarea:focus {
+            border-color: #38bdf8;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
         button {
             padding: 0.6rem 1.25rem;
             border: none;
@@ -71,25 +95,57 @@
             transition: all 0.2s;
             white-space: nowrap;
         }
+
         .btn-connect {
             background: #22c55e;
             color: #fff;
         }
-        .btn-connect:hover { background: #16a34a; }
+
+        .btn-connect:hover {
+            background: #16a34a;
+        }
+
         .btn-disconnect {
             background: #ef4444;
             color: #fff;
         }
-        .btn-disconnect:hover { background: #dc2626; }
+
+        .btn-disconnect:hover {
+            background: #dc2626;
+        }
+
         .btn-send {
             background: #3b82f6;
             color: #fff;
         }
-        .btn-send:hover { background: #2563eb; }
-        .btn-send:disabled, .btn-disconnect:disabled {
+
+        .btn-send:hover {
+            background: #2563eb;
+        }
+
+        .btn-create {
+            background: #8b5cf6;
+            color: #fff;
+        }
+
+        .btn-create:hover {
+            background: #7c3aed;
+        }
+
+        .btn-load {
+            background: #f59e0b;
+            color: #111;
+        }
+
+        .btn-load:hover {
+            background: #d97706;
+        }
+
+        button:disabled {
             opacity: 0.4;
             cursor: not-allowed;
         }
+
         .status {
             display: inline-flex;
             align-items: center;
@@ -97,30 +153,55 @@
             font-size: 0.8rem;
             margin-bottom: 0.75rem;
         }
+
         .status-dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
             background: #ef4444;
         }
-        .status-dot.connected { background: #22c55e; }
+
+        .status-dot.connected {
+            background: #22c55e;
+        }
+
         #log {
             background: #0f172a;
             border: 1px solid #334155;
             border-radius: 8px;
             padding: 0.75rem;
-            height: 350px;
+            height: 300px;
             overflow-y: auto;
             font-family: 'Fira Code', 'Cascadia Code', monospace;
             font-size: 0.8rem;
             line-height: 1.6;
         }
-        .log-entry { padding: 2px 0; }
-        .log-info { color: #38bdf8; }
-        .log-sent { color: #a78bfa; }
-        .log-received { color: #34d399; }
-        .log-error { color: #f87171; }
-        .log-time { color: #64748b; margin-right: 0.5rem; }
+
+        .log-entry {
+            padding: 2px 0;
+        }
+
+        .log-info {
+            color: #38bdf8;
+        }
+
+        .log-sent {
+            color: #a78bfa;
+        }
+
+        .log-received {
+            color: #34d399;
+        }
+
+        .log-error {
+            color: #f87171;
+        }
+
+        .log-time {
+            color: #64748b;
+            margin-right: 0.5rem;
+        }
+
         .warning-banner {
             background: #78350f;
             border: 1px solid #a16207;
@@ -130,175 +211,274 @@
             margin-bottom: 1rem;
             color: #fef08a;
         }
+
+        .room-list {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .room-item {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.25rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: border-color 0.2s;
+        }
+
+        .room-item:hover,
+        .room-item.active {
+            border-color: #38bdf8;
+        }
+
+        .room-item .room-id {
+            color: #94a3b8;
+            font-size: 0.7rem;
+        }
+
+        .room-item .room-preview {
+            color: #64748b;
+            font-style: italic;
+        }
+
+        .cols {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .cols {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
+
 <body>
-<div class="container">
-    <h1>⚡ NeoNHS Chat Test Client</h1>
+    <div class="container">
+        <h1>⚡ NeoNHS Chat Test Client (Rooms)</h1>
+        <div class="warning-banner">
+            ⚠️ Development-only test page. Remove before production.
+        </div>
 
-    <div class="warning-banner">
-        ⚠️ This is a development-only test page. Remove <code>/index.html</code> access before deploying to production.
+        <!-- Connection -->
+        <div class="card">
+            <h2>Connection</h2>
+            <div class="status">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">Disconnected</span>
+            </div>
+            <div class="form-row">
+                <input type="text" id="jwtToken" placeholder="Paste your JWT token here..." />
+            </div>
+            <div class="form-row">
+                <button class="btn-connect" id="btnConnect" onclick="connect()">Connect</button>
+                <button class="btn-disconnect" id="btnDisconnect" onclick="disconnect()" disabled>Disconnect</button>
+            </div>
+        </div>
+
+        <div class="cols">
+            <!-- Create Room -->
+            <div class="card">
+                <h2>Create Chat Room</h2>
+                <div class="form-row">
+                    <input type="text" id="roomName" placeholder="Room name (optional)" />
+                </div>
+                <div class="form-row">
+                    <input type="text" id="participantIds" placeholder="Participant UUIDs (comma-separated)" />
+                </div>
+                <div class="form-row">
+                    <button class="btn-create" onclick="createRoom()">Create Room</button>
+                    <button class="btn-load" onclick="loadRooms()">Load My Rooms</button>
+                </div>
+            </div>
+
+            <!-- Room List -->
+            <div class="card">
+                <h2>My Rooms <span id="roomCount" style="color:#64748b"></span></h2>
+                <div class="room-list" id="roomList">
+                    <div style="color:#64748b; font-size:0.8rem">Click "Load My Rooms" to see your rooms</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Send Message -->
+        <div class="card">
+            <h2>Send Message</h2>
+            <div class="form-row">
+                <input type="text" id="chatRoomId" placeholder="Chat Room ID (select from list or paste)" />
+            </div>
+            <div class="form-row">
+                <textarea id="messageContent" placeholder="Type your message..."></textarea>
+            </div>
+            <div class="form-row">
+                <button class="btn-send" id="btnSend" onclick="sendMessage()" disabled>Send Message</button>
+            </div>
+        </div>
+
+        <!-- Message Log -->
+        <div class="card">
+            <h2>Message Log</h2>
+            <div id="log"></div>
+        </div>
     </div>
 
-    <!-- Connection -->
-    <div class="card">
-        <h2>Connection</h2>
-        <div class="status">
-            <span class="status-dot" id="statusDot"></span>
-            <span id="statusText">Disconnected</span>
-        </div>
-        <div class="form-row">
-            <input type="text" id="jwtToken" placeholder="Paste your JWT token here..." />
-        </div>
-        <div class="form-row">
-            <button class="btn-connect" id="btnConnect" onclick="connect()">Connect</button>
-            <button class="btn-disconnect" id="btnDisconnect" onclick="disconnect()" disabled>Disconnect</button>
-        </div>
-    </div>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 
-    <!-- Send Message -->
-    <div class="card">
-        <h2>Send Message</h2>
-        <div class="form-row">
-            <input type="text" id="receiverId" placeholder="Receiver UUID" />
-        </div>
-        <div class="form-row">
-            <textarea id="messageContent" placeholder="Type your message..."></textarea>
-        </div>
-        <div class="form-row">
-            <button class="btn-send" id="btnSend" onclick="sendMessage()" disabled>Send Message</button>
-        </div>
-    </div>
+    <script>
+        let stompClient = null;
+        let connected = false;
+        let currentUserId = 'unknown';
 
-    <!-- Message Log -->
-    <div class="card">
-        <h2>Message Log</h2>
-        <div id="log"></div>
-    </div>
-</div>
-
-<!-- SockJS and STOMP -->
-<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
-
-<script>
-    let stompClient = null;
-    let connected = false;
-
-    function getTime() {
-        return new Date().toLocaleTimeString('en-GB', { hour12: false });
-    }
-
-    function appendLog(message, type = 'info') {
-        const log = document.getElementById('log');
-        const entry = document.createElement('div');
-        entry.className = 'log-entry log-' + type;
-        entry.innerHTML = '<span class="log-time">[' + getTime() + ']</span>' + message;
-        log.appendChild(entry);
-        log.scrollTop = log.scrollHeight;
-    }
-
-    function setConnected(isConnected) {
-        connected = isConnected;
-        document.getElementById('statusDot').classList.toggle('connected', isConnected);
-        document.getElementById('statusText').textContent = isConnected ? 'Connected' : 'Disconnected';
-        document.getElementById('btnConnect').disabled = isConnected;
-        document.getElementById('btnDisconnect').disabled = !isConnected;
-        document.getElementById('btnSend').disabled = !isConnected;
-    }
-
-    function connect() {
-        const token = document.getElementById('jwtToken').value.trim();
-        if (!token) {
-            appendLog('Please enter a JWT token.', 'error');
-            return;
+        function getTime() {
+            return new Date().toLocaleTimeString('en-GB', { hour12: false });
         }
 
-        appendLog('Connecting to WebSocket...', 'info');
+        function appendLog(message, type = 'info') {
+            const log = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry log-' + type;
+            entry.innerHTML = '<span class="log-time">[' + getTime() + ']</span>' + message;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
 
-        const socket = new SockJS('/ws?token=' + encodeURIComponent(token));
-        stompClient = Stomp.over(socket);
+        function setConnected(isConnected) {
+            connected = isConnected;
+            document.getElementById('statusDot').classList.toggle('connected', isConnected);
+            document.getElementById('statusText').textContent = isConnected ? 'Connected' : 'Disconnected';
+            document.getElementById('btnConnect').disabled = isConnected;
+            document.getElementById('btnDisconnect').disabled = !isConnected;
+            document.getElementById('btnSend').disabled = !isConnected;
+        }
 
-        // Disable STOMP debug logging in console (optional: remove for verbose)
-        stompClient.debug = function(str) {
-            // Uncomment next line for debug output:
-            // console.log('STOMP: ' + str);
-        };
+        function getToken() {
+            return document.getElementById('jwtToken').value.trim();
+        }
 
-        stompClient.connect({}, function(frame) {
-            setConnected(true);
-            appendLog('Connected! Frame: ' + frame, 'info');
+        function extractUserId() {
+            try {
+                const token = getToken();
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                currentUserId = payload.sub || 'unknown';
+            } catch { currentUserId = 'unknown'; }
+        }
 
-            // Subscribe to personal message queue
-            stompClient.subscribe('/user/queue/messages', function(message) {
-                const msg = JSON.parse(message.body);
-                const direction = msg.senderId === getCurrentUserId() ? 'sent' : 'received';
-                const label = direction === 'sent' ? '➡️ SENT' : '⬅️ RECEIVED';
-                const type = direction === 'sent' ? 'sent' : 'received';
-                appendLog(
-                    '<strong>' + label + '</strong> | ' +
-                    'From: <em>' + msg.senderId.substring(0, 8) + '...</em> → ' +
-                    'To: <em>' + msg.receiverId.substring(0, 8) + '...</em> | ' +
-                    msg.content,
-                    type
-                );
-            });
+        // ---- WebSocket ----
+        function connect() {
+            const token = getToken();
+            if (!token) { appendLog('Please enter a JWT token.', 'error'); return; }
+            extractUserId();
+            appendLog('Connecting... (userId: ' + currentUserId.substring(0, 8) + '...)', 'info');
 
-            appendLog('Subscribed to /user/queue/messages', 'info');
+            const socket = new SockJS('/ws?token=' + encodeURIComponent(token));
+            stompClient = Stomp.over(socket);
+            stompClient.debug = function () { };
 
-        }, function(error) {
-            setConnected(false);
-            appendLog('Connection error: ' + error, 'error');
-        });
-    }
+            stompClient.connect({}, function (frame) {
+                setConnected(true);
+                appendLog('Connected!', 'info');
 
-    function disconnect() {
-        if (stompClient !== null) {
-            stompClient.disconnect(function() {
+                stompClient.subscribe('/user/queue/messages', function (message) {
+                    const msg = JSON.parse(message.body);
+                    const isMine = msg.senderId === currentUserId;
+                    const label = isMine ? '➡️ YOU' : '⬅️ ' + msg.senderId.substring(0, 8) + '...';
+                    const type = isMine ? 'sent' : 'received';
+                    appendLog(
+                        '<strong>' + label + '</strong> [room:' + msg.chatRoomId.substring(0, 8) + '...] ' + msg.content,
+                        type
+                    );
+                });
+                appendLog('Subscribed to /user/queue/messages', 'info');
+            }, function (error) {
                 setConnected(false);
-                appendLog('Disconnected.', 'info');
+                appendLog('Connection error: ' + error, 'error');
             });
         }
-    }
 
-    function sendMessage() {
-        const receiverId = document.getElementById('receiverId').value.trim();
-        const content = document.getElementById('messageContent').value.trim();
-
-        if (!receiverId || !content) {
-            appendLog('Please fill in both Receiver ID and Message.', 'error');
-            return;
-        }
-
-        const payload = JSON.stringify({ receiverId: receiverId, content: content });
-
-        stompClient.send('/app/chat.send', {}, payload);
-        appendLog('Message sent to /app/chat.send: ' + content, 'info');
-
-        // Clear the message field
-        document.getElementById('messageContent').value = '';
-    }
-
-    // Helper: extract user ID from JWT payload (for display purposes only)
-    function getCurrentUserId() {
-        try {
-            const token = document.getElementById('jwtToken').value.trim();
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            return payload.sub || 'unknown';
-        } catch {
-            return 'unknown';
-        }
-    }
-
-    // Allow Enter key to send messages
-    document.addEventListener('DOMContentLoaded', function() {
-        document.getElementById('messageContent').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
+        function disconnect() {
+            if (stompClient) {
+                stompClient.disconnect(function () {
+                    setConnected(false);
+                    appendLog('Disconnected.', 'info');
+                });
             }
+        }
+
+        function sendMessage() {
+            const chatRoomId = document.getElementById('chatRoomId').value.trim();
+            const content = document.getElementById('messageContent').value.trim();
+            if (!chatRoomId || !content) { appendLog('Fill in Room ID and Message.', 'error'); return; }
+
+            stompClient.send('/app/chat.send', {}, JSON.stringify({ chatRoomId, content }));
+            appendLog('Sent to room ' + chatRoomId.substring(0, 8) + '...', 'info');
+            document.getElementById('messageContent').value = '';
+        }
+
+        // ---- REST APIs ----
+        function createRoom() {
+            const name = document.getElementById('roomName').value.trim();
+            const ids = document.getElementById('participantIds').value.trim();
+            if (!ids) { appendLog('Enter at least one participant UUID.', 'error'); return; }
+
+            const participantIds = ids.split(',').map(s => s.trim()).filter(Boolean);
+            const body = { name: name || null, participantIds };
+
+            fetch('/api/chat/rooms', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                body: JSON.stringify(body)
+            })
+                .then(r => r.json())
+                .then(room => {
+                    appendLog('Room created/found: <strong>' + room.id + '</strong> (' + room.participants.length + ' participants)', 'info');
+                    document.getElementById('chatRoomId').value = room.id;
+                    loadRooms();
+                })
+                .catch(e => appendLog('Error creating room: ' + e, 'error'));
+        }
+
+        function loadRooms() {
+            fetch('/api/chat/rooms', {
+                headers: { 'Authorization': 'Bearer ' + getToken() }
+            })
+                .then(r => r.json())
+                .then(rooms => {
+                    const list = document.getElementById('roomList');
+                    document.getElementById('roomCount').textContent = '(' + rooms.length + ')';
+                    if (rooms.length === 0) {
+                        list.innerHTML = '<div style="color:#64748b;font-size:0.8rem">No rooms yet</div>';
+                        return;
+                    }
+                    list.innerHTML = rooms.map(r =>
+                        '<div class="room-item" onclick="selectRoom(\'' + r.id + '\')">' +
+                        '<div><strong>' + (r.name || 'Room') + '</strong> — ' + r.participants.length + ' members</div>' +
+                        '<div class="room-id">' + r.id + '</div>' +
+                        (r.lastMessagePreview ? '<div class="room-preview">' + r.lastMessagePreview + '</div>' : '') +
+                        '</div>'
+                    ).join('');
+                })
+                .catch(e => appendLog('Error loading rooms: ' + e, 'error'));
+        }
+
+        function selectRoom(roomId) {
+            document.getElementById('chatRoomId').value = roomId;
+            document.querySelectorAll('.room-item').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            appendLog('Selected room: ' + roomId.substring(0, 8) + '...', 'info');
+        }
+
+        // Enter key to send
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('messageContent').addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+            });
         });
-    });
-</script>
+    </script>
 </body>
+
 </html>
