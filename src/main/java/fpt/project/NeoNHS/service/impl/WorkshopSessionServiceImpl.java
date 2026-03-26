@@ -265,6 +265,33 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
         return mapToResponse(updatedSession);
     }
 
+    @Override
+    @Transactional
+    public WorkshopSessionResponse updateWorkshopSessionStatus(String email, UUID id, SessionStatus status) {
+        WorkshopSession session = workshopSessionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("WorkshopSession", "id", id));
+
+        if (!session.getWorkshopTemplate().getVendor().getUser().getEmail().equals(email)) {
+            throw new BadRequestException("You do not have permission to update this workshop session");
+        }
+
+        if (status == SessionStatus.ONGOING) {
+            if (session.getStatus() != SessionStatus.SCHEDULED) {
+                throw new BadRequestException("Can only update status to ONGOING if current status is SCHEDULED. Current status: " + session.getStatus());
+            }
+        } else if (status == SessionStatus.COMPLETED) {
+            if (session.getStatus() != SessionStatus.ONGOING) {
+                throw new BadRequestException("Can only update status to COMPLETED if current status is ONGOING. Current status: " + session.getStatus());
+            }
+        } else {
+            throw new BadRequestException("Invalid status update. Allowed updates are ONGOING or COMPLETED.");
+        }
+
+        session.setStatus(status);
+        WorkshopSession updatedSession = workshopSessionRepository.save(session);
+        return mapToResponse(updatedSession);
+    }
+
     // ==================== DELETE ====================
 
     @Override
