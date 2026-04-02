@@ -29,6 +29,9 @@ spring:
       ssl:
         enabled: false
       timeout: 60000
+  mongodb:
+    uri: ${MONGO_URI}
+    database: ${MONGO_DATABASE}
   mail:
     username: phamminhkiet24@gmail.com
     password: ${GOOGLE_MAIL_PASSWORD}
@@ -42,7 +45,7 @@ app:
     secret: dGhpc2lzYXZlcnlsb25nc2VjcmV0a2V5Zm9yand0c2lnbmluZ3B1cnBvc2Vz
     expiration-ms: 86400000 # 24 hours
   fe-url: http://localhost:3000
-  be-url-setpassword: ${BE_URL}
+  be-url-setpassword: ${BE_URL:http://localhost:8080}
 
 google-auth:
   client-id: ${GOOGLE_AUTH_CLIENT_ID}
