@@ -20,6 +20,7 @@ import fpt.project.NeoNHS.repository.UserCheckInRepository;
 import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.service.GeoService;
 import fpt.project.NeoNHS.service.ImageUploadService;
+import fpt.project.NeoNHS.service.NotificationService;
 import fpt.project.NeoNHS.service.UserCheckInService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +49,7 @@ public class UserCheckInServiceImpl implements UserCheckInService {
     private final GeoService geoService;
     private final UserRepository userRepository;
     private final ImageUploadService imageUploadService;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -101,6 +103,16 @@ public class UserCheckInServiceImpl implements UserCheckInService {
                 .reduce(0, (sum, checkIn) -> sum + checkIn.getEarnedPoints(),
                         (first, second) -> first + second);
         userTotalPoint += checkinPoint.getRewardPoints();
+
+        if (checkinPoint.getRewardPoints() > 0) {
+            notificationService.createAndSendNotification(
+                    user,
+                    "\uD83D\uDCCD Check-in thành công!",
+                    "Bạn đã check-in tại địa điểm mới và nhận được " + checkinPoint.getRewardPoints() + " điểm thưởng.",
+                    "CHECKIN_SUCCESS",
+                    checkinPoint.getId());
+        }
+
         return UserCheckinResultResponse.builder()
                 .earnedPoints(userCheckIn.getEarnedPoints())
                 .userTotalPoints(userTotalPoint)
@@ -124,7 +136,6 @@ public class UserCheckInServiceImpl implements UserCheckInService {
                     userCheckInRepository.save(checkIn);
                 });
     }
-
 
     @Override
     public Page<UserCheckinResponse> getUserCheckins(int page, int size, String sortBy, String sortDir) {

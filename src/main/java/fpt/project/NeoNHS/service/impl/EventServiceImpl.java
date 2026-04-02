@@ -9,6 +9,7 @@ import fpt.project.NeoNHS.entity.Event;
 import fpt.project.NeoNHS.entity.EventImage;
 import fpt.project.NeoNHS.entity.EventTag;
 import fpt.project.NeoNHS.entity.EventTagId;
+import fpt.project.NeoNHS.entity.User;
 import fpt.project.NeoNHS.exception.BadRequestException;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.repository.ETagRepository;
@@ -16,7 +17,9 @@ import fpt.project.NeoNHS.repository.EventImageRepository;
 import fpt.project.NeoNHS.repository.EventRepository;
 import fpt.project.NeoNHS.repository.EventTagRepository;
 import fpt.project.NeoNHS.repository.OrderDetailRepository;
+import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.service.EventService;
+import fpt.project.NeoNHS.service.NotificationService;
 import fpt.project.NeoNHS.specification.EventSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -39,6 +42,8 @@ public class EventServiceImpl implements EventService {
     private final EventTagRepository eventTagRepository;
     private final EventImageRepository eventImageRepository;
     private final OrderDetailRepository orderDetailRepository;
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -76,6 +81,17 @@ public class EventServiceImpl implements EventService {
         if (request.getTagIds() != null && !request.getTagIds().isEmpty()) {
             List<EventTag> eventTags = createEventTags(savedEvent, request.getTagIds());
             savedEvent.setEventTags(eventTags);
+        }
+
+        // Notify all active users
+        List<User> activeUsers = userRepository.findByIsActiveTrueAndIsBannedFalse();
+        for (User user : activeUsers) {
+            notificationService.createAndSendNotification(
+                    user,
+                    "New event: " + savedEvent.getName(),
+                    "Ngu Hanh Son Ward will host a new event soon. Stay tuned!",
+                    "EVENT",
+                    savedEvent.getId());
         }
 
         return EventResponse.fromEntity(savedEvent);

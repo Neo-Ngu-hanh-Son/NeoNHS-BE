@@ -32,6 +32,7 @@ public class OrderServiceImpl implements OrderService {
     private final CartRepository cartRepository;
     private final EventRepository eventRepository;
     private final TicketCatalogRepository ticketCatalogRepository;
+    private final fpt.project.NeoNHS.service.NotificationService notificationService;
 
     @Override
     @Transactional
@@ -286,6 +287,14 @@ public class OrderServiceImpl implements OrderService {
             cart.setTotalItem(cart.getCartItems().size());
             cartRepository.save(cart);
         }
+
+        // --- NOTIFICATION TRIGGER ---
+        notificationService.createAndSendNotification(
+                order.getUser(),
+                "🎉 Thanh toán thành công!",
+                "Đơn hàng của bạn đã thanh toán thành công với số tiền " + order.getFinalAmount() + " VNĐ",
+                "ORDER_SUCCESS",
+                order.getId());
     }
 
     private String generateTicketCode() {
