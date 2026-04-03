@@ -291,8 +291,8 @@ public class OrderServiceImpl implements OrderService {
         // --- NOTIFICATION TRIGGER ---
         notificationService.createAndSendNotification(
                 order.getUser(),
-                "🎉 Thanh toán thành công!",
-                "Đơn hàng của bạn đã thanh toán thành công với số tiền " + order.getFinalAmount() + " VNĐ",
+                "🎉 Payment Successful!",
+                "Your order has been paid successfully for the amount of " + order.getFinalAmount() + " VNĐ",
                 "ORDER_SUCCESS",
                 order.getId());
     }

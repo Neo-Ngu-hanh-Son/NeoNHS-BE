@@ -107,8 +107,8 @@ public class UserCheckInServiceImpl implements UserCheckInService {
         if (checkinPoint.getRewardPoints() > 0) {
             notificationService.createAndSendNotification(
                     user,
-                    "\uD83D\uDCCD Check-in thành công!",
-                    "Bạn đã check-in tại địa điểm mới và nhận được " + checkinPoint.getRewardPoints() + " điểm thưởng.",
+                    "\uD83D\uDCCD Check-in Successful!",
+                    "You've checked in at a new location and earned " + checkinPoint.getRewardPoints() + " reward points.",
                     "CHECKIN_SUCCESS",
                     checkinPoint.getId());
         }
