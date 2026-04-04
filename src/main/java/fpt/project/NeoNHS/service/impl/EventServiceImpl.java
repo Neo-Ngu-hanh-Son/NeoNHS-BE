@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.NotificationMessages;
 import fpt.project.NeoNHS.dto.request.event.CreateEventRequest;
 import fpt.project.NeoNHS.dto.request.event.EventFilterRequest;
 import fpt.project.NeoNHS.dto.request.event.UpdateEventRequest;
@@ -88,9 +89,9 @@ public class EventServiceImpl implements EventService {
         for (User user : activeUsers) {
             notificationService.createAndSendNotification(
                     user,
-                    "New event: " + savedEvent.getName(),
-                    "Ngu Hanh Son Ward will host a new event soon. Stay tuned!",
-                    "EVENT",
+                    NotificationMessages.eventTitle(savedEvent.getName()),
+                    NotificationMessages.eventMessage(),
+                    NotificationMessages.TYPE_EVENT,
                     savedEvent.getId());
         }
 
@@ -197,12 +198,12 @@ public class EventServiceImpl implements EventService {
     public EventResponse getEventById(UUID id) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
-        
+
         // Public access: only return non-deleted events
         if (event.getDeletedAt() != null) {
             throw new ResourceNotFoundException("Event not found with id: " + id);
         }
-        
+
         return EventResponse.fromEntityWithImages(event);
     }
 
@@ -219,11 +220,11 @@ public class EventServiceImpl implements EventService {
     public void softDeleteEvent(UUID id, UUID deletedBy) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
-        
+
         if (event.getDeletedAt() != null) {
             throw new BadRequestException("Event is already deleted");
         }
-        
+
         event.setDeletedAt(LocalDateTime.now());
         event.setDeletedBy(deletedBy);
         eventRepository.save(event);
@@ -234,11 +235,11 @@ public class EventServiceImpl implements EventService {
     public EventResponse restoreEvent(UUID id) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
-        
+
         if (event.getDeletedAt() == null) {
             throw new BadRequestException("Event is not deleted");
         }
-        
+
         event.setDeletedAt(null);
         event.setDeletedBy(null);
         Event restoredEvent = eventRepository.save(event);

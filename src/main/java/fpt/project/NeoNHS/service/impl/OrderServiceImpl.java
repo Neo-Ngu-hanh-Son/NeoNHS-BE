@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.NotificationMessages;
 import fpt.project.NeoNHS.dto.request.order.CreateOrderRequest;
 import fpt.project.NeoNHS.entity.*;
 import fpt.project.NeoNHS.enums.*;
@@ -291,9 +292,9 @@ public class OrderServiceImpl implements OrderService {
         // --- NOTIFICATION TRIGGER ---
         notificationService.createAndSendNotification(
                 order.getUser(),
-                "🎉 Payment Successful!",
-                "Your order has been paid successfully for the amount of " + order.getFinalAmount() + " VNĐ",
-                "ORDER_SUCCESS",
+                NotificationMessages.orderSuccessTitle(),
+                NotificationMessages.orderSuccessMessage(order.getFinalAmount()),
+                NotificationMessages.TYPE_ORDER_SUCCESS,
                 order.getId());
     }
 
