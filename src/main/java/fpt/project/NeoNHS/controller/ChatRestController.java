@@ -66,4 +66,14 @@ public class ChatRestController {
 
         return ResponseEntity.ok(messages);
     }
+
+    /**
+     * GET /api/chat/users/{userId}
+     * Get user information for chat participants.
+     */
+    @GetMapping("/users/{userId}")
+    public ResponseEntity<ChatUserDTO> getChatUserInfo(@PathVariable String userId) {
+        ChatUserDTO userInfo = chatService.getChatUserInfo(userId);
+        return ResponseEntity.ok(userInfo);
+    }
 }

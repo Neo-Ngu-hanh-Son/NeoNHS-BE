@@ -6,6 +6,9 @@ import fpt.project.NeoNHS.dto.chat.*;
 import fpt.project.NeoNHS.enums.MessageStatus;
 import fpt.project.NeoNHS.repository.mongo.ChatMessageRepository;
 import fpt.project.NeoNHS.repository.mongo.ChatRoomRepository;
+import fpt.project.NeoNHS.repository.UserRepository;
+import fpt.project.NeoNHS.entity.User;
+import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.service.ChatService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +29,7 @@ public class ChatServiceImpl implements ChatService {
 
     private final ChatMessageRepository chatMessageRepository;
     private final ChatRoomRepository chatRoomRepository;
+    private final UserRepository userRepository;
 
     @Override
     public ChatRoomDTO createChatRoom(String creatorId, CreateChatRoomRequest request) {
@@ -139,6 +143,19 @@ public class ChatServiceImpl implements ChatService {
                 .lastMessageAt(room.getLastMessageAt())
                 .lastMessagePreview(room.getLastMessagePreview())
                 .lastMessageSenderId(room.getLastMessageSenderId())
+                .build();
+    }
+
+    @Override
+    public ChatUserDTO getChatUserInfo(String userId) {
+        User user = userRepository.findById(java.util.UUID.fromString(userId))
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+        return ChatUserDTO.builder()
+                .id(user.getId().toString())
+                .fullname(user.getFullname())
+                .avatarUrl(user.getAvatarUrl())
+                .role(user.getRole())
                 .build();
     }
 }

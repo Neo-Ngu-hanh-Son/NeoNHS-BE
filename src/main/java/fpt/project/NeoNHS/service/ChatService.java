@@ -33,4 +33,9 @@ public interface ChatService {
      * Get the participant list for a room (used by controller for broadcasting).
      */
     List<String> getRoomParticipants(String chatRoomId);
+    
+    /**
+     * Get user information for chat participant
+     */
+    ChatUserDTO getChatUserInfo(String userId);
 }
