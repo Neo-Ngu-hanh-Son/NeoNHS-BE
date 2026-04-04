@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.NotificationMessages;
 import fpt.project.NeoNHS.dto.request.order.CreateOrderRequest;
 import fpt.project.NeoNHS.entity.*;
 import fpt.project.NeoNHS.enums.*;
@@ -32,6 +33,7 @@ public class OrderServiceImpl implements OrderService {
     private final CartRepository cartRepository;
     private final EventRepository eventRepository;
     private final TicketCatalogRepository ticketCatalogRepository;
+    private final fpt.project.NeoNHS.service.NotificationService notificationService;
 
     @Override
     @Transactional
@@ -286,6 +288,14 @@ public class OrderServiceImpl implements OrderService {
             cart.setTotalItem(cart.getCartItems().size());
             cartRepository.save(cart);
         }
+
+        // --- NOTIFICATION TRIGGER ---
+        notificationService.createAndSendNotification(
+                order.getUser(),
+                NotificationMessages.orderSuccessTitle(),
+                NotificationMessages.orderSuccessMessage(order.getFinalAmount()),
+                NotificationMessages.TYPE_ORDER_SUCCESS,
+                order.getId());
     }
 
     private String generateTicketCode() {
