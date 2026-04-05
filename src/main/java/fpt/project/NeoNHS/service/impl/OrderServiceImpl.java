@@ -274,10 +274,12 @@ public class OrderServiceImpl implements OrderService {
 
             for (int i = 0; i < detail.getQuantity(); i++) {
                 TicketType type = TicketType.ENTRANCE;
+                LocalDateTime expiryDate = null;
                 if (detail.getWorkshopSession() != null) {
                     type = TicketType.WORKSHOP;
                 } else if (detail.getTicketCatalog() != null && detail.getTicketCatalog().getEvent() != null) {
                     type = TicketType.EVENT;
+                    expiryDate = detail.getTicketCatalog().getEvent().getEndTime();
                 }
 
                 Ticket ticket = Ticket.builder()
@@ -289,6 +291,7 @@ public class OrderServiceImpl implements OrderService {
                         .ticketCode(generateTicketCode())
                         .qrCode(UUID.randomUUID().toString())
                         .issueDate(LocalDateTime.now())
+                        .expiryDate(expiryDate)
                         .build();
                 ticketRepository.save(ticket);
             }
@@ -365,6 +368,10 @@ public class OrderServiceImpl implements OrderService {
         if (event != null) {
             if (event.getStatus() == EventStatus.CANCELLED || event.getStatus() == EventStatus.COMPLETED) {
                 throw new BadRequestException("Event is not available for booking: " + event.getName());
+            }
+
+            if (event.getEndTime() != null && LocalDateTime.now().isAfter(event.getEndTime())) {
+                throw new BadRequestException("Event has already ended: " + event.getName());
             }
 
             if (event.getMaxParticipants() != null) {

@@ -504,6 +504,10 @@ public class CartServiceImpl implements CartService {
                 throw new BadRequestException("Event is not available for booking: " + event.getName());
             }
 
+            if (event.getEndTime() != null && LocalDateTime.now().isAfter(event.getEndTime())) {
+                throw new BadRequestException("Event has already ended: " + event.getName());
+            }
+
             if (event.getMaxParticipants() != null) {
                 int currentEnrolled = event.getCurrentEnrolled() != null ? event.getCurrentEnrolled() : 0;
                 if (currentEnrolled + quantity > event.getMaxParticipants()) {
