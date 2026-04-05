@@ -33,6 +33,7 @@ public class OrderServiceImpl implements OrderService {
     private final CartRepository cartRepository;
     private final EventRepository eventRepository;
     private final TicketCatalogRepository ticketCatalogRepository;
+    private final WorkshopSessionRepository workshopSessionRepository;
     private final fpt.project.NeoNHS.service.NotificationService notificationService;
 
     @Override
@@ -56,10 +57,17 @@ public class OrderServiceImpl implements OrderService {
                 throw new BadRequestException("Item " + item.getId() + " does not belong to user");
             }
 
-            // Validate Ticket Availability before creating order
-            validateTicketAvailability(item.getTicketCatalog(), item.getQuantity());
+            // Validate Availability before creating order
+            BigDecimal price = BigDecimal.ZERO;
+            if (item.getTicketCatalog() != null) {
+                validateTicketAvailability(item.getTicketCatalog(), item.getQuantity());
+                price = item.getTicketCatalog().getPrice();
+            } else if (item.getWorkshopSession() != null) {
+                validateWorkshopAvailability(item.getWorkshopSession(), item.getQuantity());
+                price = item.getWorkshopSession().getPrice() != null ? item.getWorkshopSession().getPrice()
+                        : BigDecimal.ZERO;
+            }
 
-            BigDecimal price = item.getTicketCatalog().getPrice();
             totalAmount = totalAmount.add(price.multiply(BigDecimal.valueOf(item.getQuantity())));
         }
 
@@ -136,12 +144,19 @@ public class OrderServiceImpl implements OrderService {
 
         List<OrderDetail> orderDetails = new ArrayList<>();
         for (CartItem item : cartItems) {
+            BigDecimal unitPrice = BigDecimal.ZERO;
+            if (item.getTicketCatalog() != null) {
+                unitPrice = item.getTicketCatalog().getPrice();
+            } else if (item.getWorkshopSession() != null && item.getWorkshopSession().getPrice() != null) {
+                unitPrice = item.getWorkshopSession().getPrice();
+            }
+
             OrderDetail detail = OrderDetail.builder()
                     .order(order)
                     .ticketCatalog(item.getTicketCatalog())
                     .workshopSession(item.getWorkshopSession())
                     .quantity(item.getQuantity())
-                    .unitPrice(item.getTicketCatalog().getPrice())
+                    .unitPrice(unitPrice)
                     .build();
             orderDetails.add(detail);
         }
@@ -232,30 +247,39 @@ public class OrderServiceImpl implements OrderService {
         for (OrderDetail detail : order.getOrderDetails()) {
 
             // 1. Update TicketCatalog Sold Quantity
-            TicketCatalog ticketCatalog = detail.getTicketCatalog();
-            int currentSold = ticketCatalog.getSoldQuantity() != null ? ticketCatalog.getSoldQuantity() : 0;
-            ticketCatalog.setSoldQuantity(currentSold + detail.getQuantity());
+            if (detail.getTicketCatalog() != null) {
+                TicketCatalog ticketCatalog = detail.getTicketCatalog();
+                int currentSold = ticketCatalog.getSoldQuantity() != null ? ticketCatalog.getSoldQuantity() : 0;
+                ticketCatalog.setSoldQuantity(currentSold + detail.getQuantity());
 
-            if (ticketCatalog.getTotalQuota() != null
-                    && ticketCatalog.getSoldQuantity() >= ticketCatalog.getTotalQuota()) {
-                ticketCatalog.setStatus(TicketCatalogStatus.SOLD_OUT);
-            }
-            ticketCatalogRepository.save(ticketCatalog);
+                if (ticketCatalog.getTotalQuota() != null
+                        && ticketCatalog.getSoldQuantity() >= ticketCatalog.getTotalQuota()) {
+                    ticketCatalog.setStatus(TicketCatalogStatus.SOLD_OUT);
+                }
+                ticketCatalogRepository.save(ticketCatalog);
 
-            // 2. Update Event Current Enrolled
-            Event event = ticketCatalog.getEvent();
-            if (event != null) {
-                int currentEnrolled = event.getCurrentEnrolled() != null ? event.getCurrentEnrolled() : 0;
-                event.setCurrentEnrolled(currentEnrolled + detail.getQuantity());
-                eventRepository.save(event);
+                // 2. Update Event Current Enrolled
+                Event event = ticketCatalog.getEvent();
+                if (event != null) {
+                    int currentEnrolled = event.getCurrentEnrolled() != null ? event.getCurrentEnrolled() : 0;
+                    event.setCurrentEnrolled(currentEnrolled + detail.getQuantity());
+                    eventRepository.save(event);
+                }
+            } else if (detail.getWorkshopSession() != null) {
+                WorkshopSession session = detail.getWorkshopSession();
+                int currentEnrolled = session.getCurrentEnrolled() != null ? session.getCurrentEnrolled() : 0;
+                session.setCurrentEnrolled(currentEnrolled + detail.getQuantity());
+                workshopSessionRepository.save(session);
             }
 
             for (int i = 0; i < detail.getQuantity(); i++) {
                 TicketType type = TicketType.ENTRANCE;
+                LocalDateTime expiryDate = null;
                 if (detail.getWorkshopSession() != null) {
                     type = TicketType.WORKSHOP;
-                } else if (detail.getTicketCatalog().getEvent() != null) {
+                } else if (detail.getTicketCatalog() != null && detail.getTicketCatalog().getEvent() != null) {
                     type = TicketType.EVENT;
+                    expiryDate = detail.getTicketCatalog().getEvent().getEndTime();
                 }
 
                 Ticket ticket = Ticket.builder()
@@ -267,6 +291,7 @@ public class OrderServiceImpl implements OrderService {
                         .ticketCode(generateTicketCode())
                         .qrCode(UUID.randomUUID().toString())
                         .issueDate(LocalDateTime.now())
+                        .expiryDate(expiryDate)
                         .build();
                 ticketRepository.save(ticket);
             }
@@ -277,7 +302,15 @@ public class OrderServiceImpl implements OrderService {
             List<CartItem> itemsToRemove = new ArrayList<>();
             for (CartItem ci : cart.getCartItems()) {
                 boolean purchased = order.getOrderDetails().stream()
-                        .anyMatch(od -> od.getTicketCatalog().getId().equals(ci.getTicketCatalog().getId()));
+                        .anyMatch(od -> {
+                            if (od.getTicketCatalog() != null && ci.getTicketCatalog() != null) {
+                                return od.getTicketCatalog().getId().equals(ci.getTicketCatalog().getId());
+                            }
+                            if (od.getWorkshopSession() != null && ci.getWorkshopSession() != null) {
+                                return od.getWorkshopSession().getId().equals(ci.getWorkshopSession().getId());
+                            }
+                            return false;
+                        });
                 if (purchased) {
                     itemsToRemove.add(ci);
                 }
@@ -309,13 +342,17 @@ public class OrderServiceImpl implements OrderService {
         }
 
         // 2. Check Date Validity
-        LocalDateTime now = LocalDateTime.now();
-        if (ticketCatalog.getValidFromDate() != null && now.isBefore(ticketCatalog.getValidFromDate())) {
-            throw new BadRequestException("Ticket sale has not started yet: " + ticketCatalog.getName());
-        }
-        if (ticketCatalog.getValidToDate() != null && now.isAfter(ticketCatalog.getValidToDate())) {
-            throw new BadRequestException("Ticket sale has ended: " + ticketCatalog.getName());
-        }
+        // LocalDateTime now = LocalDateTime.now();
+        // if (ticketCatalog.getValidFromDate() != null &&
+        // now.isBefore(ticketCatalog.getValidFromDate())) {
+        // throw new BadRequestException("Ticket sale has not started yet: " +
+        // ticketCatalog.getName());
+        // }
+        // if (ticketCatalog.getValidToDate() != null &&
+        // now.isAfter(ticketCatalog.getValidToDate())) {
+        // throw new BadRequestException("Ticket sale has ended: " +
+        // ticketCatalog.getName());
+        // }
 
         // 3. Check Ticket Quota
         int currentSold = ticketCatalog.getSoldQuantity() != null ? ticketCatalog.getSoldQuantity() : 0;
@@ -333,12 +370,32 @@ public class OrderServiceImpl implements OrderService {
                 throw new BadRequestException("Event is not available for booking: " + event.getName());
             }
 
+            if (event.getEndTime() != null && LocalDateTime.now().isAfter(event.getEndTime())) {
+                throw new BadRequestException("Event has already ended: " + event.getName());
+            }
+
             if (event.getMaxParticipants() != null) {
                 int currentEnrolled = event.getCurrentEnrolled() != null ? event.getCurrentEnrolled() : 0;
                 if (currentEnrolled + quantity > event.getMaxParticipants()) {
                     throw new BadRequestException("Event is full! Remaining slots: "
                             + (event.getMaxParticipants() - currentEnrolled));
                 }
+            }
+        }
+    }
+
+    private void validateWorkshopAvailability(WorkshopSession workshopSession, int quantity) {
+        if (workshopSession.getStatus() != SessionStatus.SCHEDULED) {
+            throw new BadRequestException(
+                    "Workshop is not available for booking: " + workshopSession.getWorkshopTemplate().getName());
+        }
+
+        if (workshopSession.getMaxParticipants() != null) {
+            int currentEnrolled = workshopSession.getCurrentEnrolled() != null ? workshopSession.getCurrentEnrolled()
+                    : 0;
+            if (currentEnrolled + quantity > workshopSession.getMaxParticipants()) {
+                throw new BadRequestException("Workshop is full! Remaining slots: "
+                        + (workshopSession.getMaxParticipants() - currentEnrolled));
             }
         }
     }

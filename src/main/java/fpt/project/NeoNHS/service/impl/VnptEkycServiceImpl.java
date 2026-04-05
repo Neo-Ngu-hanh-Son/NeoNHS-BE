@@ -151,6 +151,45 @@ public class VnptEkycServiceImpl implements VnptEkycService {
         }
     }
 
+    @Override
+    public boolean checkLiveness(String base64Image) {
+        log.info("Performing VNPT eKYC liveness check...");
+        try {
+            String selfieHash = uploadBase64Image(base64Image, "liveness.jpg");
+            String clientSession = generateClientSession();
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("img", selfieHash);
+            body.put("client_session", clientSession);
+            body.put("token", tokenId);
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, buildAiHeaders());
+
+            log.info("Calling liveness API...");
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    BASE_URL + "/ai/v1/face/liveness",
+                    HttpMethod.POST,
+                    entity,
+                    Map.class);
+
+            Map<String, Object> data = response.getBody();
+            log.info("Liveness response: {}", data);
+
+            String message = (String) data.getOrDefault("message", "");
+            if ("IDG-00000000".equals(message)) {
+                String liveness = extractNestedString(data, "object", "liveness");
+                // String isEyeOpen = extractNestedString(data, "object", "is_eye_open"); // The eye open is optional or check if needed
+                if ("success".equalsIgnoreCase(liveness)) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            log.error("VNPT liveness check failed: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
     private String uploadBase64Image(String base64Data, String filename) {
         byte[] imageBytes = Base64.getDecoder().decode(base64Data);
 

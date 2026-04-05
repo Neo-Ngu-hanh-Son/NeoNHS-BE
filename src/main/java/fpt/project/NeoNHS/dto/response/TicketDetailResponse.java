@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -21,4 +22,5 @@ public class TicketDetailResponse {
     private String itemName;
     private LocalDateTime validFrom;
     private LocalDateTime validTo;
+    private BigDecimal price;
 }
