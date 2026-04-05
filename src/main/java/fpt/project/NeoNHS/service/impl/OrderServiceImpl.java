@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.NotificationMessages;
 import fpt.project.NeoNHS.dto.request.order.CreateOrderRequest;
 import fpt.project.NeoNHS.entity.*;
 import fpt.project.NeoNHS.enums.*;
@@ -33,6 +34,7 @@ public class OrderServiceImpl implements OrderService {
     private final EventRepository eventRepository;
     private final TicketCatalogRepository ticketCatalogRepository;
     private final WorkshopSessionRepository workshopSessionRepository;
+    private final fpt.project.NeoNHS.service.NotificationService notificationService;
 
     @Override
     @Transactional
@@ -62,7 +64,8 @@ public class OrderServiceImpl implements OrderService {
                 price = item.getTicketCatalog().getPrice();
             } else if (item.getWorkshopSession() != null) {
                 validateWorkshopAvailability(item.getWorkshopSession(), item.getQuantity());
-                price = item.getWorkshopSession().getPrice() != null ? item.getWorkshopSession().getPrice() : BigDecimal.ZERO;
+                price = item.getWorkshopSession().getPrice() != null ? item.getWorkshopSession().getPrice()
+                        : BigDecimal.ZERO;
             }
 
             totalAmount = totalAmount.add(price.multiply(BigDecimal.valueOf(item.getQuantity())));
@@ -315,6 +318,14 @@ public class OrderServiceImpl implements OrderService {
             cart.setTotalItem(cart.getCartItems().size());
             cartRepository.save(cart);
         }
+
+        // --- NOTIFICATION TRIGGER ---
+        notificationService.createAndSendNotification(
+                order.getUser(),
+                NotificationMessages.orderSuccessTitle(),
+                NotificationMessages.orderSuccessMessage(order.getFinalAmount()),
+                NotificationMessages.TYPE_ORDER_SUCCESS,
+                order.getId());
     }
 
     private String generateTicketCode() {
@@ -368,11 +379,13 @@ public class OrderServiceImpl implements OrderService {
 
     private void validateWorkshopAvailability(WorkshopSession workshopSession, int quantity) {
         if (workshopSession.getStatus() != SessionStatus.SCHEDULED) {
-            throw new BadRequestException("Workshop is not available for booking: " + workshopSession.getWorkshopTemplate().getName());
+            throw new BadRequestException(
+                    "Workshop is not available for booking: " + workshopSession.getWorkshopTemplate().getName());
         }
 
         if (workshopSession.getMaxParticipants() != null) {
-            int currentEnrolled = workshopSession.getCurrentEnrolled() != null ? workshopSession.getCurrentEnrolled() : 0;
+            int currentEnrolled = workshopSession.getCurrentEnrolled() != null ? workshopSession.getCurrentEnrolled()
+                    : 0;
             if (currentEnrolled + quantity > workshopSession.getMaxParticipants()) {
                 throw new BadRequestException("Workshop is full! Remaining slots: "
                         + (workshopSession.getMaxParticipants() - currentEnrolled));
