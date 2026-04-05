@@ -13,12 +13,15 @@ import fpt.project.NeoNHS.entity.TicketCatalog;
 import fpt.project.NeoNHS.entity.User;
 import fpt.project.NeoNHS.entity.UserVoucher;
 import fpt.project.NeoNHS.entity.Voucher;
+import fpt.project.NeoNHS.entity.WorkshopSession;
+import fpt.project.NeoNHS.enums.SessionStatus;
 import fpt.project.NeoNHS.exception.BadRequestException;
 import fpt.project.NeoNHS.repository.CartItemRepository;
 import fpt.project.NeoNHS.repository.CartRepository;
 import fpt.project.NeoNHS.repository.TicketCatalogRepository;
 import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.repository.UserVoucherRepository;
+import fpt.project.NeoNHS.repository.WorkshopSessionRepository;
 import fpt.project.NeoNHS.service.CartService;
 import java.time.LocalDateTime;
 import fpt.project.NeoNHS.enums.EventStatus;
@@ -42,6 +45,7 @@ public class CartServiceImpl implements CartService {
     private final UserRepository userRepository;
     private final TicketCatalogRepository ticketCatalogRepository;
     private final UserVoucherRepository userVoucherRepository;
+    private final WorkshopSessionRepository workshopSessionRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -56,39 +60,73 @@ public class CartServiceImpl implements CartService {
     public CartResponse addToCart(String userEmail, AddToCartRequest request) {
         User user = getUserByEmail(userEmail);
         Cart cart = getOrCreateCart(user);
-        TicketCatalog ticketCatalog = ticketCatalogRepository.findById(request.getTicketCatalogId())
-                .orElseThrow(() -> new BadRequestException("Ticket Catalog not found"));
+
+        if (request.getTicketCatalogId() == null && request.getWorkshopSessionId() == null) {
+            throw new BadRequestException("Either Ticket Catalog ID or Workshop Session ID must be provided");
+        }
 
         if (cart.getCartItems() == null) {
             cart.setCartItems(new ArrayList<>());
         }
 
-        // Validate basic ticket info and quota for the *new* quantity being requested
-        // Note: For existing items, we add the requested quantity to current.
         int totalQuantityToCheck = request.getQuantity();
-        Optional<CartItem> existingItem = cart.getCartItems().stream()
-                .filter(item -> item.getTicketCatalog() != null
-                        && item.getTicketCatalog().getId().equals(ticketCatalog.getId()))
-                .findFirst();
 
-        if (existingItem.isPresent()) {
-            totalQuantityToCheck += existingItem.get().getQuantity();
-        }
+        if (request.getTicketCatalogId() != null) {
+            TicketCatalog ticketCatalog = ticketCatalogRepository.findById(request.getTicketCatalogId())
+                    .orElseThrow(() -> new BadRequestException("Ticket Catalog not found"));
 
-        validateTicketAvailability(ticketCatalog, totalQuantityToCheck);
+            Optional<CartItem> existingItem = cart.getCartItems().stream()
+                    .filter(item -> item.getTicketCatalog() != null
+                            && item.getTicketCatalog().getId().equals(ticketCatalog.getId()))
+                    .findFirst();
 
-        if (existingItem.isPresent()) {
-            CartItem item = existingItem.get();
-            item.setQuantity(item.getQuantity() + request.getQuantity());
-            cartItemRepository.save(item);
+            if (existingItem.isPresent()) {
+                totalQuantityToCheck += existingItem.get().getQuantity();
+            }
+
+            validateTicketAvailability(ticketCatalog, totalQuantityToCheck);
+
+            if (existingItem.isPresent()) {
+                CartItem item = existingItem.get();
+                item.setQuantity(item.getQuantity() + request.getQuantity());
+                cartItemRepository.save(item);
+            } else {
+                CartItem newItem = CartItem.builder()
+                        .cart(cart)
+                        .ticketCatalog(ticketCatalog)
+                        .quantity(request.getQuantity())
+                        .build();
+                cart.getCartItems().add(newItem);
+                cartItemRepository.save(newItem);
+            }
         } else {
-            CartItem newItem = CartItem.builder()
-                    .cart(cart)
-                    .ticketCatalog(ticketCatalog)
-                    .quantity(request.getQuantity())
-                    .build();
-            cart.getCartItems().add(newItem);
-            cartItemRepository.save(newItem);
+            WorkshopSession workshopSession = workshopSessionRepository.findById(request.getWorkshopSessionId())
+                    .orElseThrow(() -> new BadRequestException("Workshop Session not found"));
+
+            Optional<CartItem> existingItem = cart.getCartItems().stream()
+                    .filter(item -> item.getWorkshopSession() != null
+                            && item.getWorkshopSession().getId().equals(workshopSession.getId()))
+                    .findFirst();
+
+            if (existingItem.isPresent()) {
+                totalQuantityToCheck += existingItem.get().getQuantity();
+            }
+
+            validateWorkshopAvailability(workshopSession, totalQuantityToCheck);
+
+            if (existingItem.isPresent()) {
+                CartItem item = existingItem.get();
+                item.setQuantity(item.getQuantity() + request.getQuantity());
+                cartItemRepository.save(item);
+            } else {
+                CartItem newItem = CartItem.builder()
+                        .cart(cart)
+                        .workshopSession(workshopSession)
+                        .quantity(request.getQuantity())
+                        .build();
+                cart.getCartItems().add(newItem);
+                cartItemRepository.save(newItem);
+            }
         }
 
         cart.setTotalItem(cart.getCartItems().size());
@@ -112,7 +150,11 @@ public class CartServiceImpl implements CartService {
             throw new BadRequestException("Item does not belong to user's cart");
         }
 
-        validateTicketAvailability(cartItem.getTicketCatalog(), request.getQuantity());
+        if (cartItem.getTicketCatalog() != null) {
+            validateTicketAvailability(cartItem.getTicketCatalog(), request.getQuantity());
+        } else if (cartItem.getWorkshopSession() != null) {
+            validateWorkshopAvailability(cartItem.getWorkshopSession(), request.getQuantity());
+        }
 
         cartItem.setQuantity(request.getQuantity());
         cartItemRepository.save(cartItem);
@@ -247,7 +289,11 @@ public class CartServiceImpl implements CartService {
             }
 
             // Re-validate availability at pre-checkout
-            validateTicketAvailability(item.getTicketCatalog(), item.getQuantity());
+            if (item.getTicketCatalog() != null) {
+                validateTicketAvailability(item.getTicketCatalog(), item.getQuantity());
+            } else if (item.getWorkshopSession() != null) {
+                validateWorkshopAvailability(item.getWorkshopSession(), item.getQuantity());
+            }
 
             BigDecimal itemPrice = item.getTicketCatalog() != null
                     ? item.getTicketCatalog().getPrice()
@@ -424,6 +470,9 @@ public class CartServiceImpl implements CartService {
             throw new BadRequestException("Ticket is not active for sale: " + ticketCatalog.getName());
         }
 
+
+
+
         // 2. Check Date Validity
         /*
          * LocalDateTime now = LocalDateTime.now();
@@ -461,6 +510,20 @@ public class CartServiceImpl implements CartService {
                     throw new BadRequestException("Event is full! Remaining slots: "
                             + (event.getMaxParticipants() - currentEnrolled));
                 }
+            }
+        }
+    }
+
+    private void validateWorkshopAvailability(WorkshopSession workshopSession, int quantity) {
+        if (workshopSession.getStatus() != SessionStatus.SCHEDULED) {
+            throw new BadRequestException("Workshop is not available for booking: " + workshopSession.getWorkshopTemplate().getName());
+        }
+
+        if (workshopSession.getMaxParticipants() != null) {
+            int currentEnrolled = workshopSession.getCurrentEnrolled() != null ? workshopSession.getCurrentEnrolled() : 0;
+            if (currentEnrolled + quantity > workshopSession.getMaxParticipants()) {
+                throw new BadRequestException("Workshop is full! Remaining slots: "
+                        + (workshopSession.getMaxParticipants() - currentEnrolled));
             }
         }
     }

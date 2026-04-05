@@ -14,6 +14,7 @@ import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.service.FaceVerificationService;
 import fpt.project.NeoNHS.service.UserService;
+import fpt.project.NeoNHS.service.VnptEkycService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -36,6 +37,7 @@ public class UserController {
     private final UserRepository userRepository;
     private final PayoutController payoutController;
     private final FaceVerificationService faceVerificationService;
+    private final VnptEkycService vnptEkycService;
 
     @GetMapping("/profile")
     public ResponseEntity<ApiResponse<UserProfileResponse>> getMyProfile(Principal principal) {
@@ -64,6 +66,21 @@ public class UserController {
         } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(HttpStatus.BAD_REQUEST, kycResponse.getMessage()));
+        }
+    }
+
+    @PostMapping("/check-liveness")
+    public ResponseEntity<ApiResponse<Boolean>> checkLiveness(@RequestBody java.util.Map<String, String> body) {
+        String base64Image = body.get("image");
+        if (base64Image == null || base64Image.isEmpty()) {
+            throw new BadRequestException("Image is required");
+        }
+        boolean isLive = vnptEkycService.checkLiveness(base64Image);
+        if (isLive) {
+            return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Liveness check passed", true));
+        } else {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(HttpStatus.BAD_REQUEST, "Spoofing detected or check failed"));
         }
     }
 
