@@ -2,6 +2,7 @@ package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.dto.request.event.EventTimelineRequest;
 import fpt.project.NeoNHS.dto.response.event.EventTimelineResponse;
+import fpt.project.NeoNHS.dto.response.event.TimelineGroupedResponse;
 import fpt.project.NeoNHS.entity.Event;
 import fpt.project.NeoNHS.entity.EventPoint;
 import fpt.project.NeoNHS.entity.EventTimeline;
@@ -14,7 +15,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -27,11 +30,14 @@ public class EventTimelineServiceImpl implements EventTimelineService {
 
     @Override
     @Transactional
-    public EventTimelineResponse createTimeline(EventTimelineRequest request) {
-        EventPoint point = pointRepository.findById(request.getEventPointId())
-                .orElseThrow(() -> new ResourceNotFoundException("Point not found"));
+    public EventTimelineResponse createTimeline(UUID eventId, EventTimelineRequest request) {
+        EventPoint point = null;
+        if (request.getEventPointId() != null) {
+            point = pointRepository.findById(request.getEventPointId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Point not found"));
+        }
 
-        Event event = eventRepository.findById(request.getEventId())
+        Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
 
         EventTimeline timeline = EventTimeline.builder()
@@ -52,14 +58,17 @@ public class EventTimelineServiceImpl implements EventTimelineService {
 
     @Override
     @Transactional
-    public EventTimelineResponse updateTimeline(UUID id, EventTimelineRequest request) {
+    public EventTimelineResponse updateTimeline(UUID eventId, UUID id, EventTimelineRequest request) {
         EventTimeline timeline = timelineRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Timeline not found"));
 
-        EventPoint point = pointRepository.findById(request.getEventPointId())
-                .orElseThrow(() -> new ResourceNotFoundException("Point not found"));
+        EventPoint point = null;
+        if (request.getEventPointId() != null) {
+            point = pointRepository.findById(request.getEventPointId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Point not found"));
+        }
 
-        Event event = eventRepository.findById(request.getEventId())
+        Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
 
         timeline.setName(request.getName());
@@ -97,6 +106,40 @@ public class EventTimelineServiceImpl implements EventTimelineService {
     public List<EventTimelineResponse> getAllTimelines() {
         return timelineRepository.findAll().stream()
                 .map(EventTimelineResponse::fromEntity)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EventTimelineResponse> getTimelinesByEventAndDate(UUID eventId, LocalDate date) {
+        return timelineRepository.findByEventIdAndDate(eventId, date).stream()
+                .map(EventTimelineResponse::fromEntity)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TimelineGroupedResponse> getTimelinesByEventGroupedByDate(UUID eventId) {
+        List<EventTimeline> timelines = timelineRepository.findByEventIdOrderByDateAscStartTimeAsc(eventId);
+
+        Map<LocalDate, List<EventTimeline>> grouped = new java.util.LinkedHashMap<>();
+        for (EventTimeline timeline : timelines) {
+            grouped.computeIfAbsent(timeline.getDate(), k -> new java.util.ArrayList<>()).add(timeline);
+        }
+
+        return grouped.entrySet().stream()
+                .map(entry -> {
+                    List<EventTimeline> dayTimelines = entry.getValue();
+                    String lunarDate = dayTimelines.isEmpty() ? null : dayTimelines.get(0).getLunarDate();
+
+                    return TimelineGroupedResponse.builder()
+                            .date(entry.getKey())
+                            .lunarDate(lunarDate)
+                            .timelines(dayTimelines.stream()
+                                    .map(EventTimelineResponse::fromEntity)
+                                    .toList())
+                            .build();
+                })
                 .toList();
     }
 

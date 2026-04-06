@@ -27,7 +27,8 @@ public class AdminEventPointTagController {
 
     @PostMapping
     @Operation(summary = "Create a new event point tag")
-    public ResponseEntity<ApiResponse<EventPointTagResponse>> createTag(@Valid @RequestBody EventPointTagRequest request) {
+    public ResponseEntity<ApiResponse<EventPointTagResponse>> createTag(
+            @Valid @RequestBody EventPointTagRequest request) {
         EventPointTagResponse response = tagService.createTag(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(HttpStatus.CREATED, "Tag created successfully", response));
@@ -35,7 +36,8 @@ public class AdminEventPointTagController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update an existing event point tag")
-    public ResponseEntity<ApiResponse<EventPointTagResponse>> updateTag(@PathVariable UUID id, @Valid @RequestBody EventPointTagRequest request) {
+    public ResponseEntity<ApiResponse<EventPointTagResponse>> updateTag(
+            @PathVariable UUID id, @Valid @RequestBody EventPointTagRequest request) {
         EventPointTagResponse response = tagService.updateTag(id, request);
         return ResponseEntity.ok(ApiResponse.success("Tag updated successfully", response));
     }

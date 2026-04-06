@@ -27,7 +27,8 @@ public class AdminEventPointController {
 
     @PostMapping
     @Operation(summary = "Create a new event point")
-    public ResponseEntity<ApiResponse<EventPointResponse>> createPoint(@Valid @RequestBody EventPointRequest request) {
+    public ResponseEntity<ApiResponse<EventPointResponse>> createPoint(
+            @Valid @RequestBody EventPointRequest request) {
         EventPointResponse response = pointService.createPoint(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(HttpStatus.CREATED, "Point created successfully", response));
@@ -35,7 +36,8 @@ public class AdminEventPointController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update an existing event point")
-    public ResponseEntity<ApiResponse<EventPointResponse>> updatePoint(@PathVariable UUID id, @Valid @RequestBody EventPointRequest request) {
+    public ResponseEntity<ApiResponse<EventPointResponse>> updatePoint(
+            @PathVariable UUID id, @Valid @RequestBody EventPointRequest request) {
         EventPointResponse response = pointService.updatePoint(id, request);
         return ResponseEntity.ok(ApiResponse.success("Point updated successfully", response));
     }

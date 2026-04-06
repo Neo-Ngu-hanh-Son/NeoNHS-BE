@@ -3,6 +3,7 @@ package fpt.project.NeoNHS.service.impl;
 import fpt.project.NeoNHS.dto.request.event.EventPointTagRequest;
 import fpt.project.NeoNHS.dto.response.event.EventPointTagResponse;
 import fpt.project.NeoNHS.entity.EventPointTag;
+import fpt.project.NeoNHS.exception.BadRequestException;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.repository.EventPointTagRepository;
 import fpt.project.NeoNHS.service.EventPointTagService;
@@ -35,11 +36,13 @@ public class EventPointTagServiceImpl implements EventPointTagService {
     @Transactional
     public EventPointTagResponse updateTag(UUID id, EventPointTagRequest request) {
         EventPointTag tag = tagRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Tag not found"));
-        tag.setName(request.getName());
-        tag.setDescription(request.getDescription());
-        tag.setTagColor(request.getTagColor());
-        tag.setIconUrl(request.getIconUrl());
+                .orElseThrow(() -> new ResourceNotFoundException("EventPointTag not found with id: " + id));
+
+        if (request.getName() != null) tag.setName(request.getName());
+        if (request.getDescription() != null) tag.setDescription(request.getDescription());
+        if (request.getTagColor() != null) tag.setTagColor(request.getTagColor());
+        if (request.getIconUrl() != null) tag.setIconUrl(request.getIconUrl());
+
         return EventPointTagResponse.fromEntity(tagRepository.save(tag));
     }
 
@@ -48,7 +51,7 @@ public class EventPointTagServiceImpl implements EventPointTagService {
     public EventPointTagResponse getTagById(UUID id) {
         return tagRepository.findById(id)
                 .map(EventPointTagResponse::fromEntity)
-                .orElseThrow(() -> new ResourceNotFoundException("Tag not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("EventPointTag not found with id: " + id));
     }
 
     @Override
@@ -62,6 +65,12 @@ public class EventPointTagServiceImpl implements EventPointTagService {
     @Override
     @Transactional
     public void deleteTag(UUID id) {
-        tagRepository.deleteById(id);
+        EventPointTag tag = tagRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("EventPointTag not found with id: " + id));
+
+        if (tag.getEventPoints() != null && !tag.getEventPoints().isEmpty()) {
+            throw new BadRequestException("Cannot delete tag that is being used by event points");
+        }
+        tagRepository.delete(tag);
     }
 }

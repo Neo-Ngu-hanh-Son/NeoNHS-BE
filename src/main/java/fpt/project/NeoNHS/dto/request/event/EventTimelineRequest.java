@@ -37,9 +37,5 @@ public class EventTimelineRequest {
     @NotNull(message = "End time is required")
     private LocalTime endTime;
 
-    @NotNull(message = "Event Point ID is required")
     private UUID eventPointId;
-
-    @NotNull(message = "Event ID is required")
-    private UUID eventId;
 }

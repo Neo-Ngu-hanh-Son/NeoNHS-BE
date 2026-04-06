@@ -11,5 +11,6 @@ public interface EventPointService {
     EventPointResponse updatePoint(UUID id, EventPointRequest request);
     EventPointResponse getPointById(UUID id);
     List<EventPointResponse> getAllPoints();
+    List<EventPointResponse> getPointsByTagId(UUID tagId);
     void deletePoint(UUID id);
 }
