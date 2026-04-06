@@ -4,7 +4,6 @@ import fpt.project.NeoNHS.dto.response.TicketDetailResponse;
 import fpt.project.NeoNHS.dto.response.TransactionDetailResponse;
 import fpt.project.NeoNHS.dto.response.TransactionResponse;
 import fpt.project.NeoNHS.entity.*;
-import fpt.project.NeoNHS.enums.TransactionStatus;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.exception.UnauthorizedException;
 import fpt.project.NeoNHS.repository.TransactionRepository;

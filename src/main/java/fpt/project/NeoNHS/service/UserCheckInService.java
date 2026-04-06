@@ -6,7 +6,6 @@ import fpt.project.NeoNHS.dto.response.checkin.UserCheckinResultResponse;
 import fpt.project.NeoNHS.dto.response.usercheckin.UserCheckinGalleryListResponse;
 import fpt.project.NeoNHS.dto.response.usercheckin.UserCheckinResponse;
 import org.springframework.data.domain.Page;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
