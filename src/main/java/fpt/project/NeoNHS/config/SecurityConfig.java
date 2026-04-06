@@ -104,6 +104,7 @@ public class SecurityConfig {
                                 "http://localhost:5173",
                                 "http://localhost:3000",
                                 "https://fwbgft4w-5173.asse.devtunnels.ms",
+                                "https://neonhs-fe-web.vercel.app",
                                 feWebUrl));
                 configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
                 configuration.setAllowedHeaders(List.of("*"));
@@ -114,4 +115,6 @@ public class SecurityConfig {
                 source.registerCorsConfiguration("/**", configuration);
                 return source;
         }
+
+
 }
