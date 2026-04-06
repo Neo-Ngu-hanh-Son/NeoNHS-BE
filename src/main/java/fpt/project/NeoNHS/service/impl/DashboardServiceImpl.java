@@ -376,7 +376,7 @@ public class DashboardServiceImpl implements DashboardService {
                 });
 
         // 4️⃣ Workshop approved (Hoạt động Admin phê duyệt cho Vendor)
-        workshopRepository.findRecentApproved(pageable)
+        workshopRepository.findRecentApprovedReviews(pageable)
                 .forEach(w -> activities.add(
                         VendorActivityResponse.builder()
                                 .vendorId(w.getVendor().getId())

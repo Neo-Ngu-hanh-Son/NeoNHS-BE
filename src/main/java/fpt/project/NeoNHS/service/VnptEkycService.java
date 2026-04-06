@@ -18,4 +18,9 @@ public interface VnptEkycService {
      * 4. Face compare (CCCD vs Selfie)
      */
     KycResponse performKyc(KycRequest request);
+
+    /**
+     * Kiểm tra ảnh face truyền vào có phải ảnh người thật hay không
+     */
+    boolean checkLiveness(String base64Image);
 }

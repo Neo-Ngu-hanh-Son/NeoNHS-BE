@@ -45,6 +45,8 @@ public interface WorkshopSessionService {
     // ==================== UPDATE ====================
     WorkshopSessionResponse updateWorkshopSession(String email, UUID id, UpdateWorkshopSessionRequest request);
 
+    WorkshopSessionResponse updateWorkshopSessionStatus(String email, UUID id, SessionStatus status);
+
     // ==================== DELETE ====================
     void deleteWorkshopSession(String email, UUID id);
 
