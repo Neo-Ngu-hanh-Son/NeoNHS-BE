@@ -24,8 +24,6 @@ import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -119,6 +117,10 @@ public class BlogServiceImpl implements BlogService {
         return BlogResponse.fromEntity(blogRepository.save(blog));
     }
 
+    /**
+     * Soft delete blog
+     * @param id
+     */
     @Override
     @Transactional
     public void deleteBlog(UUID id) {
@@ -130,6 +132,24 @@ public class BlogServiceImpl implements BlogService {
         blog.setDeletedBy(currentUser.getId());
         blog.setStatus(BlogStatus.ARCHIVED);
         blogRepository.save(blog);
+    }
+
+    @Override
+    @Transactional
+    public void deleteBlogHard(UUID id) {
+        var blog = blogRepository.getBlogById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Blog not found"));
+        if (blog.getStatus() != BlogStatus.ARCHIVED) {
+            throw new BadRequestException("Only archived blog can be hard deleted");
+        }
+        validateOwner(blog);
+        blogRepository.deleteBlogById(id);
+    }
+
+    @Override
+    @Transactional
+    public void emptyAllDeletedBlogs() {
+        blogRepository.deleteAllByDeletedAtIsNotNull();
     }
 
     @Override

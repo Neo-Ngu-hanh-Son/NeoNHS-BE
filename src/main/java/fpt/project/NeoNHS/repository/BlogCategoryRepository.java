@@ -17,5 +17,5 @@ public interface BlogCategoryRepository
 
     boolean existsByNameContaining(String name);
 
-    boolean existsByNameContainingAndDeletedAtIsNull(String name);
+    boolean existsByNameAndDeletedAtIsNull(String name);
 }
