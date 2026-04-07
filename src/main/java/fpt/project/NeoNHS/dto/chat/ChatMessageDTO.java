@@ -17,4 +17,7 @@ public class ChatMessageDTO {
     private String content;
     private LocalDateTime timestamp;
     private MessageStatus status;
+    private String messageType;
+    private String mediaUrl;
+    private java.util.Map<String, Object> metadata;
 }

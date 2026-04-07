@@ -4,7 +4,6 @@ import fpt.project.NeoNHS.dto.response.TicketDetailResponse;
 import fpt.project.NeoNHS.dto.response.TransactionDetailResponse;
 import fpt.project.NeoNHS.dto.response.TransactionResponse;
 import fpt.project.NeoNHS.entity.*;
-import fpt.project.NeoNHS.enums.TransactionStatus;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.exception.UnauthorizedException;
 import fpt.project.NeoNHS.repository.TransactionRepository;
@@ -93,6 +92,7 @@ public class TransactionServiceImpl implements TransactionService {
                                 .itemName(itemName)
                                 .validFrom(validFrom)
                                 .validTo(validTo)
+                                .price(detail.getUnitPrice())
                                 .build());
                     }
                 }
@@ -126,18 +126,25 @@ public class TransactionServiceImpl implements TransactionService {
         if (transaction.getOrder() == null || transaction.getOrder().getOrderDetails() == null) {
             return "UNKNOWN";
         }
+        
+        java.util.Set<String> types = new java.util.HashSet<>();
+        
         for (OrderDetail detail : transaction.getOrder().getOrderDetails()) {
             if (detail.getWorkshopSession() != null) {
-                return "WORKSHOP";
-            }
-            if (detail.getTicketCatalog() != null) {
-                // If associated with an event, it's an EVENT ticket
+                types.add("WORKSHOP");
+            } else if (detail.getTicketCatalog() != null) {
                 if (detail.getTicketCatalog().getEvent() != null) {
-                    return "EVENT";
+                    types.add("EVENT");
+                } else {
+                    types.add("ENTRANCE");
                 }
-                // Otherwise defaults to ENTRANCE (e.g. Attraction tickets)
-                return "ENTRANCE";
             }
+        }
+        
+        if (types.size() > 1) {
+            return "MIXED";
+        } else if (types.size() == 1) {
+            return types.iterator().next();
         }
         return "UNKNOWN";
     }
