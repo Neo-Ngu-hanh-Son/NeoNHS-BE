@@ -18,4 +18,7 @@ public class ChatRoomDTO {
     private LocalDateTime lastMessageAt;
     private String lastMessagePreview;
     private String lastMessageSenderId;
+    private String roomType;
+    private int unreadCount;
+    private boolean isHidden;
 }

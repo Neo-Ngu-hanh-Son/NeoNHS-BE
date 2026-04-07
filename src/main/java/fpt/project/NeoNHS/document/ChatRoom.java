@@ -32,4 +32,13 @@ public class ChatRoom {
     private String lastMessagePreview; // Truncated content of the last message
 
     private String lastMessageSenderId; // Who sent the last message
+
+    @Builder.Default
+    private String roomType = "STANDARD"; // SYSTEM_SUPPORT, VENDOR_CHAT, STANDARD
+
+    @Builder.Default
+    private java.util.Map<String, Integer> unreadCounts = new java.util.HashMap<>();
+
+    @Builder.Default
+    private List<String> hiddenBy = new java.util.ArrayList<>();
 }

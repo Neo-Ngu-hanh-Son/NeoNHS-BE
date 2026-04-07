@@ -12,7 +12,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import fpt.project.NeoNHS.service.impl.CloudinaryImageUploadServiceImpl;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/chat")
@@ -20,6 +27,7 @@ import java.util.List;
 public class ChatRestController {
 
     private final ChatService chatService;
+    private final CloudinaryImageUploadServiceImpl cloudinaryImageUploadService;
 
     /**
      * POST /api/chat/rooms
@@ -75,5 +83,31 @@ public class ChatRestController {
     public ResponseEntity<ChatUserDTO> getChatUserInfo(@PathVariable String userId) {
         ChatUserDTO userInfo = chatService.getChatUserInfo(userId);
         return ResponseEntity.ok(userInfo);
+    }
+
+    /**
+     * PATCH /api/chat/rooms/{roomId}/visibility
+     * Hide/Archive a chat room (Swipe action).
+     */
+    @PatchMapping("/rooms/{roomId}/visibility")
+    public ResponseEntity<?> toggleVisibility(
+            @PathVariable String roomId,
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            @RequestBody ToggleVisibilityRequest request) {
+
+        chatService.toggleVisibility(roomId, currentUser.getId().toString(), request.isHidden());
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * POST /api/chat/media
+     * Upload an image before sending an IMAGE type message.
+     */
+    @PostMapping(value = "/media", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, String>> uploadMedia(@RequestParam("file") MultipartFile file) {
+        String url = cloudinaryImageUploadService.uploadImage(file);
+        Map<String, String> response = new HashMap<>();
+        response.put("mediaUrl", url);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

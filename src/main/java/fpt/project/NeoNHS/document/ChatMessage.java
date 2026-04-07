@@ -32,8 +32,10 @@ public class ChatMessage {
     @Builder.Default
     private MessageStatus status = MessageStatus.SENT;
 
-    // Future extension fields (not used yet):
-    // private String messageType; // TEXT, IMAGE, FILE, etc.
-    // private String mediaUrl; // URL for image/file attachments
-    // private String aiResponse; // AI chatbot response metadata
+    @Builder.Default
+    private String messageType = "TEXT";
+
+    private String mediaUrl;
+
+    private java.util.Map<String, Object> metadata;
 }

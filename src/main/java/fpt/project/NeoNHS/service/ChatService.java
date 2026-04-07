@@ -38,4 +38,14 @@ public interface ChatService {
      * Get user information for chat participant
      */
     ChatUserDTO getChatUserInfo(String userId);
+
+    /**
+     * Toggle visibility of a chat room for a user.
+     */
+    void toggleVisibility(String roomId, String userId, boolean isHidden);
+
+    /**
+     * Mark messages in a chat room as read up to the given message ID.
+     */
+    void markAsRead(String roomId, String userId, String lastReadMessageId);
 }
