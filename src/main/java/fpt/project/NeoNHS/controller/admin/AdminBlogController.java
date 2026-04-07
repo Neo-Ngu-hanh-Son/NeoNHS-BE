@@ -86,4 +86,20 @@ public class AdminBlogController {
     blogService.deleteBlog(id);
     return ResponseEntity.ok(ApiResponse.success("Blog deleted successfully", null));
   }
+
+
+    @Operation(summary = "Delete an archived blog permanently", description = "Delete a blog")
+    @DeleteMapping("/{id}/hard")
+    public ResponseEntity<ApiResponse<Void>> deleteBlogPermanently(
+            @Parameter(description = "Blog ID") @PathVariable UUID id) {
+        blogService.deleteBlogHard(id);
+        return ResponseEntity.ok(ApiResponse.success("Blog deleted successfully", null));
+    }
+
+    @Operation(summary = "Delete all archived blogs", description = "Empty all archived blogs")
+    @DeleteMapping("/empty-deleted")
+    public ResponseEntity<ApiResponse<Void>> emptyAllDeletedBlogs() {
+        blogService.emptyAllDeletedBlogs();
+        return ResponseEntity.ok(ApiResponse.success("All archived blogs emptied", null));
+    }
 }

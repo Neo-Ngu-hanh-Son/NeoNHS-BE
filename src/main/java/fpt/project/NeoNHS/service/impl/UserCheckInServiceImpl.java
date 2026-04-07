@@ -34,6 +34,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -173,9 +174,9 @@ public class UserCheckInServiceImpl implements UserCheckInService {
 
         if (request.getImages() != null && !request.getImages().isEmpty()) {
             // Create a lookup map for faster processing
-            java.util.Map<UUID, String> updateMap = request.getImages().stream()
+            Map<UUID, String> updateMap = request.getImages().stream()
                     .filter(img -> img.getImageId() != null)
-                    .collect(java.util.stream.Collectors.toMap(
+                    .collect(Collectors.toMap(
                             UpdateCheckinImageCaptionRequest::getImageId,
                             UpdateCheckinImageCaptionRequest::getCaption,
                             (existing, replacement) -> replacement));

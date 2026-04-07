@@ -26,6 +26,10 @@ public interface BlogService {
 
     void deleteBlog(UUID id);
 
+    void deleteBlogHard(UUID id);
+
+    void emptyAllDeletedBlogs();
+
     BlogResponse getBlogById(UUID id);
 
     BlogResponse getBlogBySlug(String slug);
