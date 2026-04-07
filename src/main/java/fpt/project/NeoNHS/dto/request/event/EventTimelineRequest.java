@@ -29,8 +29,6 @@ public class EventTimelineRequest {
     @NotNull(message = "Date is required")
     private LocalDate date;
 
-    private String lunarDate;
-
     @NotNull(message = "Start time is required")
     private LocalTime startTime;
 

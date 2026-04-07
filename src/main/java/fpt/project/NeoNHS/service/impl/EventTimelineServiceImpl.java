@@ -7,6 +7,8 @@ import fpt.project.NeoNHS.entity.Event;
 import fpt.project.NeoNHS.entity.EventPoint;
 import fpt.project.NeoNHS.entity.EventTimeline;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
+import fpt.project.NeoNHS.exception.BadRequestException;
+import fpt.project.NeoNHS.helpers.LunarDateUtil;
 import fpt.project.NeoNHS.repository.EventPointRepository;
 import fpt.project.NeoNHS.repository.EventRepository;
 import fpt.project.NeoNHS.repository.EventTimelineRepository;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -31,6 +34,7 @@ public class EventTimelineServiceImpl implements EventTimelineService {
     @Override
     @Transactional
     public EventTimelineResponse createTimeline(UUID eventId, EventTimelineRequest request) {
+        // TODO: create time line with point will be modify here
         EventPoint point = null;
         if (request.getEventPointId() != null) {
             point = pointRepository.findById(request.getEventPointId())
@@ -40,13 +44,17 @@ public class EventTimelineServiceImpl implements EventTimelineService {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
 
+        validateTimelineTime(request, event);
+
+        String lunarDate = LunarDateUtil.convertSolarToLunar(request.getDate());
+
         EventTimeline timeline = EventTimeline.builder()
                 .name(request.getName())
                 .description(request.getDescription())
                 .organizer(request.getOrganizer())
                 .coOrganizer(request.getCoOrganizer())
                 .date(request.getDate())
-                .lunarDate(request.getLunarDate())
+                .lunarDate(lunarDate)
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
                 .eventPoint(point)
@@ -71,12 +79,16 @@ public class EventTimelineServiceImpl implements EventTimelineService {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
 
+        validateTimelineTime(request, event);
+
+        String lunarDate = LunarDateUtil.convertSolarToLunar(request.getDate());
+
         timeline.setName(request.getName());
         timeline.setDescription(request.getDescription());
         timeline.setOrganizer(request.getOrganizer());
         timeline.setCoOrganizer(request.getCoOrganizer());
         timeline.setDate(request.getDate());
-        timeline.setLunarDate(request.getLunarDate());
+        timeline.setLunarDate(lunarDate);
         timeline.setStartTime(request.getStartTime());
         timeline.setEndTime(request.getEndTime());
         timeline.setEventPoint(point);
@@ -147,5 +159,18 @@ public class EventTimelineServiceImpl implements EventTimelineService {
     @Transactional
     public void deleteTimeline(UUID id) {
         timelineRepository.deleteById(id);
+    }
+
+    private void validateTimelineTime(EventTimelineRequest request, Event event) {
+        LocalDateTime timelineStart = LocalDateTime.of(request.getDate(), request.getStartTime());
+        LocalDateTime timelineEnd = LocalDateTime.of(request.getDate(), request.getEndTime());
+
+        if (timelineStart.isAfter(timelineEnd)) {
+            throw new BadRequestException("Timeline start time must be before end time");
+        }
+
+        if (timelineStart.isBefore(event.getStartTime()) || timelineEnd.isAfter(event.getEndTime())) {
+            throw new BadRequestException("Timeline must be within the event's start and end time");
+        }
     }
 }
