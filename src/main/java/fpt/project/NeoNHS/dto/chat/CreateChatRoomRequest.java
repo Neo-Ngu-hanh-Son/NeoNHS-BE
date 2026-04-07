@@ -12,4 +12,5 @@ import java.util.List;
 public class CreateChatRoomRequest {
     private String name; // Optional
     private List<String> participantIds; // User UUID strings
+    private String roomType;
 }

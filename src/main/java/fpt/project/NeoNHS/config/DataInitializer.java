@@ -8,7 +8,6 @@ import fpt.project.NeoNHS.entity.VendorProfile;
 import fpt.project.NeoNHS.enums.UserRole;
 import fpt.project.NeoNHS.repository.AttractionRepository;
 import fpt.project.NeoNHS.repository.BlogCategoryRepository;
-import fpt.project.NeoNHS.repository.BlogRepository;
 import fpt.project.NeoNHS.repository.VendorProfileRepository;
 import fpt.project.NeoNHS.service.GeoService;
 import fpt.project.NeoNHS.service.UserService;
