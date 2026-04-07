@@ -5,8 +5,6 @@ import fpt.project.NeoNHS.entity.CheckinPoint;
 import fpt.project.NeoNHS.repository.CheckinPointRepository;
 import fpt.project.NeoNHS.service.GeoService;
 import lombok.AllArgsConstructor;
-import org.jetbrains.annotations.NotNull;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.geo.Circle;
 import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.GeoResults;
