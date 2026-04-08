@@ -16,8 +16,11 @@ import java.util.UUID;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CreateReviewRequest {
 
-    @NotNull(message = "Workshop template ID is required")
-    UUID workshopTemplateId;
+    @NotNull(message = "Review type ID is required")
+    UUID reviewTypeId;
+
+    @NotNull(message = "Review type flag is required")
+    Integer reviewTypeFlg; // 1: Workshop, 2: Event, 3: Point
 
     @NotNull(message = "Rating is required")
     @Min(value = 1, message = "Rating must be at least 1")

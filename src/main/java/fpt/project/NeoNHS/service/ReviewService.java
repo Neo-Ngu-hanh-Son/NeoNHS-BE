@@ -11,5 +11,10 @@ import java.util.UUID;
 public interface ReviewService {
     ReviewResponse createReview(UUID userId, CreateReviewRequest request);
     ReviewResponse updateReview(UUID userId, UUID reviewId, UpdateReviewRequest request);
-    PagedResponse<ReviewResponse> getReviewsByWorkshopTemplateId(UUID workshopTemplateId, Pageable pageable);
+
+    PagedResponse<ReviewResponse> getReviewsForWorkshopTemplate(UUID workshopTemplateId, Pageable pageable);
+
+    PagedResponse<ReviewResponse> getReviewsForEvent(UUID eventId, Pageable pageable);
+
+    PagedResponse<ReviewResponse> getReviewsForPoint(UUID pointId, Pageable pageable);
 }
