@@ -35,6 +35,10 @@ public class EventResponse {
 
     private String longitude;
 
+    private String lunarStartDate;
+
+    private String lunarEndDate;
+
     private LocalDateTime startTime;
 
     private LocalDateTime endTime;
@@ -92,6 +96,8 @@ public class EventResponse {
                 .locationName(event.getLocationName())
                 .latitude(event.getLatitude())
                 .longitude(event.getLongitude())
+                .lunarStartDate(event.getLunarStartDate())
+                .lunarEndDate(event.getLunarEndDate())
                 .startTime(event.getStartTime())
                 .endTime(event.getEndTime())
                 .isTicketRequired(event.getIsTicketRequired())

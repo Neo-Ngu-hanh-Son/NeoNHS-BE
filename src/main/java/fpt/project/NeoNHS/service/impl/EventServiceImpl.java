@@ -53,6 +53,9 @@ public class EventServiceImpl implements EventService {
             throw new BadRequestException("End time must be after start time");
         }
 
+        String lunarStartDate = fpt.project.NeoNHS.helpers.LunarDateUtil.convertSolarToLunar(request.getStartTime().toLocalDate());
+        String lunarEndDate = fpt.project.NeoNHS.helpers.LunarDateUtil.convertSolarToLunar(request.getEndTime().toLocalDate());
+
         Event event = Event.builder()
                 .name(request.getName())
                 .shortDescription(request.getShortDescription())
@@ -60,6 +63,8 @@ public class EventServiceImpl implements EventService {
                 .locationName(request.getLocationName())
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
+                .lunarStartDate(lunarStartDate)
+                .lunarEndDate(lunarEndDate)
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
                 .isTicketRequired(request.getIsTicketRequired() != null ? request.getIsTicketRequired() : false)
@@ -124,9 +129,11 @@ public class EventServiceImpl implements EventService {
         }
         if (request.getStartTime() != null) {
             event.setStartTime(request.getStartTime());
+            event.setLunarStartDate(fpt.project.NeoNHS.helpers.LunarDateUtil.convertSolarToLunar(request.getStartTime().toLocalDate()));
         }
         if (request.getEndTime() != null) {
             event.setEndTime(request.getEndTime());
+            event.setLunarEndDate(fpt.project.NeoNHS.helpers.LunarDateUtil.convertSolarToLunar(request.getEndTime().toLocalDate()));
         }
         if (request.getIsTicketRequired() != null) {
             event.setIsTicketRequired(request.getIsTicketRequired());

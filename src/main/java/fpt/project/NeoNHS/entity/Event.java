@@ -37,6 +37,10 @@ public class Event extends BaseEntity {
 
     private String longitude;
 
+    private String lunarStartDate;
+
+    private String lunarEndDate;
+
     @Column(nullable = false)
     private LocalDateTime startTime;
 
