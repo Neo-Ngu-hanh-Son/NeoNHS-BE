@@ -17,6 +17,7 @@ public class UserResponse {
     private String avatarUrl;
     private UserRole role;
     private Boolean isActive;
+    private Boolean isVerified;
     private Boolean isBanned;
     private String banReason;
     private LocalDateTime bannedAt;

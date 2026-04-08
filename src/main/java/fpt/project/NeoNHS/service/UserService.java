@@ -2,6 +2,7 @@ package fpt.project.NeoNHS.service;
 
 import fpt.project.NeoNHS.dto.request.auth.UpdateUserProfileRequest;
 import fpt.project.NeoNHS.dto.request.kyc.KycRequest;
+import fpt.project.NeoNHS.dto.response.admin.UserStatsResponse;
 import fpt.project.NeoNHS.dto.response.auth.UserProfileResponse;
 import fpt.project.NeoNHS.dto.response.kyc.KycResponse;
 import fpt.project.NeoNHS.dto.request.payout.WithdrawRequest;
@@ -15,6 +16,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface UserService {
+
+    UserStatsResponse getUserStats();
 
     long countUsers();
 

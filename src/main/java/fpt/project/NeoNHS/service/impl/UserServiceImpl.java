@@ -3,6 +3,7 @@ package fpt.project.NeoNHS.service.impl;
 import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.request.auth.UpdateUserProfileRequest;
 import fpt.project.NeoNHS.dto.request.kyc.KycRequest;
+import fpt.project.NeoNHS.dto.response.admin.UserStatsResponse;
 import fpt.project.NeoNHS.dto.response.auth.UserProfileResponse;
 import fpt.project.NeoNHS.dto.response.kyc.KycResponse;
 import fpt.project.NeoNHS.dto.request.user.UserFilterRequest;
@@ -340,6 +341,17 @@ public class UserServiceImpl implements UserService {
                 .map(this::mapToAdminUserResponse);
     }
 
+    @Override
+    public UserStatsResponse getUserStats() {
+        return UserStatsResponse.builder()
+                .total(userRepository.count())
+                .active(userRepository.countByIsActiveTrueAndIsBannedFalse())
+                .banned(userRepository.countByIsBannedTrue())
+                .unverified(userRepository.countByIsVerifiedFalse())
+                .inactive(userRepository.countByIsActiveFalseAndIsBannedFalse(UserRole.TOURIST))
+                .build();
+    }
+
     private UserResponse mapToAdminUserResponse(User user) {
         return UserResponse.builder()
                 .id(user.getId())
@@ -349,6 +361,7 @@ public class UserServiceImpl implements UserService {
                 .avatarUrl(user.getAvatarUrl())
                 .role(user.getRole())
                 .isActive(user.getIsActive())
+                .isVerified(user.getIsVerified())
                 .isBanned(user.getIsBanned())
                 .banReason(user.getBanReason())
                 .bannedAt(user.getBannedAt())
