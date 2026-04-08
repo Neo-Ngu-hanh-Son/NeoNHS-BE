@@ -257,7 +257,9 @@ public class VendorDashboardDataSeeder implements CommandLineRunner {
 
                 Review review = Review.builder()
                         .user(tourist)
-                        .workshopTemplate(wt)
+//                        .workshopTemplate(wt)
+                        .reviewTypeId(wt.getId())
+                        .reviewTypeFlg(1)
                         .rating(rating)
                         .comment(comments[reviewCount % comments.length])
                         .status(ReviewStatus.VISIBLE)
@@ -272,8 +274,9 @@ public class VendorDashboardDataSeeder implements CommandLineRunner {
         // Update averageRating on templates
         for (WorkshopTemplate wt : activeTemplates) {
             List<Review> reviews = reviewRepository.findAll().stream()
-                    .filter(r -> r.getWorkshopTemplate() != null && r.getWorkshopTemplate().getId().equals(wt.getId()))
+//                    .filter(r -> r.getWorkshopTemplate() != null && r.getWorkshopTemplate().getId().equals(wt.getId()))
                     .toList();
+            //todo
             if (!reviews.isEmpty()) {
                 double avg = reviews.stream().mapToInt(Review::getRating).average().orElse(0);
                 wt.setAverageRating(BigDecimal.valueOf(avg).setScale(2, java.math.RoundingMode.HALF_UP));
