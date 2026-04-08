@@ -69,13 +69,6 @@ public class TransactionServiceImpl implements TransactionService {
                             } else {
                                 itemName = detail.getTicketCatalog().getName();
                             }
-
-                            if (detail.getTicketCatalog().getValidFromDate() != null) {
-                                validFrom = detail.getTicketCatalog().getValidFromDate();
-                            }
-                            if (detail.getTicketCatalog().getValidToDate() != null) {
-                                validTo = detail.getTicketCatalog().getValidToDate();
-                            }
                         } else if (detail.getWorkshopSession() != null) {
                             itemName = "Workshop: " + detail.getWorkshopSession().getWorkshopTemplate().getName();
                             validFrom = detail.getWorkshopSession().getStartTime();
