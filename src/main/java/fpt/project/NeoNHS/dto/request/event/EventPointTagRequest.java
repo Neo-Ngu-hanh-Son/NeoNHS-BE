@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EventPointTagRequest {
-
+    private String id;
     @NotBlank(message = "Tag name is required")
     @Size(max = 255, message = "Tag name must not exceed 255 characters")
     private String name;

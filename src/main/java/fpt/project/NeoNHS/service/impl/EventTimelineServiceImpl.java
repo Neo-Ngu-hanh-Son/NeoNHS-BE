@@ -2,6 +2,8 @@ package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.dto.request.event.EventPointRequest;
 import fpt.project.NeoNHS.dto.request.event.EventTimelineRequest;
+import fpt.project.NeoNHS.dto.response.event.EventPointResponse;
+import fpt.project.NeoNHS.dto.response.event.EventPointTagResponse;
 import fpt.project.NeoNHS.dto.response.event.EventTimelineResponse;
 import fpt.project.NeoNHS.dto.response.event.TimelineGroupedResponse;
 import fpt.project.NeoNHS.entity.Event;
@@ -25,6 +27,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -40,38 +43,13 @@ public class EventTimelineServiceImpl implements EventTimelineService {
     @Override
     @Transactional
     public EventTimelineResponse createTimeline(UUID eventId, EventTimelineRequest request) {
-        if (request.getEventPoint() == null) {
-            throw new BadRequestException("Event point cannot be null");
-        }
-
-        if (request.getEventPoint().getEventPointTagRequest() == null) {
-            throw new BadRequestException("Event point tag request cannot be null");
-        }
-
-        var requestPointTag = request.getEventPoint().getEventPointTagRequest();
-        EventPointTag eventPointTag = EventPointTag.builder()
-                .name(requestPointTag.getName())
-                .description(requestPointTag.getDescription())
-                .iconUrl(requestPointTag.getIconUrl())
-                .tagColor(requestPointTag.getTagColor())
-                .build();
-        var saveEventPointTag = pointTagRepository.save(eventPointTag);
-
-        EventPoint point = EventPoint.builder()
-                .latitude(request.getEventPoint().getLatitude())
-                .longitude(request.getEventPoint().getLongitude())
-                .name(request.getEventPoint().getName())
-                .description(request.getEventPoint().getDescription())
-                .address(request.getEventPoint().getAddress())
-                .eventPointTag(saveEventPointTag)
-                .imageList(request.getEventPoint().getImageUrl())
-                .build();
-        var savedPoint = pointRepository.save(point);
-
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
 
         validateTimelineTime(request, event);
+
+        // Resolve the event point: either reuse an existing one or create a new one
+        EventPoint savedPoint = resolvePointForCreate(request);
 
         String lunarDate = LunarDateUtil.convertSolarToLunar(request.getDate());
 
@@ -89,6 +67,62 @@ public class EventTimelineServiceImpl implements EventTimelineService {
                 .build();
 
         return EventTimelineResponse.fromEntity(timelineRepository.save(timeline));
+    }
+
+    private EventPoint resolvePointForCreate(EventTimelineRequest request) {
+        // Reuse an existing point entirely
+        if (request.getEventPointId() != null) {
+            return pointRepository.findById(request.getEventPointId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Event point not found with id: " + request.getEventPointId()));
+        }
+
+        // Create a new point — eventPoint payload is required
+        if (request.getEventPoint() == null) {
+            throw new BadRequestException("Either eventPointId or eventPoint must be provided");
+        }
+
+        EventPointTag tag = resolveTagForCreate(request.getEventPoint());
+
+        EventPoint point = EventPoint.builder()
+                .latitude(request.getEventPoint().getLatitude())
+                .longitude(request.getEventPoint().getLongitude())
+                .name(request.getEventPoint().getName())
+                .description(request.getEventPoint().getDescription())
+                .address(request.getEventPoint().getAddress())
+                .eventPointTag(tag)
+                .imageList(request.getEventPoint().getImageUrl())
+                .build();
+
+        return pointRepository.save(point);
+    }
+
+    private EventPointTag resolveTagForCreate(EventPointRequest pointRequest) {
+        // Reuse existing tag by ID
+        if (pointRequest.getEventPointTagId() != null) {
+            return pointTagRepository.findById(pointRequest.getEventPointTagId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Event point tag not found with id: " + pointRequest.getEventPointTagId()));
+        }
+
+        // Create a new tag — tag request is required
+        if (pointRequest.getEventPointTagRequest() == null) {
+            throw new BadRequestException("Either eventPointTagId or eventPointTagRequest must be provided");
+        }
+
+        // Get an existing tag with the same name if exist and use it
+        var existingTag = pointTagRepository.findByName(pointRequest.getEventPointTagRequest().getName());
+        if (existingTag.isPresent()) {
+            return existingTag.get();
+        }
+
+        var tagRequest = pointRequest.getEventPointTagRequest();
+        EventPointTag eventPointTag = EventPointTag.builder()
+                .name(tagRequest.getName())
+                .description(tagRequest.getDescription())
+                .iconUrl(tagRequest.getIconUrl())
+                .tagColor(tagRequest.getTagColor())
+                .build();
+
+        return pointTagRepository.save(eventPointTag);
     }
 
     @Override
@@ -254,5 +288,23 @@ public class EventTimelineServiceImpl implements EventTimelineService {
         if (timelineStart.isBefore(event.getStartTime()) || timelineEnd.isAfter(event.getEndTime())) {
             throw new BadRequestException("Timeline must be within the event's start and end time");
         }
+    }
+
+    @Override
+    public List<EventPointResponse> getAllEventPointByEventId(UUID eventId) {
+        return timelineRepository.findByEventId(eventId).stream()
+                .map(EventTimeline::getEventPoint)
+                .filter(Objects::nonNull)
+                .map(EventPointResponse::fromEntity)
+                .toList();
+    }
+
+    @Override
+    public List<EventPointTagResponse> getAllEventPointTagByEventId(UUID eventId) {
+        return timelineRepository.findByEventId(eventId).stream()
+                .map(EventTimeline::getEventPoint)
+                .map(EventPoint::getEventPointTag)
+                .map(EventPointTagResponse::fromEntity)
+                .toList();
     }
 }

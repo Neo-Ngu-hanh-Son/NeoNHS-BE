@@ -15,7 +15,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EventPointRequest {
-
+    private String id;
     @NotBlank(message = "Point name is required")
     private String name;
 
