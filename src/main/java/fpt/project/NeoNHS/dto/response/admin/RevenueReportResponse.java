@@ -11,4 +11,5 @@ public class RevenueReportResponse {
     private RevenueSummaryResponse summary;
     private List<VendorRevenueResponse> vendorBreakdown;
     private List<TransactionDetailResponse> transactions;
+    private List<RevenueTrendItem> revenueTrends;
 }

@@ -16,21 +16,52 @@ import java.util.UUID;
 @Repository
 public interface ReviewRepository extends JpaRepository<Review, UUID> {
 
-    Page<Review> findByWorkshopTemplateIdAndStatus(UUID workshopTemplateId, ReviewStatus status, Pageable pageable);
+    Page<Review> findByReviewTypeIdAndReviewTypeFlgAndStatus(UUID reviewTypeId, Integer reviewTypeFlg, ReviewStatus status, Pageable pageable);
 
-    Long countByWorkshopTemplateIdAndStatus(UUID workshopTemplateId, ReviewStatus status);
+    @Query("""
+            SELECT r FROM Review r
+            JOIN WorkshopTemplate wt ON r.reviewTypeId = wt.id
+            WHERE wt.id = :workshopTemplateId AND r.reviewTypeFlg = 1 AND r.status = :status
+            """)
+    Page<Review> pageVisibleReviewsForWorkshopTemplate(
+            @Param("workshopTemplateId") UUID workshopTemplateId,
+            @Param("status") ReviewStatus status,
+            Pageable pageable);
 
-    @Query("SELECT AVG(r.rating) FROM Review r WHERE r.workshopTemplate.id = :workshopTemplateId AND r.status = :status")
-    Double getAverageRatingByWorkshopTemplateId(@Param("workshopTemplateId") UUID workshopTemplateId, @Param("status") ReviewStatus status);
+    @Query("""
+            SELECT r FROM Review r
+            JOIN Event e ON r.reviewTypeId = e.id
+            WHERE e.id = :eventId AND r.reviewTypeFlg = 2 AND r.status = :status
+            """)
+    Page<Review> pageVisibleReviewsForEvent(
+            @Param("eventId") UUID eventId,
+            @Param("status") ReviewStatus status,
+            Pageable pageable);
 
-    boolean existsByUser_IdAndWorkshopTemplate_IdAndDeletedAtIsNull(UUID userId, UUID workshopTemplateId);
+    @Query("""
+            SELECT r FROM Review r
+            JOIN Point p ON r.reviewTypeId = p.id
+            WHERE p.id = :pointId AND r.reviewTypeFlg = 3 AND r.status = :status
+            """)
+    Page<Review> pageVisibleReviewsForPoint(
+            @Param("pointId") UUID pointId,
+            @Param("status") ReviewStatus status,
+            Pageable pageable);
+
+    Long countByReviewTypeIdAndReviewTypeFlgAndStatus(UUID reviewTypeId, Integer reviewTypeFlg, ReviewStatus status);
+
+    @Query("SELECT AVG(r.rating) FROM Review r WHERE r.reviewTypeId = :reviewTypeId AND r.reviewTypeFlg = :reviewTypeFlg AND r.status = :status")
+    Double getAverageRatingByReviewType(@Param("reviewTypeId") UUID reviewTypeId, @Param("reviewTypeFlg") Integer reviewTypeFlg, @Param("status") ReviewStatus status);
+
+    boolean existsByUser_IdAndReviewTypeIdAndReviewTypeFlgAndDeletedAtIsNull(UUID userId, UUID reviewTypeId, Integer reviewTypeFlg);
 
     @Query("""
         SELECT wt.id, wt.name, COUNT(r), COALESCE(AVG(r.rating), 0),
                SUM(CASE WHEN r.createdAt >= :since THEN 1 ELSE 0 END)
         FROM Review r
-        JOIN r.workshopTemplate wt
-        WHERE wt.vendor.id = :vendorId
+        JOIN WorkshopTemplate wt ON r.reviewTypeId = wt.id
+        WHERE r.reviewTypeFlg = 1
+          AND wt.vendor.id = :vendorId
           AND r.status = fpt.project.NeoNHS.enums.ReviewStatus.VISIBLE
         GROUP BY wt.id, wt.name
         ORDER BY COUNT(r) DESC

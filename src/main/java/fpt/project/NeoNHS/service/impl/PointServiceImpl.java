@@ -1,5 +1,7 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.exception.BadRequestException;
+
 import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.request.event.EventFilterRequest;
 import fpt.project.NeoNHS.dto.request.point.PointRequest;
@@ -43,6 +45,17 @@ public class PointServiceImpl implements PointService {
     @Override
     @Transactional
     public PointResponse createPoint(PointRequest request) {
+        if (request.getGooglePlaceId() != null && !request.getGooglePlaceId().isBlank()) {
+            if (pointRepository.existsByGooglePlaceIdAndDeletedAtIsNull(request.getGooglePlaceId())) {
+                throw new BadRequestException("Point with this Google Place ID already exists");
+            }
+        }
+        if (pointRepository.existsByNameAndAttractionIdAndDeletedAtIsNull(request.getName(),
+                request.getAttractionId())) {
+            throw new BadRequestException(
+                    "Point with name '" + request.getName() + "' already exists in this attraction");
+        }
+
         Attraction attraction = attractionRepository.findById(request.getAttractionId())
                 .orElseThrow(() -> new RuntimeException("Attraction not found with id: " + request.getAttractionId()));
 
@@ -67,6 +80,26 @@ public class PointServiceImpl implements PointService {
     public PointResponse updatePoint(UUID id, PointRequest request) {
         Point point = pointRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Point not found with id: " + id));
+
+        // Check for duplicates if relevant fields are changed
+        if (request.getGooglePlaceId() != null && !request.getGooglePlaceId().isBlank() &&
+                (point.getGooglePlaceId() == null || !point.getGooglePlaceId().equals(request.getGooglePlaceId()))) {
+            if (pointRepository.existsByGooglePlaceIdAndIdNotAndDeletedAtIsNull(request.getGooglePlaceId(), id)) {
+                throw new BadRequestException("Another point with this Google Place ID already exists");
+            }
+        }
+
+        String targetName = request.getName() != null ? request.getName() : point.getName();
+        UUID targetAttractionId = request.getAttractionId() != null ? request.getAttractionId()
+                : point.getAttraction().getId();
+
+        if (request.getName() != null || request.getAttractionId() != null) {
+            if (pointRepository.existsByNameAndAttractionIdAndIdNotAndDeletedAtIsNull(targetName, targetAttractionId,
+                    id)) {
+                throw new BadRequestException(
+                        "Another point with name '" + targetName + "' already exists in this attraction");
+            }
+        }
 
         if (request.getName() != null)
             point.setName(request.getName());
@@ -113,6 +146,14 @@ public class PointServiceImpl implements PointService {
     }
 
     @Override
+    @Transactional
+    public void hardDeletePoint(UUID id) {
+        Point point = pointRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Point not found with id: " + id));
+        pointRepository.delete(point);
+    }
+
+    @Override
     public PointResponse getPointById(UUID id) {
         Point point = pointRepository.findById(id)
                 .filter(p -> p.getDeletedAt() == null)
@@ -141,7 +182,7 @@ public class PointServiceImpl implements PointService {
 
     @Override
     public Page<PointResponse> getAllPointsWithPagination(UUID attractionId, int page, int size, String sortBy,
-                                                          String sortDir, String search) {
+            String sortDir, String search) {
         if (!attractionRepository.existsById(attractionId)) {
             throw new RuntimeException("Attraction not found");
         }
@@ -222,12 +263,12 @@ public class PointServiceImpl implements PointService {
 
     @Override
     public Page<PointResponse> getAllPointsForAdmin(int page, int size, String sortBy, String sortDir, String search,
-                                                    boolean includeDeleted) {
+            boolean includeDeleted) {
         return findAllPoints(page, size, sortBy, sortDir, search, !includeDeleted);
     }
 
     private Page<PointResponse> findAllPoints(int page, int size, String sortBy, String sortDir, String search,
-                                              boolean excludeDeleted) {
+            boolean excludeDeleted) {
         Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
                 ? Sort.by(sortBy).ascending()
                 : Sort.by(sortBy).descending();

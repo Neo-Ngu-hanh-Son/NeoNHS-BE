@@ -15,7 +15,8 @@ import java.util.UUID;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ReviewResponse {
     UUID id;
-    UUID workshopTemplateId;
+    UUID reviewTypeId;
+    Integer reviewTypeFlg;
     UserResponse user;
     Integer rating;
     String comment;

@@ -248,7 +248,7 @@ public class DashboardServiceImpl implements DashboardService {
         int requestedPointCount = (limit != null && limit > 0) ? limit : 6;
 
         long touristTotal = userRepository.countByRole(UserRole.TOURIST);
-        long touristActive = userRepository.countByRoleAndIsActiveTrueAndIsBannedFalse(UserRole.TOURIST);
+        long touristActive = userRepository.countByIsActiveFalseAndIsBannedFalse(UserRole.TOURIST);
         long vendorTotal = vendorRepository.count();
         long vendorActive = vendorRepository.countByUserIsActiveTrueAndUserIsBannedFalse();
 

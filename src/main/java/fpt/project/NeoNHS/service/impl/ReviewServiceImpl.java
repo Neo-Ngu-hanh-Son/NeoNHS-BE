@@ -12,6 +12,8 @@ import fpt.project.NeoNHS.entity.WorkshopTemplate;
 import fpt.project.NeoNHS.enums.ReviewStatus;
 import fpt.project.NeoNHS.exception.BadRequestException;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
+import fpt.project.NeoNHS.repository.EventRepository;
+import fpt.project.NeoNHS.repository.PointRepository;
 import fpt.project.NeoNHS.repository.ReviewRepository;
 import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.repository.WorkshopTemplateRepository;
@@ -35,6 +37,8 @@ public class ReviewServiceImpl implements ReviewService {
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
     private final WorkshopTemplateRepository workshopTemplateRepository;
+    private final EventRepository eventRepository;
+    private final PointRepository pointRepository;
 
     @Override
     @Transactional
@@ -42,20 +46,20 @@ public class ReviewServiceImpl implements ReviewService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
-        // specific the workshop template
-        WorkshopTemplate workshopTemplate = workshopTemplateRepository.findById(request.getWorkshopTemplateId())
-                .orElseThrow(() -> new ResourceNotFoundException("WorkshopTemplate", "id", request.getWorkshopTemplateId()));
+        // Validate the target exists
+        validateReviewTarget(request.getReviewTypeId(), request.getReviewTypeFlg());
 
-        // Check if user already reviewed this workshop
-        if (reviewRepository.existsByUser_IdAndWorkshopTemplate_IdAndDeletedAtIsNull(userId, request.getWorkshopTemplateId())) {
-            throw new BadRequestException("You have already reviewed this workshop. Please update your existing review instead.");
+        // Check if user already reviewed this target
+        if (reviewRepository.existsByUser_IdAndReviewTypeIdAndReviewTypeFlgAndDeletedAtIsNull(userId, request.getReviewTypeId(), request.getReviewTypeFlg())) {
+            throw new BadRequestException("You have already reviewed this item. Please update your existing review instead.");
         }
 
         Review review = Review.builder()
                 .rating(request.getRating())
                 .comment(request.getComment())
                 .user(user)
-                .workshopTemplate(workshopTemplate)
+                .reviewTypeFlg(request.getReviewTypeFlg())
+                .reviewTypeId(request.getReviewTypeId())
                 .status(ReviewStatus.VISIBLE)
                 .build();
 
@@ -70,7 +74,7 @@ public class ReviewServiceImpl implements ReviewService {
         }
 
         Review savedReview = reviewRepository.save(review);
-        updateWorkshopStats(workshopTemplate);
+        updateStatsIfNeeded(request.getReviewTypeId(), request.getReviewTypeFlg());
 
         return mapToResponse(savedReview);
     }
@@ -96,8 +100,6 @@ public class ReviewServiceImpl implements ReviewService {
 
         // Update images if provided (replace existing)
         if (request.getImageUrls() != null) {
-            // Clear existing images (orphanRemoval should handle deletion if setup, but simpler to recreate list or update manually)
-            // Assuming Review has cascade ALL for reviewImages
             if (review.getReviewImages() != null) {
                 review.getReviewImages().clear();
             } else {
@@ -107,7 +109,7 @@ public class ReviewServiceImpl implements ReviewService {
             if (!request.getImageUrls().isEmpty()) {
                 List<ReviewImage> images = request.getImageUrls().stream()
                         .map(url -> ReviewImage.builder()
-                                .imageUrl(url) // Assuming imageUrl field
+                                .imageUrl(url)
                                 .review(review)
                                 .build())
                         .collect(Collectors.toList());
@@ -118,20 +120,37 @@ public class ReviewServiceImpl implements ReviewService {
         Review savedReview = reviewRepository.save(review);
 
         // Update stats
-        updateWorkshopStats(review.getWorkshopTemplate());
+        updateStatsIfNeeded(review.getReviewTypeId(), review.getReviewTypeFlg());
 
         return mapToResponse(savedReview);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<ReviewResponse> getReviewsByWorkshopTemplateId(UUID workshopTemplateId, Pageable pageable) {
-        if (!workshopTemplateRepository.existsById(workshopTemplateId)) {
-            throw new ResourceNotFoundException("WorkshopTemplate", "id", workshopTemplateId);
-        }
+    public PagedResponse<ReviewResponse> getReviewsForWorkshopTemplate(UUID workshopTemplateId, Pageable pageable) {
+        validateReviewTarget(workshopTemplateId, 1);
+        Page<Review> reviewPage = reviewRepository.pageVisibleReviewsForWorkshopTemplate(
+                workshopTemplateId, ReviewStatus.VISIBLE, pageable);
+        return toPagedReviewResponse(reviewPage);
+    }
 
-        Page<Review> reviewPage = reviewRepository.findByWorkshopTemplateIdAndStatus(workshopTemplateId, ReviewStatus.VISIBLE, pageable);
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponse<ReviewResponse> getReviewsForEvent(UUID eventId, Pageable pageable) {
+        validateReviewTarget(eventId, 2);
+        Page<Review> reviewPage = reviewRepository.pageVisibleReviewsForEvent(eventId, ReviewStatus.VISIBLE, pageable);
+        return toPagedReviewResponse(reviewPage);
+    }
 
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponse<ReviewResponse> getReviewsForPoint(UUID pointId, Pageable pageable) {
+        validateReviewTarget(pointId, 3);
+        Page<Review> reviewPage = reviewRepository.pageVisibleReviewsForPoint(pointId, ReviewStatus.VISIBLE, pageable);
+        return toPagedReviewResponse(reviewPage);
+    }
+
+    private PagedResponse<ReviewResponse> toPagedReviewResponse(Page<Review> reviewPage) {
         List<ReviewResponse> reviewResponses = reviewPage.getContent().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -145,14 +164,47 @@ public class ReviewServiceImpl implements ReviewService {
                 .build();
     }
 
-    private void updateWorkshopStats(WorkshopTemplate workshopTemplate) {
-        Double avgRating = reviewRepository.getAverageRatingByWorkshopTemplateId(workshopTemplate.getId(), ReviewStatus.VISIBLE);
-        Long totalReviews = reviewRepository.countByWorkshopTemplateIdAndStatus(workshopTemplate.getId(), ReviewStatus.VISIBLE);
+    private void validateReviewTarget(UUID reviewTypeId, Integer reviewTypeFlg) {
+        if (reviewTypeFlg == null) {
+            throw new BadRequestException("Review type flag must not be null");
+        }
+        if (reviewTypeId == null) {
+            throw new BadRequestException("Review type ID must not be null");
+        }
+        switch (reviewTypeFlg) {
+            case 1: // Workshop
+                if (!workshopTemplateRepository.existsById(reviewTypeId)) {
+                    throw new ResourceNotFoundException("WorkshopTemplate", "id", reviewTypeId);
+                }
+                break;
+            case 2: // Event
+                if (!eventRepository.existsById(reviewTypeId)) {
+                    throw new ResourceNotFoundException("Event", "id", reviewTypeId);
+                }
+                break;
+            case 3: // Point
+                if (!pointRepository.existsById(reviewTypeId)) {
+                    throw new ResourceNotFoundException("Point", "id", reviewTypeId);
+                }
+                break;
+            default:
+                throw new BadRequestException("Invalid review type flag. Allowed values: 1 (Workshop), 2 (Event), 3 (Point)");
+        }
+    }
 
-        workshopTemplate.setAverageRating(BigDecimal.valueOf(avgRating != null ? avgRating : 0.0));
-        workshopTemplate.setTotalRatings(totalReviews.intValue());
+    private void updateStatsIfNeeded(UUID reviewTypeId, Integer reviewTypeFlg) {
+        if (reviewTypeFlg != null && reviewTypeFlg == 1) { // Workshop has average rating fields
+            WorkshopTemplate workshopTemplate = workshopTemplateRepository.findById(reviewTypeId).orElse(null);
+            if (workshopTemplate != null) {
+                Double avgRating = reviewRepository.getAverageRatingByReviewType(reviewTypeId, reviewTypeFlg, ReviewStatus.VISIBLE);
+                Long totalReviews = reviewRepository.countByReviewTypeIdAndReviewTypeFlgAndStatus(reviewTypeId, reviewTypeFlg, ReviewStatus.VISIBLE);
 
-        workshopTemplateRepository.save(workshopTemplate);
+                workshopTemplate.setAverageRating(BigDecimal.valueOf(avgRating != null ? avgRating : 0.0));
+                workshopTemplate.setTotalRatings(totalReviews.intValue());
+
+                workshopTemplateRepository.save(workshopTemplate);
+            }
+        }
     }
 
     private ReviewResponse mapToResponse(Review review) {
@@ -170,7 +222,8 @@ public class ReviewServiceImpl implements ReviewService {
 
         return ReviewResponse.builder()
                 .id(review.getId())
-                .workshopTemplateId(review.getWorkshopTemplate() != null ? review.getWorkshopTemplate().getId() : null)
+                .reviewTypeId(review.getReviewTypeId())
+                .reviewTypeFlg(review.getReviewTypeFlg())
                 .user(userResponse)
                 .rating(review.getRating())
                 .comment(review.getComment())

@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import fpt.project.NeoNHS.service.validator.AvailabilityValidator;
 
 @Service
 @RequiredArgsConstructor
@@ -46,6 +47,7 @@ public class CartServiceImpl implements CartService {
     private final TicketCatalogRepository ticketCatalogRepository;
     private final UserVoucherRepository userVoucherRepository;
     private final WorkshopSessionRepository workshopSessionRepository;
+    private final AvailabilityValidator avai;
 
     @Override
     @Transactional(readOnly = true)
@@ -84,7 +86,7 @@ public class CartServiceImpl implements CartService {
                 totalQuantityToCheck += existingItem.get().getQuantity();
             }
 
-            validateTicketAvailability(ticketCatalog, totalQuantityToCheck);
+            avai.validateTicketAvailability(ticketCatalog, totalQuantityToCheck);
 
             if (existingItem.isPresent()) {
                 CartItem item = existingItem.get();
@@ -112,7 +114,7 @@ public class CartServiceImpl implements CartService {
                 totalQuantityToCheck += existingItem.get().getQuantity();
             }
 
-            validateWorkshopAvailability(workshopSession, totalQuantityToCheck);
+            avai.validateWorkshopAvailability(workshopSession, totalQuantityToCheck);
 
             if (existingItem.isPresent()) {
                 CartItem item = existingItem.get();
@@ -151,9 +153,9 @@ public class CartServiceImpl implements CartService {
         }
 
         if (cartItem.getTicketCatalog() != null) {
-            validateTicketAvailability(cartItem.getTicketCatalog(), request.getQuantity());
+            avai.validateTicketAvailability(cartItem.getTicketCatalog(), request.getQuantity());
         } else if (cartItem.getWorkshopSession() != null) {
-            validateWorkshopAvailability(cartItem.getWorkshopSession(), request.getQuantity());
+            avai.validateWorkshopAvailability(cartItem.getWorkshopSession(), request.getQuantity());
         }
 
         cartItem.setQuantity(request.getQuantity());
@@ -290,9 +292,9 @@ public class CartServiceImpl implements CartService {
 
             // Re-validate availability at pre-checkout
             if (item.getTicketCatalog() != null) {
-                validateTicketAvailability(item.getTicketCatalog(), item.getQuantity());
+                avai.validateTicketAvailability(item.getTicketCatalog(), item.getQuantity());
             } else if (item.getWorkshopSession() != null) {
-                validateWorkshopAvailability(item.getWorkshopSession(), item.getQuantity());
+                avai.validateWorkshopAvailability(item.getWorkshopSession(), item.getQuantity());
             }
 
             BigDecimal itemPrice = item.getTicketCatalog() != null
@@ -464,71 +466,4 @@ public class CartServiceImpl implements CartService {
         return voucherResponses;
     }
 
-    private void validateTicketAvailability(TicketCatalog ticketCatalog, int quantity) {
-        // 1. Check Ticket Status
-        if (ticketCatalog.getStatus() != TicketCatalogStatus.ACTIVE) {
-            throw new BadRequestException("Ticket is not active for sale: " + ticketCatalog.getName());
-        }
-
-
-
-
-        // 2. Check Date Validity
-        /*
-         * LocalDateTime now = LocalDateTime.now();
-         * if (ticketCatalog.getValidFromDate() != null &&
-         * now.isBefore(ticketCatalog.getValidFromDate())) {
-         * throw new BadRequestException("Ticket sale has not started yet: " +
-         * ticketCatalog.getName());
-         * }
-         * if (ticketCatalog.getValidToDate() != null &&
-         * now.isAfter(ticketCatalog.getValidToDate())) {
-         * throw new BadRequestException("Ticket sale has ended: " +
-         * ticketCatalog.getName());
-         * }
-         */
-
-        // 3. Check Ticket Quota
-        int currentSold = ticketCatalog.getSoldQuantity() != null ? ticketCatalog.getSoldQuantity() : 0;
-        if (ticketCatalog.getTotalQuota() != null) {
-            if (currentSold + quantity > ticketCatalog.getTotalQuota()) {
-                throw new BadRequestException("Exceeds available tickets! Remaining: "
-                        + (ticketCatalog.getTotalQuota() - currentSold));
-            }
-        }
-
-        // 4. Check Event Status and Capacity
-        Event event = ticketCatalog.getEvent();
-        if (event != null) {
-            if (event.getStatus() == EventStatus.CANCELLED || event.getStatus() == EventStatus.COMPLETED) {
-                throw new BadRequestException("Event is not available for booking: " + event.getName());
-            }
-
-            if (event.getEndTime() != null && LocalDateTime.now().isAfter(event.getEndTime())) {
-                throw new BadRequestException("Event has already ended: " + event.getName());
-            }
-
-            if (event.getMaxParticipants() != null) {
-                int currentEnrolled = event.getCurrentEnrolled() != null ? event.getCurrentEnrolled() : 0;
-                if (currentEnrolled + quantity > event.getMaxParticipants()) {
-                    throw new BadRequestException("Event is full! Remaining slots: "
-                            + (event.getMaxParticipants() - currentEnrolled));
-                }
-            }
-        }
-    }
-
-    private void validateWorkshopAvailability(WorkshopSession workshopSession, int quantity) {
-        if (workshopSession.getStatus() != SessionStatus.SCHEDULED) {
-            throw new BadRequestException("Workshop is not available for booking: " + workshopSession.getWorkshopTemplate().getName());
-        }
-
-        if (workshopSession.getMaxParticipants() != null) {
-            int currentEnrolled = workshopSession.getCurrentEnrolled() != null ? workshopSession.getCurrentEnrolled() : 0;
-            if (currentEnrolled + quantity > workshopSession.getMaxParticipants()) {
-                throw new BadRequestException("Workshop is full! Remaining slots: "
-                        + (workshopSession.getMaxParticipants() - currentEnrolled));
-            }
-        }
-    }
 }

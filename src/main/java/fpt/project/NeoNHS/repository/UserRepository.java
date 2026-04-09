@@ -63,9 +63,15 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
 
         long countByRole(UserRole role);
 
-        long countByRoleAndIsActiveTrueAndIsBannedFalse(UserRole role);
+        long countByIsActiveTrueAndIsBannedFalse();
+
+        long countByIsBannedTrue();
+
+        long countByIsVerifiedFalse();
+
+        long countByIsActiveFalseAndIsBannedFalse(UserRole tourist);
 
         Optional<User> findFirstByRole(UserRole role);
-        
+
         List<User> findByIsActiveTrueAndIsBannedFalse();
 }
