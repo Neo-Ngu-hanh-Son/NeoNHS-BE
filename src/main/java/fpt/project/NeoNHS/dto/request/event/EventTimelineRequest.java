@@ -36,4 +36,6 @@ public class EventTimelineRequest {
     private LocalTime endTime;
 
     private UUID eventPointId;
+
+    private EventPointRequest eventPoint;
 }

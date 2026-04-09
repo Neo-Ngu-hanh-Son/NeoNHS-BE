@@ -21,7 +21,7 @@ public class EventPointRequest {
 
     private String description;
 
-    private String imageList;
+    private String imageUrl;
 
     @NotNull(message = "Latitude is required")
     private BigDecimal latitude;
@@ -32,4 +32,6 @@ public class EventPointRequest {
     private String address;
 
     private UUID eventPointTagId;
+
+    private EventPointTagRequest eventPointTagRequest;
 }

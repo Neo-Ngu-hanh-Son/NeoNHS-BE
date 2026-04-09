@@ -43,6 +43,7 @@ public class SecurityConfig {
                         "/api/blogs/**",
                         "/api/attractions/**",
                         "/api/events/**",
+                        "/api/reviews/**",
                         "/api/wtags/all",
                         "/api/reviews/workshops/**",
                         "/ws/**", // WebSocket endpoint

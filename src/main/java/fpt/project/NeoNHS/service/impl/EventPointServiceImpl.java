@@ -27,7 +27,14 @@ public class EventPointServiceImpl implements EventPointService {
     @Transactional
     public EventPointResponse createPoint(EventPointRequest request) {
         EventPointTag tag = null;
-        if (request.getEventPointTagId() != null) {
+        if (request.getEventPointTagRequest() != null) {
+            tag = EventPointTag.builder()
+                    .name(request.getEventPointTagRequest().getName())
+                    .description(request.getEventPointTagRequest().getDescription())
+                    .tagColor(request.getEventPointTagRequest().getTagColor())
+                    .iconUrl(request.getEventPointTagRequest().getIconUrl())
+                    .build();
+        } else if (request.getEventPointTagId() != null) {
             tag = tagRepository.findById(request.getEventPointTagId())
                     .orElseThrow(() -> new ResourceNotFoundException("EventPointTag not found with id: " + request.getEventPointTagId()));
         }
@@ -35,7 +42,7 @@ public class EventPointServiceImpl implements EventPointService {
         EventPoint point = EventPoint.builder()
                 .name(request.getName())
                 .description(request.getDescription())
-                .imageList(request.getImageList())
+                .imageList(request.getImageUrl())
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
                 .address(request.getAddress())
@@ -59,7 +66,7 @@ public class EventPointServiceImpl implements EventPointService {
 
         if (request.getName() != null) point.setName(request.getName());
         if (request.getDescription() != null) point.setDescription(request.getDescription());
-        if (request.getImageList() != null) point.setImageList(request.getImageList());
+        if (request.getImageUrl() != null) point.setImageList(request.getImageUrl());
         if (request.getLatitude() != null) point.setLatitude(request.getLatitude());
         if (request.getLongitude() != null) point.setLongitude(request.getLongitude());
         if (request.getAddress() != null) point.setAddress(request.getAddress());

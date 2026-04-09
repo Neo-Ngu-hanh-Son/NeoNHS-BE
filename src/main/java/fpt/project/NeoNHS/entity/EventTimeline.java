@@ -39,9 +39,10 @@ public class EventTimeline extends BaseEntity {
 
     private LocalTime endTime;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    // Optional for most flexible (Like create event timeline and then assign the later parts)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "event_point_id")
-    private EventPoint eventPoint;
+    private EventPoint eventPoint; // One event timeline must have one event point.
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id", nullable = false)

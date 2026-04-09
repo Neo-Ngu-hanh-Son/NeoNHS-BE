@@ -203,9 +203,11 @@ public class PointServiceImpl implements PointService {
                     .thumbnailUrl(p.getThumbnailUrl())
                     .latitude(p.getLatitude().doubleValue())
                     .longitude(p.getLongitude().doubleValue())
+                    .estTimeSpent(p.getEstTimeSpent())
                     .type(p.getType())
                     .attractionId(p.getAttraction() != null ? p.getAttraction().getId() : null)
                     .googlePlaceId(p.getGooglePlaceId())
+                    .historyAudioCount((int) p.getHistoryAudios().stream().filter(historyAudio -> historyAudio.getDeletedAt() == null).count())
                     .checkinPoints(p.getCheckinPoints().stream()
                             .map(cp -> {
                                 boolean isUserCheckedInHere = userCheckedInIds.contains(cp.getId());
