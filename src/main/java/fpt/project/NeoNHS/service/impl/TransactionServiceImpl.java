@@ -10,7 +10,8 @@ import fpt.project.NeoNHS.repository.TransactionRepository;
 import fpt.project.NeoNHS.service.TransactionService;
 import fpt.project.NeoNHS.specification.TransactionSpecification;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
@@ -18,7 +19,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,19 +27,14 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionRepository transactionRepository;
 
     @Override
-    public List<TransactionResponse> getTransactions(UUID userId, String type, String status) {
+    public Page<TransactionResponse> getTransactions(UUID userId, String type, String status, Pageable pageable) {
         Specification<Transaction> spec = Specification.where(TransactionSpecification.hasUserId(userId))
                 .and(TransactionSpecification.hasStatus(status))
                 .and(TransactionSpecification.hasType(type));
 
-        // Sort by transactionDate desc
-        Sort sort = Sort.by(Sort.Direction.DESC, "transactionDate");
+        Page<Transaction> transactions = transactionRepository.findAll(spec, pageable);
 
-        List<Transaction> transactions = transactionRepository.findAll(spec, sort);
-
-        return transactions.stream()
-                .map(this::mapToTransactionResponse)
-                .collect(Collectors.toList());
+        return transactions.map(this::mapToTransactionResponse);
     }
 
     @Override
@@ -119,9 +114,9 @@ public class TransactionServiceImpl implements TransactionService {
         if (transaction.getOrder() == null || transaction.getOrder().getOrderDetails() == null) {
             return "UNKNOWN";
         }
-        
+
         java.util.Set<String> types = new java.util.HashSet<>();
-        
+
         for (OrderDetail detail : transaction.getOrder().getOrderDetails()) {
             if (detail.getWorkshopSession() != null) {
                 types.add("WORKSHOP");
@@ -133,7 +128,7 @@ public class TransactionServiceImpl implements TransactionService {
                 }
             }
         }
-        
+
         if (types.size() > 1) {
             return "MIXED";
         } else if (types.size() == 1) {
