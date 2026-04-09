@@ -45,5 +45,5 @@ public class EventPoint extends BaseEntity {
 
     @OneToMany(mappedBy = "eventPoint", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default
-    private List<EventTimeline> eventTimelines = new ArrayList<>();
+    private List<EventTimeline> eventTimelines = new ArrayList<>(); // Event point can be independent (Ex: WC, Parking lots, etc).
 }

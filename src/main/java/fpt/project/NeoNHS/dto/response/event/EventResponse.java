@@ -68,6 +68,8 @@ public class EventResponse {
      */
     private List<EventImageResponse> images;
 
+    private Integer timelineCount;
+
     /**
      * For list view: includes all event info + thumbnail URL, no image album.
      */
@@ -110,6 +112,7 @@ public class EventResponse {
                 .updatedAt(event.getUpdatedAt())
                 .deletedAt(event.getDeletedAt())
                 .tags(tagResponses)
+                .timelineCount(event.getEventTimelines() != null ? event.getEventTimelines().size() : 0)
                 .build();
     }
 

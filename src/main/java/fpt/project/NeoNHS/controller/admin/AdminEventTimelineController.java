@@ -27,7 +27,8 @@ public class AdminEventTimelineController {
 
     @PostMapping
     @Operation(summary = "Create a new event timeline entry")
-    public ResponseEntity<ApiResponse<EventTimelineResponse>> createTimeline(@PathVariable UUID eventId, @Valid @RequestBody EventTimelineRequest request) {
+    public ResponseEntity<ApiResponse<EventTimelineResponse>> createTimeline(@PathVariable UUID eventId,
+                                                                             @Valid @RequestBody EventTimelineRequest request) {
         EventTimelineResponse response = timelineService.createTimeline(eventId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(HttpStatus.CREATED, "Timeline created successfully", response));

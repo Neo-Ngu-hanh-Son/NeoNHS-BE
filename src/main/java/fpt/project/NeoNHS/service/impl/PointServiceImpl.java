@@ -236,6 +236,9 @@ public class PointServiceImpl implements PointService {
     private List<MapPointResponse> getMapPointWithUserCheckinDefined(List<Point> points, Set<UUID> userCheckedInIds) {
         List<MapPointResponse> userMappedPoints = new ArrayList<>();
         for (var p : points) {
+            if (p.getDeletedAt() != null) {
+                continue; // Skip deleted points
+            }
             // Note some props are not mapped because no need.
             var userCheckinPoint = MapPointResponse.builder()
                     .id(p.getId())
@@ -244,10 +247,13 @@ public class PointServiceImpl implements PointService {
                     .thumbnailUrl(p.getThumbnailUrl())
                     .latitude(p.getLatitude().doubleValue())
                     .longitude(p.getLongitude().doubleValue())
+                    .estTimeSpent(p.getEstTimeSpent())
                     .type(p.getType())
                     .attractionId(p.getAttraction() != null ? p.getAttraction().getId() : null)
                     .googlePlaceId(p.getGooglePlaceId())
+                    .historyAudioCount((int) p.getHistoryAudios().stream().filter(historyAudio -> historyAudio.getDeletedAt() == null).count())
                     .checkinPoints(p.getCheckinPoints().stream()
+                            .filter(cp -> cp.getIsActive() == true && cp.getDeletedAt() == null)
                             .map(cp -> {
                                 boolean isUserCheckedInHere = userCheckedInIds.contains(cp.getId());
                                 return CheckinPointResponse.fromEntity(cp, isUserCheckedInHere);

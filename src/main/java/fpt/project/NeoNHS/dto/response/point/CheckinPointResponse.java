@@ -1,9 +1,11 @@
 package fpt.project.NeoNHS.dto.response.point;
 
+import com.google.api.client.util.DateTime;
 import fpt.project.NeoNHS.entity.CheckinPoint;
 import lombok.Builder;
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
@@ -26,6 +28,7 @@ public class CheckinPointResponse {
     private Boolean isUserCheckedIn; // Indicates if the user has checked in at this point
     private String parentPointId;
     private String parentPointName;
+    private LocalDateTime deletedAt;
 
     /**
      * Factory method to create a PointCheckinResponse from a CheckinPoint entity and user's check-in status. <br/>
@@ -55,6 +58,7 @@ public class CheckinPointResponse {
                 .isUserCheckedIn(isUserCheckedIn)
                 .parentPointId(checkinPoint.getPoint() != null ? checkinPoint.getPoint().getId().toString() : null)
                 .parentPointName(checkinPoint.getPoint() != null ? checkinPoint.getPoint().getName() : null)
+                .deletedAt(checkinPoint.getDeletedAt())
                 .build();
     }
 }
