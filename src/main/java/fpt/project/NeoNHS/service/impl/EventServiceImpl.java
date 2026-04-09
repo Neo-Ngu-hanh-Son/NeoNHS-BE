@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.NotificationMessages;
 import fpt.project.NeoNHS.dto.request.event.CreateEventRequest;
 import fpt.project.NeoNHS.dto.request.event.EventFilterRequest;
 import fpt.project.NeoNHS.dto.request.event.UpdateEventRequest;
@@ -9,6 +10,7 @@ import fpt.project.NeoNHS.entity.Event;
 import fpt.project.NeoNHS.entity.EventImage;
 import fpt.project.NeoNHS.entity.EventTag;
 import fpt.project.NeoNHS.entity.EventTagId;
+import fpt.project.NeoNHS.entity.User;
 import fpt.project.NeoNHS.exception.BadRequestException;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.repository.ETagRepository;
@@ -16,7 +18,9 @@ import fpt.project.NeoNHS.repository.EventImageRepository;
 import fpt.project.NeoNHS.repository.EventRepository;
 import fpt.project.NeoNHS.repository.EventTagRepository;
 import fpt.project.NeoNHS.repository.OrderDetailRepository;
+import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.service.EventService;
+import fpt.project.NeoNHS.service.NotificationService;
 import fpt.project.NeoNHS.specification.EventSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -39,6 +43,8 @@ public class EventServiceImpl implements EventService {
     private final EventTagRepository eventTagRepository;
     private final EventImageRepository eventImageRepository;
     private final OrderDetailRepository orderDetailRepository;
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -47,6 +53,9 @@ public class EventServiceImpl implements EventService {
             throw new BadRequestException("End time must be after start time");
         }
 
+        String lunarStartDate = fpt.project.NeoNHS.helpers.LunarDateUtil.convertSolarToLunar(request.getStartTime().toLocalDate());
+        String lunarEndDate = fpt.project.NeoNHS.helpers.LunarDateUtil.convertSolarToLunar(request.getEndTime().toLocalDate());
+
         Event event = Event.builder()
                 .name(request.getName())
                 .shortDescription(request.getShortDescription())
@@ -54,6 +63,8 @@ public class EventServiceImpl implements EventService {
                 .locationName(request.getLocationName())
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
+                .lunarStartDate(lunarStartDate)
+                .lunarEndDate(lunarEndDate)
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
                 .isTicketRequired(request.getIsTicketRequired() != null ? request.getIsTicketRequired() : false)
@@ -76,6 +87,17 @@ public class EventServiceImpl implements EventService {
         if (request.getTagIds() != null && !request.getTagIds().isEmpty()) {
             List<EventTag> eventTags = createEventTags(savedEvent, request.getTagIds());
             savedEvent.setEventTags(eventTags);
+        }
+
+        // Notify all active users
+        List<User> activeUsers = userRepository.findByIsActiveTrueAndIsBannedFalse();
+        for (User user : activeUsers) {
+            notificationService.createAndSendNotification(
+                    user,
+                    NotificationMessages.eventTitle(savedEvent.getName()),
+                    NotificationMessages.eventMessage(),
+                    NotificationMessages.TYPE_EVENT,
+                    savedEvent.getId());
         }
 
         return EventResponse.fromEntity(savedEvent);
@@ -107,9 +129,11 @@ public class EventServiceImpl implements EventService {
         }
         if (request.getStartTime() != null) {
             event.setStartTime(request.getStartTime());
+            event.setLunarStartDate(fpt.project.NeoNHS.helpers.LunarDateUtil.convertSolarToLunar(request.getStartTime().toLocalDate()));
         }
         if (request.getEndTime() != null) {
             event.setEndTime(request.getEndTime());
+            event.setLunarEndDate(fpt.project.NeoNHS.helpers.LunarDateUtil.convertSolarToLunar(request.getEndTime().toLocalDate()));
         }
         if (request.getIsTicketRequired() != null) {
             event.setIsTicketRequired(request.getIsTicketRequired());
@@ -181,12 +205,12 @@ public class EventServiceImpl implements EventService {
     public EventResponse getEventById(UUID id) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
-        
+
         // Public access: only return non-deleted events
         if (event.getDeletedAt() != null) {
             throw new ResourceNotFoundException("Event not found with id: " + id);
         }
-        
+
         return EventResponse.fromEntityWithImages(event);
     }
 
@@ -203,11 +227,11 @@ public class EventServiceImpl implements EventService {
     public void softDeleteEvent(UUID id, UUID deletedBy) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
-        
+
         if (event.getDeletedAt() != null) {
             throw new BadRequestException("Event is already deleted");
         }
-        
+
         event.setDeletedAt(LocalDateTime.now());
         event.setDeletedBy(deletedBy);
         eventRepository.save(event);
@@ -218,11 +242,11 @@ public class EventServiceImpl implements EventService {
     public EventResponse restoreEvent(UUID id) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
-        
+
         if (event.getDeletedAt() == null) {
             throw new BadRequestException("Event is not deleted");
         }
-        
+
         event.setDeletedAt(null);
         event.setDeletedBy(null);
         Event restoredEvent = eventRepository.save(event);

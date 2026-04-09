@@ -2,7 +2,7 @@ package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.request.point.CheckinPointRequest;
-import fpt.project.NeoNHS.dto.response.point.PointCheckinResponse;
+import fpt.project.NeoNHS.dto.response.point.CheckinPointResponse;
 import fpt.project.NeoNHS.entity.CheckinPoint;
 import fpt.project.NeoNHS.entity.Point;
 import fpt.project.NeoNHS.exception.BadRequestException;
@@ -35,7 +35,7 @@ public class CheckinPointServiceImpl implements CheckinPointService {
     private final GeoService geoService; // Geo and redis related operations
 
     @Override
-    public PointCheckinResponse getCheckinPointById(UUID pointId, UUID checkinId) {
+    public CheckinPointResponse getCheckinPointById(UUID pointId, UUID checkinId) {
         if (!pointRepository.existsById(pointId)) {
             throw new ResourceNotFoundException("Point not found with id: " + pointId);
         }
@@ -46,13 +46,13 @@ public class CheckinPointServiceImpl implements CheckinPointService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "CheckinPoint not found with id " + checkinId + " for point " + pointId));
 
-        return PointCheckinResponse.fromEntity(checkinPoint, false);
+        return CheckinPointResponse.fromEntity(checkinPoint, false);
     }
 
     // For now, the default sort by is by createdAt (you might want to sort by user
     // location instead).
     @Override
-    public Page<PointCheckinResponse> getAllCheckinFromPointId(UUID pointId, int page, int size, String sortBy,
+    public Page<CheckinPointResponse> getAllCheckinFromPointId(UUID pointId, int page, int size, String sortBy,
                                                                String sortDir,
                                                                String search) {
         if (!pointRepository.existsById(pointId)) {
@@ -66,23 +66,23 @@ public class CheckinPointServiceImpl implements CheckinPointService {
         Pageable pageable = PageRequest.of(page, Math.min(size, PaginationConstants.MAX_PAGE_SIZE), sort);
 
         return checkinPointRepository.findAll(CheckinPointSpecification.withFilters(pointId, search, true), pageable)
-                .map(p -> PointCheckinResponse.fromEntity(p, false));
+                .map(p -> CheckinPointResponse.fromEntity(p, false));
     }
 
     @Override
-    public List<PointCheckinResponse> getAllCheckinPoints() {
+    public List<CheckinPointResponse> getAllCheckinPoints() {
         List<CheckinPoint> checkinPoints = checkinPointRepository.findAll();
         return checkinPoints.stream()
-                .map(p -> PointCheckinResponse.fromEntity(p, false)).toList();
+                .map(p -> CheckinPointResponse.fromEntity(p, false)).toList();
     }
 
     @Override
-    public PointCheckinResponse createCheckinPoint(CheckinPointRequest request) {
+    public CheckinPointResponse createCheckinPoint(CheckinPointRequest request) {
         Point point = pointRepository.findById(request.getPointId())
                 .orElseThrow(() -> new ResourceNotFoundException("Point not found with id: " + request.getPointId()));
 
         if (request.getRewardPoints() < 10) {
-            throw new  BadRequestException("Reward Points must be greater than 10");
+            throw new BadRequestException("Reward Points must be greater than 10");
         }
 
         CheckinPoint checkinPoint = CheckinPoint.builder()
@@ -90,7 +90,7 @@ public class CheckinPointServiceImpl implements CheckinPointService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .position(request.getPosition())
-                .thumbnailUrl(request.getThumbnailUrl() != null ?  request.getThumbnailUrl() : point.getThumbnailUrl())
+                .thumbnailUrl(request.getThumbnailUrl() != null ? request.getThumbnailUrl() : point.getThumbnailUrl())
                 .isActive(request.getIsActive() != null ? request.getIsActive() : true)
                 .qrCode(request.getQrCode())
                 .longitude(request.getLongitude())
@@ -105,11 +105,11 @@ public class CheckinPointServiceImpl implements CheckinPointService {
         // Sync
         geoService.addCheckinToRedis(saved.getId().toString(), saved.getLongitude().doubleValue(),
                 saved.getLatitude().doubleValue());
-        return PointCheckinResponse.fromEntity(saved, false);
+        return CheckinPointResponse.fromEntity(saved, false);
     }
 
     @Override
-    public PointCheckinResponse updateCheckinPoint(UUID id, CheckinPointRequest request) {
+    public CheckinPointResponse updateCheckinPoint(UUID id, CheckinPointRequest request) {
         CheckinPoint checkinPoint = checkinPointRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("CheckinPoint not found with id: " + id));
 
@@ -138,16 +138,23 @@ public class CheckinPointServiceImpl implements CheckinPointService {
             geoService.updateCheckinInRedis(saved.getId().toString(), saved.getLongitude().doubleValue(),
                     saved.getLatitude().doubleValue());
         }
-        return PointCheckinResponse.fromEntity(saved, false);
+        return CheckinPointResponse.fromEntity(saved, false);
     }
 
+    /**
+     * Soft delete (NOTE: This only hide from user, while any user that already has this checkin point will not be affected
+     * Therefore we don't need to check if the check-in point has user check-ins
+     *
+     * @param id
+     * @param currentUserId
+     */
     @Override
     public void deleteCheckinPoint(UUID id, UUID currentUserId) {
         CheckinPoint checkinPoint = checkinPointRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("CheckinPoint not found with id: " + id));
-        if (!checkinPoint.getUserCheckIns().isEmpty()) {
-            throw new BadRequestException("Cannot delete check-in point that has user check-ins");
-        }
+//        if (!checkinPoint.getUserCheckIns().isEmpty()) {
+//            throw new BadRequestException("Cannot delete check-in point that has user check-ins");
+//        }
 
         checkinPoint.setDeletedAt(LocalDateTime.now());
         checkinPoint.setDeletedBy(currentUserId);
@@ -159,14 +166,27 @@ public class CheckinPointServiceImpl implements CheckinPointService {
     }
 
     @Override
-    public PointCheckinResponse getCheckinPointByIdForAdmin(UUID id) {
+    public void restoreCheckinPoint(UUID id, UUID currentUserId) {
         CheckinPoint checkinPoint = checkinPointRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("CheckinPoint not found with id: " + id));
-        return PointCheckinResponse.fromEntity(checkinPoint, false);
+
+        checkinPoint.setDeletedAt(null);
+        checkinPoint.setDeletedBy(null);
+        checkinPoint.setIsActive(true);
+        checkinPointRepository.save(checkinPoint);
+        // Sync
+        geoService.addCheckinToRedis(checkinPoint.getId().toString(), checkinPoint.getLongitude().doubleValue(), checkinPoint.getLatitude().doubleValue());
     }
 
     @Override
-    public Page<PointCheckinResponse> getAllCheckinPointsForAdmin(int page, int size, String sortBy, String sortDir,
+    public CheckinPointResponse getCheckinPointByIdForAdmin(UUID id) {
+        CheckinPoint checkinPoint = checkinPointRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("CheckinPoint not found with id: " + id));
+        return CheckinPointResponse.fromEntity(checkinPoint, false);
+    }
+
+    @Override
+    public Page<CheckinPointResponse> getAllCheckinPointsForAdmin(int page, int size, String sortBy, String sortDir,
                                                                   String search, boolean includeDeleted) {
         Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
                 ? Sort.by(sortBy).ascending()
@@ -176,11 +196,11 @@ public class CheckinPointServiceImpl implements CheckinPointService {
 
         // !includeDeleted because the filters is isActive
         return checkinPointRepository.findAll(CheckinPointSpecification.withFilters(null, search, !includeDeleted), pageable)
-                .map(p -> PointCheckinResponse.fromEntity(p, false));
+                .map(p -> CheckinPointResponse.fromEntity(p, false));
     }
 
     @Override
-    public List<PointCheckinResponse> getNearbyCheckinPoints(double latitude, double longitude, double radiusMeters) {
+    public List<CheckinPointResponse> getNearbyCheckinPoints(double latitude, double longitude, double radiusMeters) {
         List<String> idList = geoService.getCheckinsInRadius(latitude, longitude, radiusMeters);
         // Get all the checkin point entities from the database and map them to responses
         List<UUID> uuidList = idList.stream().map(UUID::fromString).toList();
@@ -194,7 +214,7 @@ public class CheckinPointServiceImpl implements CheckinPointService {
             checkinPoints = checkinPointRepository.findAllCheckinPointThatUserNotCheckined(uuidList, principal.getId());
         }
         return checkinPoints.stream()
-                .map(p -> PointCheckinResponse.fromEntity(p, false))
+                .map(p -> CheckinPointResponse.fromEntity(p, false))
                 .toList();
     }
 }

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -13,27 +14,90 @@ import java.util.UUID;
 @Repository
 public interface OrderDetailRepository extends JpaRepository<OrderDetail, UUID> {
 
-    boolean existsByTicketCatalogId(UUID ticketCatalogId);
+        boolean existsByTicketCatalogId(UUID ticketCatalogId);
 
-    boolean existsByTicketCatalog_EventId(UUID eventId);
+        boolean existsByTicketCatalog_EventId(UUID eventId);
 
-    // Lấy danh sách giao dịch chi tiết cho bảng
-    @Query("SELECT od FROM OrderDetail od " +
-            "JOIN FETCH od.order o " +
-            "LEFT JOIN FETCH od.workshopSession ws " +
-            "LEFT JOIN FETCH ws.workshopTemplate wt " +
-            "LEFT JOIN FETCH wt.vendor v " +
-            "WHERE od.createdAt BETWEEN :start AND :end " +
-            "ORDER BY od.createdAt DESC")
-    List<OrderDetail> findRevenueDetails(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+        // Lấy danh sách giao dịch chi tiết cho bảng
+        @Query("SELECT od FROM OrderDetail od " +
+                        "JOIN FETCH od.order o " +
+                        "LEFT JOIN FETCH od.workshopSession ws " +
+                        "LEFT JOIN FETCH ws.workshopTemplate wt " +
+                        "LEFT JOIN FETCH wt.vendor v " +
+                        "WHERE od.createdAt BETWEEN :start AND :end " +
+                        "ORDER BY od.createdAt DESC")
+        List<OrderDetail> findRevenueDetails(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
-    // Thống kê doanh thu theo từng Vendor (cho biểu đồ thanh)
-    @Query("SELECT COALESCE(v.businessName, 'Admin'), SUM(od.unitPrice * od.quantity) " +
-            "FROM OrderDetail od " +
-            "LEFT JOIN od.workshopSession ws " + // Dùng LEFT JOIN để không mất record Admin Event
-            "LEFT JOIN ws.workshopTemplate wt " +
-            "LEFT JOIN wt.vendor v " +
-            "WHERE od.createdAt BETWEEN :start AND :end " +
-            "GROUP BY v.businessName")
-    List<Object[]> getRevenueByVendor(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+        // Thống kê doanh thu theo từng Vendor (cho biểu đồ thanh)
+        @Query("SELECT COALESCE(v.businessName, 'Admin'), SUM(od.unitPrice * od.quantity) " +
+                        "FROM OrderDetail od " +
+                        "LEFT JOIN od.workshopSession ws " + // Dùng LEFT JOIN để không mất record Admin Event
+                        "LEFT JOIN ws.workshopTemplate wt " +
+                        "LEFT JOIN wt.vendor v " +
+                        "WHERE od.createdAt BETWEEN :start AND :end " +
+                        "GROUP BY v.businessName")
+        List<Object[]> getRevenueByVendor(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+        @Query(value = "SELECT COALESCE(SUM(od.unit_price * od.quantity), 0) " +
+                        "FROM order_details od " +
+                        "JOIN workshop_sessions ws ON od.workshop_session_id = ws.id " +
+                        "JOIN workshop_templates wt ON ws.workshop_id = wt.id " +
+                        "JOIN orders o ON od.order_id = o.id " +
+                        "JOIN transactions t ON o.id = t.order_id " +
+                        "WHERE wt.vendor_id = :vendorId " +
+                        "AND t.status = 'SUCCESS' " +
+                        "AND od.created_at >= :start " +
+                        "AND od.created_at < :end", nativeQuery = true)
+        java.math.BigDecimal sumRevenueByVendorIdBetween(
+                        @Param("vendorId") UUID vendorId,
+                        @Param("start") LocalDateTime start,
+                        @Param("end") LocalDateTime end);
+
+        @Query(value = "SELECT DATE(od.created_at) as day, COALESCE(SUM(od.unit_price * od.quantity), 0) as revenue " +
+                        "FROM order_details od " +
+                        "JOIN workshop_sessions ws ON od.workshop_session_id = ws.id " +
+                        "JOIN workshop_templates wt ON ws.workshop_id = wt.id " +
+                        "JOIN orders o ON od.order_id = o.id " +
+                        "JOIN transactions t ON o.id = t.order_id " +
+                        "WHERE wt.vendor_id = :vendorId " +
+                        "AND t.status = 'SUCCESS' " +
+                        "AND od.created_at >= :start " +
+                        "AND od.created_at < :end " +
+                        "GROUP BY DATE(od.created_at) " +
+                        "ORDER BY day", nativeQuery = true)
+        List<Object[]> getDailyRevenueByVendorId(
+                        @Param("vendorId") UUID vendorId,
+                        @Param("start") LocalDateTime start,
+                        @Param("end") LocalDateTime end);
+
+        @Query(value = "SELECT DATE_FORMAT(od.created_at, '%Y-%m') as month, COALESCE(SUM(od.unit_price * od.quantity), 0) as revenue "
+                        +
+                        "FROM order_details od " +
+                        "JOIN workshop_sessions ws ON od.workshop_session_id = ws.id " +
+                        "JOIN workshop_templates wt ON ws.workshop_id = wt.id " +
+                        "JOIN orders o ON od.order_id = o.id " +
+                        "JOIN transactions t ON o.id = t.order_id " +
+                        "WHERE wt.vendor_id = :vendorId " +
+                        "AND t.status = 'SUCCESS' " +
+                        "AND od.created_at >= :start " +
+                        "AND od.created_at < :end " +
+                        "GROUP BY DATE_FORMAT(od.created_at, '%Y-%m') " +
+                        "ORDER BY month", nativeQuery = true)
+        List<Object[]> getMonthlyRevenueByVendorId(
+                        @Param("vendorId") UUID vendorId,
+                        @Param("start") LocalDateTime start,
+                        @Param("end") LocalDateTime end);
+
+        @Query(value = "SELECT COALESCE(SUM(od.unit_price * od.quantity), 0) " +
+                        "FROM order_details od " +
+                        "WHERE od.created_at BETWEEN :start AND :end", nativeQuery = true)
+        BigDecimal sumRevenueBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+        @Query(value = "SELECT DATE_FORMAT(od.created_at, '%Y-%m-%d') as day, SUM(od.unit_price * od.quantity) as revenue, COUNT(*) as count "
+                        +
+                        "FROM order_details od " +
+                        "WHERE od.created_at BETWEEN :start AND :end " +
+                        "GROUP BY day " +
+                        "ORDER BY day", nativeQuery = true)
+        List<Object[]> getGlobalDailyRevenue(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 }

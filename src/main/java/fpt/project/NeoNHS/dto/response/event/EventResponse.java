@@ -35,6 +35,10 @@ public class EventResponse {
 
     private String longitude;
 
+    private String lunarStartDate;
+
+    private String lunarEndDate;
+
     private LocalDateTime startTime;
 
     private LocalDateTime endTime;
@@ -64,6 +68,8 @@ public class EventResponse {
      */
     private List<EventImageResponse> images;
 
+    private Integer timelineCount;
+
     /**
      * For list view: includes all event info + thumbnail URL, no image album.
      */
@@ -92,6 +98,8 @@ public class EventResponse {
                 .locationName(event.getLocationName())
                 .latitude(event.getLatitude())
                 .longitude(event.getLongitude())
+                .lunarStartDate(event.getLunarStartDate())
+                .lunarEndDate(event.getLunarEndDate())
                 .startTime(event.getStartTime())
                 .endTime(event.getEndTime())
                 .isTicketRequired(event.getIsTicketRequired())
@@ -104,6 +112,7 @@ public class EventResponse {
                 .updatedAt(event.getUpdatedAt())
                 .deletedAt(event.getDeletedAt())
                 .tags(tagResponses)
+                .timelineCount(event.getEventTimelines() != null ? event.getEventTimelines().size() : 0)
                 .build();
     }
 

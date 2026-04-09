@@ -3,6 +3,7 @@ package fpt.project.NeoNHS.controller;
 import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.request.workshop.CreateWorkshopSessionRequest;
 import fpt.project.NeoNHS.dto.request.workshop.UpdateWorkshopSessionRequest;
+import fpt.project.NeoNHS.dto.request.workshop.UpdateWorkshopSessionStatusRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.workshop.WorkshopSessionResponse;
 import fpt.project.NeoNHS.enums.SessionStatus;
@@ -478,6 +479,65 @@ public class WorkshopSessionController {
                             .ok(ApiResponse.success(HttpStatus.OK, "Workshop session updated successfully",
                                             response));
     }
+
+    @Operation(
+            summary = "Update workshop session status (Vendor only)",
+            description = """
+                    Updates the status of a workshop session. Only SCHEDULED sessions can have their status changed.
+                    
+                    **Requirements:**
+                    - Vendor role required
+                    - Must own the session (via template ownership)
+                    - Session must be in SCHEDULED status
+                    
+                    **Allowed Status Changes:**
+                    - SCHEDULED -> ONGOING: Manually start the session when it begins
+                    - SCHEDULED -> CANCELLED: Cancel the session if it cannot proceed
+                    
+                    **Cannot Change Status To:**
+                    - COMPLETED: Session is automatically marked as COMPLETED when it ends based on time, not manually
+                    - Cannot change status of ONGOING, COMPLETED, or CANCELLED sessions
+                    """
+    )
+        @ApiResponses(value = {
+                @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                        responseCode = "200",
+                        description = "Session status updated successfully",
+                        content = @Content(mediaType = "application/json",
+                                         schema = @Schema(implementation = WorkshopSessionResponse.class))
+                ),
+                @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                        responseCode = "400",
+                        description = "Bad Request - Invalid status change or session cannot be edited (wrong status)"
+                ),
+                @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                        responseCode = "401",
+                        description = "Unauthorized - Valid JWT token required"
+                ),
+                @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                        responseCode = "403",
+                        description = "Forbidden - Vendor role required or not session owner"
+                ),
+                @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                        responseCode = "404",
+                        description = "Not Found - Session does not exist"
+                )
+        })
+        @PatchMapping("/sessions/{id}/status")
+        @PreAuthorize("hasRole('VENDOR')")
+        public ResponseEntity<ApiResponse<WorkshopSessionResponse>> updateWorkshopSessionStatus(
+                        @Parameter(description = "Workshop Session ID", required = true)
+                        @PathVariable UUID id,
+                        @Valid @RequestBody UpdateWorkshopSessionStatusRequest request,
+                        Principal principal) {
+                WorkshopSessionResponse response = workshopSessionService.updateWorkshopSessionStatus(
+                                principal.getName(),
+                                id,
+                                request.getStatus());
+                return ResponseEntity
+                                .ok(ApiResponse.success(HttpStatus.OK, "Workshop session status updated successfully",
+                                                response));
+        }
 
     // ==================== DELETE WORKSHOP SESSION ====================
 

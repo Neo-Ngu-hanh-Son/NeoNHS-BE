@@ -115,4 +115,9 @@ public class User extends BaseEntity {
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Cart cart;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_device_tokens", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "push_token")
+    private List<String> deviceTokens;
 }

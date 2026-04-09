@@ -37,4 +37,8 @@ public interface BlogRepository extends JpaRepository<Blog, UUID>, JpaSpecificat
     @Transactional
     @Query("UPDATE Blog b SET b.viewCount = b.viewCount + :views WHERE b.id = :id")
     void incrementViews(@Param("id") UUID id, @Param("views") int views);
+
+    void deleteBlogById(UUID id);
+    // Empty all blogs that is already deleted (Their deleted at is not null)
+    void deleteAllByDeletedAtIsNotNull();
 }

@@ -16,6 +16,8 @@ public interface PointService {
 
     void deletePoint(UUID id, UUID userId);
 
+    void hardDeletePoint(UUID id);
+
     PointResponse getPointById(UUID id);
 
     PointResponse getPointByIdForAdmin(UUID id);

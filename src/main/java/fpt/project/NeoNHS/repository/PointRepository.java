@@ -17,31 +17,39 @@ import java.util.UUID;
 
 @Repository
 public interface PointRepository extends JpaRepository<Point, UUID>, JpaSpecificationExecutor<Point> {
-    @Query("SELECT p FROM Point p WHERE p.attraction.id = :attractionId " +
-            "AND p.deletedAt IS NULL " +
-            "ORDER BY p.orderIndex ASC")
-    List<Point> findByAttractionIdOrderByOrderIndexAsc(UUID attractionId);
+        @Query("SELECT p FROM Point p WHERE p.attraction.id = :attractionId " +
+                        "AND p.deletedAt IS NULL " +
+                        "ORDER BY p.orderIndex ASC")
+        List<Point> findByAttractionIdOrderByOrderIndexAsc(UUID attractionId);
 
-    // Phân trang danh sách các điểm theo Attraction ID
-    @Query("SELECT p FROM Point p WHERE p.attraction.id = :attractionId " +
-            "AND p.deletedAt IS NULL " +
-            "AND (:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
-            "OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%')))")
-    Page<Point> findByAttractionIdWithSearch(
-            @Param("attractionId") UUID attractionId,
-            @Param("search") String search,
-            Pageable pageable);
+        // Phân trang danh sách các điểm theo Attraction ID
+        @Query("SELECT p FROM Point p WHERE p.attraction.id = :attractionId " +
+                        "AND p.deletedAt IS NULL " +
+                        "AND (:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
+                        "OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%')))")
+        Page<Point> findByAttractionIdWithSearch(
+                        @Param("attractionId") UUID attractionId,
+                        @Param("search") String search,
+                        Pageable pageable);
 
-    long countByDeletedAtIsNull();
+        long countByDeletedAtIsNull();
 
-    Page<Point> findAll(Specification<Point> spec, Pageable pageable);
+        Page<Point> findAll(Specification<Point> spec, Pageable pageable);
 
-    boolean existsByIdAndDeletedAtIsNull(UUID id);
+        boolean existsByIdAndDeletedAtIsNull(UUID id);
 
-    @Query("""
-            SELECT DISTINCT p
-            FROM Point p
-            LEFT JOIN FETCH p.checkinPoints
-            """)
-    List<Point> findAllWithCheckinPoints();
+        boolean existsByNameAndAttractionIdAndDeletedAtIsNull(String name, UUID attractionId);
+
+        boolean existsByNameAndAttractionIdAndIdNotAndDeletedAtIsNull(String name, UUID attractionId, UUID id);
+
+        boolean existsByGooglePlaceIdAndDeletedAtIsNull(String googlePlaceId);
+
+        boolean existsByGooglePlaceIdAndIdNotAndDeletedAtIsNull(String googlePlaceId, UUID id);
+
+        @Query("""
+                        SELECT DISTINCT p
+                        FROM Point p
+                        LEFT JOIN FETCH p.checkinPoints
+                        """)
+        List<Point> findAllWithCheckinPoints();
 }

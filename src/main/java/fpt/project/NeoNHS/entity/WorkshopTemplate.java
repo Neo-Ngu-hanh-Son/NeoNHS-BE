@@ -77,7 +77,4 @@ public class WorkshopTemplate extends BaseEntity {
 
     @OneToMany(mappedBy = "workshopTemplate", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<WorkshopTag> workshopTags;
-
-    @OneToMany(mappedBy = "workshopTemplate", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<Review> reviews;
 }

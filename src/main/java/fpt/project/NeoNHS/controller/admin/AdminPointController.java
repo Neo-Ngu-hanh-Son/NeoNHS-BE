@@ -42,24 +42,23 @@ public class AdminPointController {
             @PathVariable UUID attractionId,
             @RequestParam(value = "page", defaultValue = PaginationConstants.DEFAULT_PAGE, required = false) int page,
             @RequestParam(value = "size", defaultValue = PaginationConstants.DEFAULT_SIZE, required = false) int size,
-            @RequestParam(value = "sortBy", defaultValue = "orderIndex", required = false) String sortBy,
-            @RequestParam(value = "sortDir", defaultValue = PaginationConstants.SORT_ASC, required = false) String sortDir,
+            @RequestParam(value = "sortBy", defaultValue = "createdAt", required = false) String sortBy,
+            @RequestParam(value = "sortDir", defaultValue = PaginationConstants.SORT_DESC, required = false) String sortDir,
             @RequestParam(value = "search", required = false) String search) {
         return ApiResponse.success(
-                pointService.getAllPointsWithPagination(attractionId, page, size, sortBy, sortDir, search)
-        );
+                pointService.getAllPointsWithPagination(attractionId, page, size, sortBy, sortDir, search));
     }
 
     @GetMapping("/all")
     public ApiResponse<Page<PointResponse>> getAllPoints(
             @RequestParam(value = "page", defaultValue = PaginationConstants.DEFAULT_PAGE, required = false) int page,
             @RequestParam(value = "size", defaultValue = PaginationConstants.DEFAULT_SIZE, required = false) int size,
-            @RequestParam(value = "sortBy", defaultValue = "orderIndex", required = false) String sortBy,
-            @RequestParam(value = "sortDir", defaultValue = PaginationConstants.SORT_ASC, required = false) String sortDir,
+            @RequestParam(value = "sortBy", defaultValue = "createdAt", required = false) String sortBy,
+            @RequestParam(value = "sortDir", defaultValue = PaginationConstants.SORT_DESC, required = false) String sortDir,
             @RequestParam(value = "search", required = false) String search,
-            @RequestParam(value = "includeDeleted", defaultValue = "true", required = false) boolean includeDeleted
-    ) {
-        Page<PointResponse> data = pointService.getAllPointsForAdmin(page, size, sortBy, sortDir, search, includeDeleted);
+            @RequestParam(value = "includeDeleted", defaultValue = "true", required = false) boolean includeDeleted) {
+        Page<PointResponse> data = pointService.getAllPointsForAdmin(page, size, sortBy, sortDir, search,
+                includeDeleted);
         return ApiResponse.success(data);
     }
 
@@ -72,9 +71,14 @@ public class AdminPointController {
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deletePoint(
             @PathVariable UUID id,
-            @AuthenticationPrincipal UserPrincipal currentUser
-    ) {
+            @AuthenticationPrincipal UserPrincipal currentUser) {
         pointService.deletePoint(id, currentUser.getId());
         return ApiResponse.success("Point deleted successfully", null);
+    }
+
+    @DeleteMapping("/{id}/hard")
+    public ApiResponse<Void> hardDeletePoint(@PathVariable UUID id) {
+        pointService.hardDeletePoint(id);
+        return ApiResponse.success("Point hard deleted successfully", null);
     }
 }

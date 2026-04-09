@@ -34,6 +34,7 @@ public class MapPointResponse extends PointResponse {
                 .thumbnailUrl(p.getThumbnailUrl())
                 .latitude(p.getLatitude().doubleValue())
                 .longitude(p.getLongitude().doubleValue())
+                .estTimeSpent(p.getEstTimeSpent())
                 .type(p.getType())
                 .attractionId(p.getAttraction() != null ? p.getAttraction().getId() : null)
                 .panoramaImageUrl(p.getPanoramaImageUrl())
@@ -42,7 +43,7 @@ public class MapPointResponse extends PointResponse {
                 .googlePlaceId(p.getGooglePlaceId())
                 .historyAudioCount(p.getHistoryAudios() != null ? p.getHistoryAudios().size() : 0)
                 .checkinPoints(p.getCheckinPoints() != null ? p.getCheckinPoints().stream()
-                        .map(cp -> PointCheckinResponse.fromEntity(cp, null))
+                        .map(cp -> CheckinPointResponse.fromEntity(cp, null))
                         .toList() : null)
                 .build();
     }

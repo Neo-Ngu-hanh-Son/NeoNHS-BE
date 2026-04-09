@@ -6,26 +6,28 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 
 import fpt.project.NeoNHS.dto.request.point.CheckinPointRequest;
-import fpt.project.NeoNHS.dto.response.point.PointCheckinResponse;
+import fpt.project.NeoNHS.dto.response.point.CheckinPointResponse;
 
 public interface CheckinPointService {
 
-    PointCheckinResponse getCheckinPointById(UUID pointId, UUID checkinId);
+    CheckinPointResponse getCheckinPointById(UUID pointId, UUID checkinId);
 
-    Page<PointCheckinResponse> getAllCheckinFromPointId(UUID pointId, int page, int size, String sortBy, String sortDir,
+    Page<CheckinPointResponse> getAllCheckinFromPointId(UUID pointId, int page, int size, String sortBy, String sortDir,
                                                         String search);
 
-    List<PointCheckinResponse> getAllCheckinPoints();
+    List<CheckinPointResponse> getAllCheckinPoints();
 
-    PointCheckinResponse createCheckinPoint(CheckinPointRequest request);
+    CheckinPointResponse createCheckinPoint(CheckinPointRequest request);
 
-    PointCheckinResponse updateCheckinPoint(UUID id, CheckinPointRequest request);
+    CheckinPointResponse updateCheckinPoint(UUID id, CheckinPointRequest request);
 
     void deleteCheckinPoint(UUID id, UUID currentUserId);
 
-    PointCheckinResponse getCheckinPointByIdForAdmin(UUID id);
+    void restoreCheckinPoint(UUID id, UUID currentUserId);
 
-    Page<PointCheckinResponse> getAllCheckinPointsForAdmin(int page, int size, String sortBy, String sortDir, String search, boolean includeDeleted);
+    CheckinPointResponse getCheckinPointByIdForAdmin(UUID id);
 
-    List<PointCheckinResponse> getNearbyCheckinPoints(double latitude, double longitude, double radius);
+    Page<CheckinPointResponse> getAllCheckinPointsForAdmin(int page, int size, String sortBy, String sortDir, String search, boolean includeDeleted);
+
+    List<CheckinPointResponse> getNearbyCheckinPoints(double latitude, double longitude, double radius);
 }

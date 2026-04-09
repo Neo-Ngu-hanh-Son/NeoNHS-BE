@@ -4,14 +4,14 @@ import fpt.project.NeoNHS.dto.response.TicketDetailResponse;
 import fpt.project.NeoNHS.dto.response.TransactionDetailResponse;
 import fpt.project.NeoNHS.dto.response.TransactionResponse;
 import fpt.project.NeoNHS.entity.*;
-import fpt.project.NeoNHS.enums.TransactionStatus;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.exception.UnauthorizedException;
 import fpt.project.NeoNHS.repository.TransactionRepository;
 import fpt.project.NeoNHS.service.TransactionService;
 import fpt.project.NeoNHS.specification.TransactionSpecification;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
@@ -19,7 +19,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,19 +27,14 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionRepository transactionRepository;
 
     @Override
-    public List<TransactionResponse> getTransactions(UUID userId, String type, String status) {
+    public Page<TransactionResponse> getTransactions(UUID userId, String type, String status, Pageable pageable) {
         Specification<Transaction> spec = Specification.where(TransactionSpecification.hasUserId(userId))
                 .and(TransactionSpecification.hasStatus(status))
                 .and(TransactionSpecification.hasType(type));
 
-        // Sort by transactionDate desc
-        Sort sort = Sort.by(Sort.Direction.DESC, "transactionDate");
+        Page<Transaction> transactions = transactionRepository.findAll(spec, pageable);
 
-        List<Transaction> transactions = transactionRepository.findAll(spec, sort);
-
-        return transactions.stream()
-                .map(this::mapToTransactionResponse)
-                .collect(Collectors.toList());
+        return transactions.map(this::mapToTransactionResponse);
     }
 
     @Override
@@ -70,13 +64,6 @@ public class TransactionServiceImpl implements TransactionService {
                             } else {
                                 itemName = detail.getTicketCatalog().getName();
                             }
-
-                            if (detail.getTicketCatalog().getValidFromDate() != null) {
-                                validFrom = detail.getTicketCatalog().getValidFromDate();
-                            }
-                            if (detail.getTicketCatalog().getValidToDate() != null) {
-                                validTo = detail.getTicketCatalog().getValidToDate();
-                            }
                         } else if (detail.getWorkshopSession() != null) {
                             itemName = "Workshop: " + detail.getWorkshopSession().getWorkshopTemplate().getName();
                             validFrom = detail.getWorkshopSession().getStartTime();
@@ -93,6 +80,7 @@ public class TransactionServiceImpl implements TransactionService {
                                 .itemName(itemName)
                                 .validFrom(validFrom)
                                 .validTo(validTo)
+                                .price(detail.getUnitPrice())
                                 .build());
                     }
                 }
@@ -126,18 +114,25 @@ public class TransactionServiceImpl implements TransactionService {
         if (transaction.getOrder() == null || transaction.getOrder().getOrderDetails() == null) {
             return "UNKNOWN";
         }
+
+        java.util.Set<String> types = new java.util.HashSet<>();
+
         for (OrderDetail detail : transaction.getOrder().getOrderDetails()) {
             if (detail.getWorkshopSession() != null) {
-                return "WORKSHOP";
-            }
-            if (detail.getTicketCatalog() != null) {
-                // If associated with an event, it's an EVENT ticket
+                types.add("WORKSHOP");
+            } else if (detail.getTicketCatalog() != null) {
                 if (detail.getTicketCatalog().getEvent() != null) {
-                    return "EVENT";
+                    types.add("EVENT");
+                } else {
+                    types.add("ENTRANCE");
                 }
-                // Otherwise defaults to ENTRANCE (e.g. Attraction tickets)
-                return "ENTRANCE";
             }
+        }
+
+        if (types.size() > 1) {
+            return "MIXED";
+        } else if (types.size() == 1) {
+            return types.iterator().next();
         }
         return "UNKNOWN";
     }

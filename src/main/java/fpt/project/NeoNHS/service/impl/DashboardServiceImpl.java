@@ -248,7 +248,7 @@ public class DashboardServiceImpl implements DashboardService {
         int requestedPointCount = (limit != null && limit > 0) ? limit : 6;
 
         long touristTotal = userRepository.countByRole(UserRole.TOURIST);
-        long touristActive = userRepository.countByRoleAndIsActiveTrueAndIsBannedFalse(UserRole.TOURIST);
+        long touristActive = userRepository.countByIsActiveFalseAndIsBannedFalse(UserRole.TOURIST);
         long vendorTotal = vendorRepository.count();
         long vendorActive = vendorRepository.countByUserIsActiveTrueAndUserIsBannedFalse();
 
@@ -376,7 +376,7 @@ public class DashboardServiceImpl implements DashboardService {
                 });
 
         // 4️⃣ Workshop approved (Hoạt động Admin phê duyệt cho Vendor)
-        workshopRepository.findRecentApproved(pageable)
+        workshopRepository.findRecentApprovedReviews(pageable)
                 .forEach(w -> activities.add(
                         VendorActivityResponse.builder()
                                 .vendorId(w.getVendor().getId())

@@ -1,0 +1,41 @@
+package fpt.project.NeoNHS.document;
+
+import fpt.project.NeoNHS.enums.MessageStatus;
+import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import java.time.LocalDateTime;
+
+@Document(collection = "chat_messages")
+@CompoundIndex(name = "room_timestamp_idx", def = "{'chatRoomId': 1, 'timestamp': -1}")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class ChatMessage {
+
+    @Id
+    private String id;
+
+    private String chatRoomId; // References ChatRoom document
+
+    private String senderId; // UUID string from MySQL User table
+
+    private String content;
+
+    @Builder.Default
+    private LocalDateTime timestamp = LocalDateTime.now();
+
+    @Builder.Default
+    private MessageStatus status = MessageStatus.SENT;
+
+    @Builder.Default
+    private String messageType = "TEXT";
+
+    private String mediaUrl;
+
+    private java.util.Map<String, Object> metadata;
+}

@@ -37,13 +37,11 @@ public class Review extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "event_id")
-    private Event event;
+    @Column(name = "review_type_flg", nullable = false)
+    private Integer reviewTypeFlg; // 1: Workshop, 2: Event, 3: Point
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "workshop_id")
-    private WorkshopTemplate workshopTemplate;
+    @Column(name = "review_type_id", nullable = false)
+    private UUID reviewTypeId;
 
     @OneToMany(mappedBy = "review", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<ReviewImage> reviewImages;

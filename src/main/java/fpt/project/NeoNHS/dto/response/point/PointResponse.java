@@ -1,12 +1,9 @@
 package fpt.project.NeoNHS.dto.response.point;
 
-import jakarta.persistence.Column;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -41,5 +38,5 @@ public class PointResponse {
     protected Double defaultPitch = 0.0;
     protected String googlePlaceId;
     protected Integer historyAudioCount;
-    private List<PointCheckinResponse> checkinPoints;
+    private List<CheckinPointResponse> checkinPoints;
 }
