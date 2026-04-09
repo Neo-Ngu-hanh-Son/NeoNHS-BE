@@ -64,9 +64,9 @@ public class UserCheckInServiceImpl implements UserCheckInService {
 
         // If user already checked in, add the checkin image into the current check in.
         // (Point not increase)
-        if (user.getCheckIns() != null) {
-            addImageToExistingCheckin(request, checkinPoint, user);
-        }
+//        if (user.getCheckIns() != null) {
+//            addImageToExistingCheckin(request, checkinPoint, user);
+//        }
 
         // Calculate the distance between the user's location and the check-in point
         double distance = geoService.calculateDistanceManually(request.getLatitude(), request.getLongitude(),
@@ -100,6 +100,7 @@ public class UserCheckInServiceImpl implements UserCheckInService {
                             .build());
         }
 
+        // TODO: Handle checked-in 2 times in checkin images
         userCheckIn.setCheckinImages(checkinImages);
         userCheckInRepository.save(userCheckIn);
 
@@ -230,7 +231,7 @@ public class UserCheckInServiceImpl implements UserCheckInService {
 
     @Override
     public UserCheckinGalleryListResponse getMyGallery(LocalDateTime from, LocalDateTime to,
-            UUID parentPointId, UUID checkinPointId) {
+                                                       UUID parentPointId, UUID checkinPointId) {
         UUID currentUserId = getCurrentUserPrincipal().getId();
 
         List<CheckinImage> images = checkinImageRepository

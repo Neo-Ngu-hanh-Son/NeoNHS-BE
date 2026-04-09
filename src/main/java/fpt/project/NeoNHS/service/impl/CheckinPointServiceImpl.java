@@ -82,7 +82,7 @@ public class CheckinPointServiceImpl implements CheckinPointService {
                 .orElseThrow(() -> new ResourceNotFoundException("Point not found with id: " + request.getPointId()));
 
         if (request.getRewardPoints() < 10) {
-            throw new  BadRequestException("Reward Points must be greater than 10");
+            throw new BadRequestException("Reward Points must be greater than 10");
         }
 
         CheckinPoint checkinPoint = CheckinPoint.builder()
@@ -90,7 +90,7 @@ public class CheckinPointServiceImpl implements CheckinPointService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .position(request.getPosition())
-                .thumbnailUrl(request.getThumbnailUrl() != null ?  request.getThumbnailUrl() : point.getThumbnailUrl())
+                .thumbnailUrl(request.getThumbnailUrl() != null ? request.getThumbnailUrl() : point.getThumbnailUrl())
                 .isActive(request.getIsActive() != null ? request.getIsActive() : true)
                 .qrCode(request.getQrCode())
                 .longitude(request.getLongitude())
@@ -141,13 +141,20 @@ public class CheckinPointServiceImpl implements CheckinPointService {
         return CheckinPointResponse.fromEntity(saved, false);
     }
 
+    /**
+     * Soft delete (NOTE: This only hide from user, while any user that already has this checkin point will not be affected
+     * Therefore we don't need to check if the check-in point has user check-ins
+     *
+     * @param id
+     * @param currentUserId
+     */
     @Override
     public void deleteCheckinPoint(UUID id, UUID currentUserId) {
         CheckinPoint checkinPoint = checkinPointRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("CheckinPoint not found with id: " + id));
-        if (!checkinPoint.getUserCheckIns().isEmpty()) {
-            throw new BadRequestException("Cannot delete check-in point that has user check-ins");
-        }
+//        if (!checkinPoint.getUserCheckIns().isEmpty()) {
+//            throw new BadRequestException("Cannot delete check-in point that has user check-ins");
+//        }
 
         checkinPoint.setDeletedAt(LocalDateTime.now());
         checkinPoint.setDeletedBy(currentUserId);
@@ -156,6 +163,19 @@ public class CheckinPointServiceImpl implements CheckinPointService {
 
         // Sync
         geoService.removeCheckinFromRedis(id.toString());
+    }
+
+    @Override
+    public void restoreCheckinPoint(UUID id, UUID currentUserId) {
+        CheckinPoint checkinPoint = checkinPointRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("CheckinPoint not found with id: " + id));
+
+        checkinPoint.setDeletedAt(null);
+        checkinPoint.setDeletedBy(null);
+        checkinPoint.setIsActive(true);
+        checkinPointRepository.save(checkinPoint);
+        // Sync
+        geoService.addCheckinToRedis(checkinPoint.getId().toString(), checkinPoint.getLongitude().doubleValue(), checkinPoint.getLatitude().doubleValue());
     }
 
     @Override
