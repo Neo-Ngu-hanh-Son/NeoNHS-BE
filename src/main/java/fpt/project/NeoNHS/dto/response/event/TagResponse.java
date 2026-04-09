@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
@@ -24,6 +25,8 @@ public class TagResponse {
 
     private String iconUrl;
 
+    private LocalDateTime deletedAt;
+
     public static TagResponse fromEntity(ETag eTag) {
         return TagResponse.builder()
                 .id(eTag.getId())
@@ -31,6 +34,7 @@ public class TagResponse {
                 .description(eTag.getDescription())
                 .tagColor(eTag.getTagColor())
                 .iconUrl(eTag.getIconUrl())
+                .deletedAt(eTag.getDeletedAt())
                 .build();
     }
 }

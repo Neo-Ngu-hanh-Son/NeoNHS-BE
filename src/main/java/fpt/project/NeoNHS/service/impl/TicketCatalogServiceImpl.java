@@ -235,12 +235,21 @@ public class TicketCatalogServiceImpl implements TicketCatalogService {
         if (validFrom != null && validTo != null && validTo.isBefore(validFrom)) {
             throw new BadRequestException("Valid to date must be after valid from date");
         }
+
+        if (ticketCatalog.getTotalQuota() != null && ticketCatalog.getSoldQuantity() != null) {
+            if (ticketCatalog.getTotalQuota() < ticketCatalog.getSoldQuantity()) {
+                throw new BadRequestException("Total quota cannot be less than sold quantity");
+            }
+        }
     }
 
     private void autoUpdateSoldOutStatus(TicketCatalog ticketCatalog) {
-        if (ticketCatalog.getTotalQuota() != null && ticketCatalog.getSoldQuantity() != null
-                && ticketCatalog.getSoldQuantity() >= ticketCatalog.getTotalQuota()) {
-            ticketCatalog.setStatus(TicketCatalogStatus.SOLD_OUT);
+        if (ticketCatalog.getTotalQuota() != null && ticketCatalog.getSoldQuantity() != null) {
+            if (ticketCatalog.getSoldQuantity() >= ticketCatalog.getTotalQuota()) {
+                ticketCatalog.setStatus(TicketCatalogStatus.SOLD_OUT);
+            } else if (ticketCatalog.getStatus() == TicketCatalogStatus.SOLD_OUT) {
+                ticketCatalog.setStatus(TicketCatalogStatus.ACTIVE);
+            }
         }
     }
 }
