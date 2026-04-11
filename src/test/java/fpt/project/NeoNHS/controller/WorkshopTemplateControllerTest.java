@@ -6,6 +6,7 @@ import fpt.project.NeoNHS.dto.request.workshop.UpdateWorkshopTemplateRequest;
 import fpt.project.NeoNHS.dto.response.workshop.WorkshopTemplateResponse;
 import fpt.project.NeoNHS.exception.BadRequestException;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
+import fpt.project.NeoNHS.exception.UnauthorizedException;
 import fpt.project.NeoNHS.security.CustomUserDetailsService;
 import fpt.project.NeoNHS.security.JwtTokenProvider;
 import fpt.project.NeoNHS.service.WorkshopTemplateService;
@@ -82,6 +83,21 @@ class WorkshopTemplateControllerTest {
                 .thumbnailIndex(0)
                 .tagIds(List.of(UUID.randomUUID(), UUID.randomUUID()))
                 .build();
+    }
+
+    private UpdateWorkshopTemplateRequest buildValidUpdateRequest() {
+        UpdateWorkshopTemplateRequest request = new UpdateWorkshopTemplateRequest();
+        request.setName("Updated Yoga Workshop");
+        request.setShortDescription("An updated relaxing yoga session");
+        request.setFullDescription("Updated full day yoga workshop for beginners");
+        request.setEstimatedDuration(150);
+        request.setDefaultPrice(new BigDecimal("149.99"));
+        request.setMinParticipants(5);
+        request.setMaxParticipants(25);
+        request.setImageUrls(List.of("https://example.com/img1_updated.jpg", "https://example.com/img2_updated.jpg"));
+        request.setThumbnailIndex(1);
+        request.setTagIds(List.of(UUID.randomUUID(), UUID.randomUUID()));
+        return request;
     }
 
     // ==================================================================================
@@ -373,21 +389,95 @@ class WorkshopTemplateControllerTest {
         }
     }
 
-    @Test
-    @WithMockUser(roles = "VENDOR")
-    void getMyWorkshopTemplates_ShouldReturn200() throws Exception {
-        Page<WorkshopTemplateResponse> mockPage = new PageImpl<>(List.of(mockResponse));
+    @Nested
+    @DisplayName("Get My Workshop Templates Tests")
+    class GetMyWorkshopTemplatesTests {
 
-        Mockito.when(workshopTemplateService.getMyWorkshopTemplates(eq(vendorEmail), any(Pageable.class)))
-               .thenReturn(mockPage);
+        // ----- UTCID01: Normal — successful retrieval with elements (200 OK) -----
+        @Test
+        @DisplayName("UTCID01 - Valid request, returns templates → 200 OK")
+        @WithMockUser(roles = "VENDOR")
+        void utcid01_validRequest_shouldReturn200() throws Exception {
+            Page<WorkshopTemplateResponse> mockPage = new PageImpl<>(List.of(mockResponse));
 
-        mockMvc.perform(get("/api/workshops/templates/my")
-                .principal(mockPrincipal)
-                .param("page", "0")
-                .param("size", "10"))
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Your workshop templates retrieved successfully"));
+            Mockito.when(workshopTemplateService.getMyWorkshopTemplates(eq(vendorEmail), any(Pageable.class)))
+                   .thenReturn(mockPage);
+
+            mockMvc.perform(get("/api/workshops/templates/my")
+                    .principal(mockPrincipal)
+                    .param("page", "0")
+                    .param("size", "10"))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.message").value("Your workshop templates retrieved successfully"));
+        }
+
+        // ----- UTCID02: Normal — successful retrieval, empty list (200 OK) -----
+        @Test
+        @DisplayName("UTCID02 - Valid request, no templates found → 200 OK")
+        @WithMockUser(roles = "VENDOR")
+        void utcid02_emptyList_shouldReturn200() throws Exception {
+            Page<WorkshopTemplateResponse> mockPage = new PageImpl<>(List.of());
+
+            Mockito.when(workshopTemplateService.getMyWorkshopTemplates(eq(vendorEmail), any(Pageable.class)))
+                   .thenReturn(mockPage);
+
+            mockMvc.perform(get("/api/workshops/templates/my")
+                    .principal(mockPrincipal)
+                    .param("page", "0")
+                    .param("size", "10"))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.message").value("Your workshop templates retrieved successfully"));
+        }
+
+        // ----- UTCID03: Abnormal — Vendor profile not found (404 Not Found) -----
+        @Test
+        @DisplayName("UTCID03 - Vendor profile not found in DB → 404 Not Found")
+        @WithMockUser(roles = "VENDOR")
+        void utcid03_vendorNotFound_shouldReturn404() throws Exception {
+            Mockito.when(workshopTemplateService.getMyWorkshopTemplates(eq(vendorEmail), any(Pageable.class)))
+                   .thenThrow(new ResourceNotFoundException("VendorProfile", "email", vendorEmail));
+
+            mockMvc.perform(get("/api/workshops/templates/my")
+                    .principal(mockPrincipal)
+                    .param("page", "0")
+                    .param("size", "10"))
+                    .andDo(print())
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.message").value("VendorProfile not found with email: '" + vendorEmail + "'"));
+        }
+
+        // ----- UTCID04: Abnormal — DB connection lost (500 Internal Server Error) -----
+        @Test
+        @DisplayName("UTCID04 - DB connection lost → 500 Internal Server Error")
+        @WithMockUser(roles = "VENDOR")
+        void utcid04_dbConnectionLost_shouldReturn500() throws Exception {
+            Mockito.when(workshopTemplateService.getMyWorkshopTemplates(eq(vendorEmail), any(Pageable.class)))
+                   .thenThrow(new DataAccessResourceFailureException("Database connection error"));
+
+            mockMvc.perform(get("/api/workshops/templates/my")
+                    .principal(mockPrincipal)
+                    .param("page", "0")
+                    .param("size", "10"))
+                    .andDo(print())
+                    .andExpect(status().isInternalServerError())
+                    .andExpect(jsonPath("$.success").value(false));
+        }
+
+        // ----- UTCID05: Abnormal — Invalid pagination parameters (400 Bad Request) -----
+        @Test
+        @DisplayName("UTCID05 - Invalid page size format → 400 Bad Request")
+        @WithMockUser(roles = "VENDOR")
+        void utcid05_invalidPageSize_shouldReturn400() throws Exception {
+            mockMvc.perform(get("/api/workshops/templates/my")
+                    .principal(mockPrincipal)
+                    .param("page", "0")
+                    .param("size", "invalid-size"))
+                    .andDo(print())
+                    .andExpect(status().isBadRequest());
+        }
     }
 
     @Test
@@ -408,21 +498,316 @@ class WorkshopTemplateControllerTest {
                 .andExpect(jsonPath("$.message").value("Workshop templates filtered successfully"));
     }
 
-    @Test
-    @WithMockUser(roles = "VENDOR")
-    void updateWorkshopTemplate_ShouldReturn200() throws Exception {
-        UpdateWorkshopTemplateRequest request = new UpdateWorkshopTemplateRequest();
+    @Nested
+    @DisplayName("Update Workshop Template Tests")
+    class UpdateWorkshopTemplateTests {
 
-        Mockito.when(workshopTemplateService.updateWorkshopTemplate(eq(vendorEmail), eq(templateId), any(UpdateWorkshopTemplateRequest.class)))
-               .thenReturn(mockResponse);
+        // ----- UTCID01: Normal — success (200 OK) -----
+        @Test
+        @DisplayName("UTCID01 - Valid update request from verified vendor → 200 OK")
+        @WithMockUser(roles = "VENDOR")
+        void utcid01_validRequest_shouldReturn200() throws Exception {
+            UpdateWorkshopTemplateRequest request = buildValidUpdateRequest();
 
-        mockMvc.perform(put("/api/workshops/templates/{id}", templateId)
-                .principal(mockPrincipal)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Workshop template updated successfully"));
+            Mockito.when(workshopTemplateService.updateWorkshopTemplate(
+                    eq(vendorEmail), eq(templateId), any(UpdateWorkshopTemplateRequest.class)))
+                    .thenReturn(mockResponse);
+
+            mockMvc.perform(put("/api/workshops/templates/{id}", templateId)
+                            .principal(mockPrincipal)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.message").value("Workshop template updated successfully"));
+        }
+
+        // ----- UTCID02: Abnormal — Template not found (404 Not Found) -----
+        @Test
+        @DisplayName("UTCID02 - Template ID not found → 404 Not Found")
+        @WithMockUser(roles = "VENDOR")
+        void utcid02_templateNotFound_shouldReturn404() throws Exception {
+            UpdateWorkshopTemplateRequest request = buildValidUpdateRequest();
+
+            Mockito.when(workshopTemplateService.updateWorkshopTemplate(
+                    eq(vendorEmail), eq(templateId), any(UpdateWorkshopTemplateRequest.class)))
+                    .thenThrow(new ResourceNotFoundException("WorkshopTemplate", "id", templateId.toString()));
+
+            mockMvc.perform(put("/api/workshops/templates/{id}", templateId)
+                            .principal(mockPrincipal)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andDo(print())
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.message").value("WorkshopTemplate not found with id: '" + templateId + "'"));
+        }
+
+        // ----- UTCID03: Abnormal — No vendor profile in DB (404 Not Found) -----
+        @Test
+        @DisplayName("UTCID03 - No vendor profile in DB → 404 Not Found")
+        @WithMockUser(roles = "VENDOR")
+        void utcid03_noVendorProfile_shouldReturn404() throws Exception {
+            UpdateWorkshopTemplateRequest request = buildValidUpdateRequest();
+
+            Mockito.when(workshopTemplateService.updateWorkshopTemplate(
+                    eq(vendorEmail), eq(templateId), any(UpdateWorkshopTemplateRequest.class)))
+                    .thenThrow(new ResourceNotFoundException("VendorProfile", "email", vendorEmail));
+
+            mockMvc.perform(put("/api/workshops/templates/{id}", templateId)
+                            .principal(mockPrincipal)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andDo(print())
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.message").value("VendorProfile not found with email: '" + vendorEmail + "'"));
+        }
+
+        // ----- UTCID04: Abnormal — DB connection lost (500 Internal Server Error) -----
+        @Test
+        @DisplayName("UTCID04 - DB connection lost → 500 Internal Server Error")
+        @WithMockUser(roles = "VENDOR")
+        void utcid04_dbConnectionLost_shouldReturn500() throws Exception {
+            UpdateWorkshopTemplateRequest request = buildValidUpdateRequest();
+
+            Mockito.when(workshopTemplateService.updateWorkshopTemplate(
+                    eq(vendorEmail), eq(templateId), any(UpdateWorkshopTemplateRequest.class)))
+                    .thenThrow(new DataAccessResourceFailureException("Database connection error"));
+
+            mockMvc.perform(put("/api/workshops/templates/{id}", templateId)
+                            .principal(mockPrincipal)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andDo(print())
+                    .andExpect(status().isInternalServerError())
+                    .andExpect(jsonPath("$.success").value(false));
+        }
+
+        // ----- UTCID05: Abnormal — Name is blank (400 Bad Request) -----
+        @Test
+        @DisplayName("UTCID05 - Name is blank → 400 Bad Request")
+        @WithMockUser(roles = "VENDOR")
+        void utcid05_nameIsBlank_shouldReturn400() throws Exception {
+            UpdateWorkshopTemplateRequest request = buildValidUpdateRequest();
+            request.setName("");
+
+            Mockito.when(workshopTemplateService.updateWorkshopTemplate(
+                    eq(vendorEmail), eq(templateId), any(UpdateWorkshopTemplateRequest.class)))
+                    .thenThrow(new BadRequestException("Workshop name is required"));
+
+            mockMvc.perform(put("/api/workshops/templates/{id}", templateId)
+                            .principal(mockPrincipal)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andDo(print())
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.message").value("Workshop name is required"));
+        }
+
+        // ----- UTCID06: Abnormal — One or more tag IDs not in DB (400 Bad Request) -----
+        @Test
+        @DisplayName("UTCID06 - Invalid tag IDs → 400 Bad Request")
+        @WithMockUser(roles = "VENDOR")
+        void utcid06_invalidTagIds_shouldReturn400() throws Exception {
+            UpdateWorkshopTemplateRequest request = buildValidUpdateRequest();
+
+            Mockito.when(workshopTemplateService.updateWorkshopTemplate(
+                    eq(vendorEmail), eq(templateId), any(UpdateWorkshopTemplateRequest.class)))
+                    .thenThrow(new BadRequestException("One or more tag IDs are invalid"));
+
+            mockMvc.perform(put("/api/workshops/templates/{id}", templateId)
+                            .principal(mockPrincipal)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andDo(print())
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.message").value("One or more tag IDs are invalid"));
+        }
+
+        // ----- UTCID07: Abnormal — minParticipants > maxParticipants (400 Bad Request) -----
+        @Test
+        @DisplayName("UTCID07 - minParticipants > maxParticipants → 400 Bad Request")
+        @WithMockUser(roles = "VENDOR")
+        void utcid07_minGreaterThanMax_shouldReturn400() throws Exception {
+            UpdateWorkshopTemplateRequest request = buildValidUpdateRequest();
+            request.setMinParticipants(30);
+            request.setMaxParticipants(10);
+
+            Mockito.when(workshopTemplateService.updateWorkshopTemplate(
+                    eq(vendorEmail), eq(templateId), any(UpdateWorkshopTemplateRequest.class)))
+                    .thenThrow(new BadRequestException("Minimum participants cannot be greater than maximum participants"));
+
+            mockMvc.perform(put("/api/workshops/templates/{id}", templateId)
+                            .principal(mockPrincipal)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andDo(print())
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.message").value("Minimum participants cannot be greater than maximum participants"));
+        }
+
+        // ----- UTCID08: Abnormal — thumbnailIndex >= imageUrls.size (400 Bad Request) -----
+        @Test
+        @DisplayName("UTCID08 - thumbnailIndex out of bounds → 400 Bad Request")
+        @WithMockUser(roles = "VENDOR")
+        void utcid08_thumbnailIndexOutOfBounds_shouldReturn400() throws Exception {
+            UpdateWorkshopTemplateRequest request = buildValidUpdateRequest();
+            request.setImageUrls(List.of("https://example.com/img1.jpg"));
+            request.setThumbnailIndex(5);
+
+            Mockito.when(workshopTemplateService.updateWorkshopTemplate(
+                    eq(vendorEmail), eq(templateId), any(UpdateWorkshopTemplateRequest.class)))
+                    .thenThrow(new BadRequestException("Thumbnail index is out of bounds"));
+
+            mockMvc.perform(put("/api/workshops/templates/{id}", templateId)
+                            .principal(mockPrincipal)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andDo(print())
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.message").value("Thumbnail index is out of bounds"));
+        }
+
+        // ----- UTCID09: Boundary — minParticipants == maxParticipants (200 OK) -----
+        @Test
+        @DisplayName("UTCID09 - minParticipants equals maxParticipants → 200 OK")
+        @WithMockUser(roles = "VENDOR")
+        void utcid09_minEqualsMax_shouldReturn200() throws Exception {
+            UpdateWorkshopTemplateRequest request = buildValidUpdateRequest();
+            request.setMinParticipants(15);
+            request.setMaxParticipants(15);
+
+            Mockito.when(workshopTemplateService.updateWorkshopTemplate(
+                    eq(vendorEmail), eq(templateId), any(UpdateWorkshopTemplateRequest.class)))
+                    .thenReturn(mockResponse);
+
+            mockMvc.perform(put("/api/workshops/templates/{id}", templateId)
+                            .principal(mockPrincipal)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.message").value("Workshop template updated successfully"));
+        }
+
+        // ----- UTCID10: Boundary — tagIds has exactly 1 item (200 OK) -----
+        @Test
+        @DisplayName("UTCID10 - tagIds with exactly 1 item (minimum) → 200 OK")
+        @WithMockUser(roles = "VENDOR")
+        void utcid10_singleTagId_shouldReturn200() throws Exception {
+            UpdateWorkshopTemplateRequest request = buildValidUpdateRequest();
+            request.setTagIds(List.of(UUID.randomUUID()));
+
+            Mockito.when(workshopTemplateService.updateWorkshopTemplate(
+                    eq(vendorEmail), eq(templateId), any(UpdateWorkshopTemplateRequest.class)))
+                    .thenReturn(mockResponse);
+
+            mockMvc.perform(put("/api/workshops/templates/{id}", templateId)
+                            .principal(mockPrincipal)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.message").value("Workshop template updated successfully"));
+        }
+
+        // ----- UTCID11: Abnormal — Invalid UUID format (400 Bad Request) -----
+        @Test
+        @DisplayName("UTCID11 - Invalid UUID format in path → 400 Bad Request")
+        @WithMockUser(roles = "VENDOR")
+        void utcid11_invalidUuidFormat_shouldReturn400() throws Exception {
+            UpdateWorkshopTemplateRequest request = buildValidUpdateRequest();
+
+            mockMvc.perform(put("/api/workshops/templates/{id}", "invalid-uuid-format")
+                            .principal(mockPrincipal)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andDo(print())
+                    .andExpect(status().isBadRequest());
+        }
+
+        // ----- UTCID12: Abnormal — Unauthorized / Does not own template (401 Unauthorized) -----
+        @Test
+        @DisplayName("UTCID12 - Vendor does not own template → 401 Unauthorized")
+        @WithMockUser(roles = "VENDOR")
+        void utcid12_notOwner_shouldReturn401() throws Exception {
+            UpdateWorkshopTemplateRequest request = buildValidUpdateRequest();
+
+            Mockito.when(workshopTemplateService.updateWorkshopTemplate(
+                    eq(vendorEmail), eq(templateId), any(UpdateWorkshopTemplateRequest.class)))
+                    .thenThrow(new UnauthorizedException("You do not have permission to modify this template"));
+
+            mockMvc.perform(put("/api/workshops/templates/{id}", templateId)
+                            .principal(mockPrincipal)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andDo(print())
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.message").value("You do not have permission to modify this template"));
+        }
+
+        // ----- UTCID13: Abnormal — Vendor not verified (400 Bad Request) -----
+        @Test
+        @DisplayName("UTCID13 - Vendor not verified → 400 Bad Request")
+        @WithMockUser(roles = "VENDOR")
+        void utcid13_vendorNotVerified_shouldReturn400() throws Exception {
+            UpdateWorkshopTemplateRequest request = buildValidUpdateRequest();
+
+            Mockito.when(workshopTemplateService.updateWorkshopTemplate(
+                    eq(vendorEmail), eq(templateId), any(UpdateWorkshopTemplateRequest.class)))
+                    .thenThrow(new BadRequestException("Only verified vendors can update workshop templates"));
+
+            mockMvc.perform(put("/api/workshops/templates/{id}", templateId)
+                            .principal(mockPrincipal)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andDo(print())
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.message").value("Only verified vendors can update workshop templates"));
+        }
+
+        // ----- UTCID14: Abnormal — Malformed JSON (400 Bad Request) -----
+        @Test
+        @DisplayName("UTCID14 - Malformed JSON payload → 400 Bad Request")
+        @WithMockUser(roles = "VENDOR")
+        void utcid14_malformedJson_shouldReturn400() throws Exception {
+            mockMvc.perform(put("/api/workshops/templates/{id}", templateId)
+                            .principal(mockPrincipal)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{ invalid_json: "))
+                    .andDo(print())
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.success").value(false));
+            // GlobalExceptionHandler handles HttpMessageNotReadableException
+        }
+
+        // ----- UTCID15: Abnormal — Invalid state to update (400 Bad Request) -----
+        @Test
+        @DisplayName("UTCID15 - Invalid state (e.g. already approved) → 400 Bad Request")
+        @WithMockUser(roles = "VENDOR")
+        void utcid15_invalidState_shouldReturn400() throws Exception {
+            UpdateWorkshopTemplateRequest request = buildValidUpdateRequest();
+
+            Mockito.when(workshopTemplateService.updateWorkshopTemplate(
+                    eq(vendorEmail), eq(templateId), any(UpdateWorkshopTemplateRequest.class)))
+                    .thenThrow(new IllegalArgumentException("Template cannot be updated because it is already approved"));
+
+            mockMvc.perform(put("/api/workshops/templates/{id}", templateId)
+                            .principal(mockPrincipal)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andDo(print())
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.message").value("Template cannot be updated because it is already approved"));
+        }
     }
 
     @Test
