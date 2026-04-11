@@ -243,6 +243,9 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
 
         // 6. Update price if provided
         if (request.getPrice() != null) {
+            if (session.getCurrentEnrolled() > 0 && session.getPrice().compareTo(request.getPrice()) != 0) {
+                throw new BadRequestException("Cannot update price because tourists have already registered for this session");
+            }
             session.setPrice(request.getPrice());
         }
 
