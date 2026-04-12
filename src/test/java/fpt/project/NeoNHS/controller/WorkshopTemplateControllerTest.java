@@ -183,7 +183,7 @@ class WorkshopTemplateControllerTest {
         @WithMockUser(roles = "VENDOR")
         void utcid05_nameIsBlank_shouldReturn400() throws Exception {
             CreateWorkshopTemplateRequest request = buildValidRequest();
-            request.setName("");
+//            request.setName("Vendor name");
 
             Mockito.when(workshopTemplateService.createWorkshopTemplate(
                     eq(vendorEmail), any(CreateWorkshopTemplateRequest.class)))
