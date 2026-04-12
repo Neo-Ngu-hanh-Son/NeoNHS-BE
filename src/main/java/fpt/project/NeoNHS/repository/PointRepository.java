@@ -32,6 +32,16 @@ public interface PointRepository extends JpaRepository<Point, UUID>, JpaSpecific
                         @Param("search") String search,
                         Pageable pageable);
 
+        @Query("SELECT p FROM Point p WHERE p.attraction.id = :attractionId " +
+                        "AND (:includeDeleted = true OR p.deletedAt IS NULL) " +
+                        "AND (:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
+                        "OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%')))")
+        Page<Point> findByAttractionIdWithSearchForAdmin(
+                        @Param("attractionId") UUID attractionId,
+                        @Param("search") String search,
+                        @Param("includeDeleted") boolean includeDeleted,
+                        Pageable pageable);
+
         long countByDeletedAtIsNull();
 
         Page<Point> findAll(Specification<Point> spec, Pageable pageable);
