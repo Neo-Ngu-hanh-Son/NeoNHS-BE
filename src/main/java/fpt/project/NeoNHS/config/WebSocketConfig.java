@@ -17,7 +17,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     private final WebSocketAuthInterceptor webSocketAuthInterceptor;
     private final WebSocketAuthChannelInterceptor webSocketAuthChannelInterceptor;
 
-    @Value("${app.be-url-setpassword}")
+    @Value("${app.fe-url-setpassword}")
     private String feWebUrl;
 
     @Override
@@ -40,7 +40,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                         "http://localhost:8080",
                         "https://fwbgft4w-5173.asse.devtunnels.ms",
                         "https://neonhs-fe-web.vercel.app",
-                        "https://alma-curdier-unmanually.ngrok-free.dev",
                         feWebUrl)
                 .addInterceptors(webSocketAuthInterceptor)
                 .withSockJS();
