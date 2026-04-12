@@ -810,30 +810,146 @@ class WorkshopTemplateControllerTest {
         }
     }
 
-    @Test
-    @WithMockUser(roles = "VENDOR")
-    void togglePublishWorkshopTemplate_ShouldReturn200() throws Exception {
-        Mockito.when(workshopTemplateService.togglePublishWorkshopTemplate(vendorEmail, templateId))
-               .thenReturn(mockResponse);
+    @Nested
+    @DisplayName("POST /api/workshops/templates/{id}/toggle-publish")
+    class TogglePublishWorkshopTemplateTests {
 
-        mockMvc.perform(post("/api/workshops/templates/{id}/toggle-publish", templateId)
-                .principal(mockPrincipal))
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Workshop template publish status toggled successfully"));
+        @Test
+        @DisplayName("UTCID01 - Valid toggle publish - Should return 200")
+        @WithMockUser(roles = "VENDOR")
+        void utcid01_validToggle_shouldReturn200() throws Exception {
+            Mockito.when(workshopTemplateService.togglePublishWorkshopTemplate(vendorEmail, templateId)).thenReturn(mockResponse);
+
+            mockMvc.perform(post("/api/workshops/templates/{id}/toggle-publish", templateId)
+                            .principal(mockPrincipal))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.message").value("Workshop template publish status toggled successfully"));
+        }
+
+        @Test
+        @DisplayName("UTCID02 - User not authenticated - Should return 401")
+        void utcid02_unauthenticated_shouldReturn401() throws Exception {
+            mockMvc.perform(post("/api/workshops/templates/{id}/toggle-publish", templateId))
+                    .andDo(print())
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @DisplayName("UTCID03 - Template not found - Should return 404")
+        @WithMockUser(roles = "VENDOR")
+        void utcid03_templateNotFound_shouldReturn404() throws Exception {
+            Mockito.when(workshopTemplateService.togglePublishWorkshopTemplate(vendorEmail, templateId))
+                    .thenThrow(new ResourceNotFoundException("Workshop template", "id", templateId));
+
+            mockMvc.perform(post("/api/workshops/templates/{id}/toggle-publish", templateId)
+                            .principal(mockPrincipal))
+                    .andDo(print())
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.message").value("Workshop template not found with id : '" + templateId + "'"));
+        }
+
+        @Test
+        @DisplayName("UTCID04 - Unauthorized vendor - Should return 403")
+        @WithMockUser(roles = "VENDOR")
+        void utcid04_unauthorizedVendor_shouldReturn403() throws Exception {
+            Mockito.when(workshopTemplateService.togglePublishWorkshopTemplate(vendorEmail, templateId))
+                    .thenThrow(new UnauthorizedException("You do not have permission to access this template"));
+
+            mockMvc.perform(post("/api/workshops/templates/{id}/toggle-publish", templateId)
+                            .principal(mockPrincipal))
+                    .andDo(print())
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.message").value("You do not have permission to access this template"));
+        }
+
+        @Test
+        @DisplayName("UTCID05 - Template not approved - Should return 400")
+        @WithMockUser(roles = "VENDOR")
+        void utcid05_templateNotApproved_shouldReturn400() throws Exception {
+            Mockito.when(workshopTemplateService.togglePublishWorkshopTemplate(vendorEmail, templateId))
+                    .thenThrow(new IllegalArgumentException("Template must be APPROVED before it can be published"));
+
+            mockMvc.perform(post("/api/workshops/templates/{id}/toggle-publish", templateId)
+                            .principal(mockPrincipal))
+                    .andDo(print())
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.message").value("Template must be APPROVED before it can be published"));
+        }
     }
 
-    @Test
-    @WithMockUser(roles = "VENDOR")
-    void registerWorkshopTemplate_ShouldReturn200() throws Exception {
-        Mockito.when(workshopTemplateService.registerWorkshopTemplate(vendorEmail, templateId))
-               .thenReturn(mockResponse);
+    @Nested
+    @DisplayName("POST /api/workshops/templates/{id}/register")
+    class RegisterWorkshopTemplateTests {
 
-        mockMvc.perform(post("/api/workshops/templates/{id}/register", templateId)
-                .principal(mockPrincipal))
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Template submitted successfully. Please wait for admin approval."));
+        @Test
+        @DisplayName("UTCID01 - Valid register - Should return 200")
+        @WithMockUser(roles = "VENDOR")
+        void utcid01_validRegister_shouldReturn200() throws Exception {
+            Mockito.when(workshopTemplateService.registerWorkshopTemplate(vendorEmail, templateId)).thenReturn(mockResponse);
+
+            mockMvc.perform(post("/api/workshops/templates/{id}/register", templateId)
+                            .principal(mockPrincipal))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.message").value("Template submitted successfully. Please wait for admin approval."));
+        }
+
+        @Test
+        @DisplayName("UTCID02 - User not authenticated - Should return 401")
+        void utcid02_unauthenticated_shouldReturn401() throws Exception {
+            mockMvc.perform(post("/api/workshops/templates/{id}/register", templateId))
+                    .andDo(print())
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @DisplayName("UTCID03 - Template not found - Should return 404")
+        @WithMockUser(roles = "VENDOR")
+        void utcid03_templateNotFound_shouldReturn404() throws Exception {
+            Mockito.when(workshopTemplateService.registerWorkshopTemplate(vendorEmail, templateId))
+                    .thenThrow(new ResourceNotFoundException("Workshop template", "id", templateId));
+
+            mockMvc.perform(post("/api/workshops/templates/{id}/register", templateId)
+                            .principal(mockPrincipal))
+                    .andDo(print())
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.message").value("Workshop template not found with id : '" + templateId + "'"));
+        }
+
+        @Test
+        @DisplayName("UTCID04 - Unauthorized vendor - Should return 403")
+        @WithMockUser(roles = "VENDOR")
+        void utcid04_unauthorizedVendor_shouldReturn403() throws Exception {
+            Mockito.when(workshopTemplateService.registerWorkshopTemplate(vendorEmail, templateId))
+                    .thenThrow(new UnauthorizedException("You do not have permission to access this template"));
+
+            mockMvc.perform(post("/api/workshops/templates/{id}/register", templateId)
+                            .principal(mockPrincipal))
+                    .andDo(print())
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.message").value("You do not have permission to access this template"));
+        }
+
+        @Test
+        @DisplayName("UTCID05 - Template already approved - Should return 400")
+        @WithMockUser(roles = "VENDOR")
+        void utcid05_templateAlreadyApproved_shouldReturn400() throws Exception {
+            Mockito.when(workshopTemplateService.registerWorkshopTemplate(vendorEmail, templateId))
+                    .thenThrow(new IllegalArgumentException("Template cannot be registered because it is already approved"));
+
+            mockMvc.perform(post("/api/workshops/templates/{id}/register", templateId)
+                            .principal(mockPrincipal))
+                    .andDo(print())
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.message").value("Template cannot be registered because it is already approved"));
+        }
     }
 
     @Test
