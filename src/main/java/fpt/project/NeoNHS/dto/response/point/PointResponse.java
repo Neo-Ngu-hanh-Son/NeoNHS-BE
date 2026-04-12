@@ -11,10 +11,10 @@ import fpt.project.NeoNHS.enums.PointType;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
-
 /**
  * Response DTO for Point entity, used to send point details to clients.
- * NOTE that both workshops and events will also be represented as points, so the type field is used to distinguish between them.
+ * NOTE that both workshops and events will also be represented as points, so
+ * the type field is used to distinguish between them.
  */
 @Data
 @SuperBuilder
@@ -39,4 +39,5 @@ public class PointResponse {
     protected String googlePlaceId;
     protected Integer historyAudioCount;
     private List<CheckinPointResponse> checkinPoints;
+    protected java.time.LocalDateTime deletedAt;
 }

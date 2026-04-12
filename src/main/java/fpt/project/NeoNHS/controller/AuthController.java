@@ -117,7 +117,7 @@ public class AuthController {
     public ResponseEntity<Void> validateSetPassword(
             @RequestParam String token,
             @RequestParam String email,
-            @Value("${app.be-url-setpassword}") String feUrl) {
+            @Value("${app.fe-url-setpassword}") String feUrl) {
         try {
             authService.validateSetPasswordToken(token, email);
             String redirectUrl = UriComponentsBuilder.fromUriString(feUrl)

@@ -13,5 +13,6 @@ import java.util.List;
 @AllArgsConstructor
 public class VendorRevenueSeriesResponse {
     private String range;
+    private java.math.BigDecimal totalRevenue;
     private List<VendorRevenuePoint> points;
 }
