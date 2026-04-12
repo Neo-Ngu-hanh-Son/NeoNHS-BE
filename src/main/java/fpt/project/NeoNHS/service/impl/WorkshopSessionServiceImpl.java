@@ -277,7 +277,11 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
         if (!session.getWorkshopTemplate().getVendor().getUser().getEmail().equals(email)) {
             throw new BadRequestException("You do not have permission to update this workshop session");
         }
-        
+        // Check if the workshop has enrolled
+        if(session.getCurrentEnrolled() > 0) {
+            throw new BadRequestException("Cannot Change the date of the session because there are already tourists registered for this session.");
+        }
+
         //Check if no tourists are registered in the session.
         if (session.getCurrentEnrolled() == 0) {
             throw new BadRequestException("Cannot start the session because no tourists are registered.");
@@ -286,6 +290,11 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
         //Check if the update status doesn't match the start date.
         if (status == SessionStatus.ONGOING && session.getStartTime().isAfter(LocalDateTime.now())) {
             throw new BadRequestException("Cannot update status to ONGOING or COMPLETED because the session has not started yet.");
+        }
+
+        //Check if the update status doesn't match the end date.
+        if (status == SessionStatus.COMPLETED && session.getEndTime().isAfter(LocalDateTime.now())) {
+            throw new BadRequestException("Cannot update status to COMPLETED because the session has not ended yet.");
         }
 
         // 1. Validate status update

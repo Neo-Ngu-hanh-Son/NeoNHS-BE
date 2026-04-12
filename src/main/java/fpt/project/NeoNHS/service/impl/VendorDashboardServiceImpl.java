@@ -111,8 +111,8 @@ public class VendorDashboardServiceImpl implements VendorDashboardService {
         LocalDateTime weekAgo = now.minusWeeks(1);
         LocalDateTime twoWeeksAgo = now.minusWeeks(2);
 
-        BigDecimal currentRevenue = safeDecimal(orderDetailRepository.sumRevenueByVendorIdBetween(vendorId, weekAgo, now));
-        BigDecimal previousRevenue = safeDecimal(orderDetailRepository.sumRevenueByVendorIdBetween(vendorId, twoWeeksAgo, weekAgo));
+        BigDecimal totalRevenue = safeDecimal(orderDetailRepository.sumTotalRevenueByVendorId(vendorId));
+        BigDecimal previousRevenue = null; // No trend mapping for all-time total revenue
 
         long currentWorkshops = workshopTemplateRepository.countByVendorIdAndDeletedAtIsNull(vendorId);
         long currentBookings = workshopSessionRepository.countBookingsByVendorId(vendorId);
@@ -121,7 +121,7 @@ public class VendorDashboardServiceImpl implements VendorDashboardService {
         long previousVouchersDelta = voucherRepository.countByVendorIdAndDeletedAtIsNullAndCreatedAtAfter(vendorId, weekAgo);
 
         return VendorStatsResponse.builder()
-                .revenue(buildStatCard(currentRevenue, previousRevenue, "VND"))
+                .revenue(buildStatCard(totalRevenue, previousRevenue, "VND"))
                 .workshops(buildStatCard(BigDecimal.valueOf(currentWorkshops), null, null))
                 .bookings(buildStatCard(BigDecimal.valueOf(currentBookings), BigDecimal.valueOf(currentBookings - previousBookings), null))
                 .vouchers(buildStatCard(BigDecimal.valueOf(currentVouchers), BigDecimal.valueOf(currentVouchers - previousVouchersDelta), null))
@@ -171,7 +171,16 @@ public class VendorDashboardServiceImpl implements VendorDashboardService {
         List<Object[]> raw = orderDetailRepository.getDailyRevenueByVendorId(vendorId, weekStart, weekEnd);
         Map<LocalDate, BigDecimal> revenueMap = new LinkedHashMap<>();
         for (Object[] row : raw) {
-            LocalDate date = ((java.sql.Date) row[0]).toLocalDate();
+            LocalDate date;
+            if (row[0] instanceof java.sql.Date sqlDate) {
+                date = sqlDate.toLocalDate();
+            } else if (row[0] instanceof java.time.LocalDate localDate) {
+                date = localDate;
+            } else if (row[0] instanceof java.time.LocalDateTime localDateTime) {
+                date = localDateTime.toLocalDate();
+            } else {
+                date = LocalDate.parse(row[0].toString());
+            }
             BigDecimal revenue = new BigDecimal(row[1].toString());
             revenueMap.put(date, revenue);
         }
@@ -196,7 +205,16 @@ public class VendorDashboardServiceImpl implements VendorDashboardService {
         List<Object[]> raw = orderDetailRepository.getDailyRevenueByVendorId(vendorId, monthStart, monthEnd);
         Map<LocalDate, BigDecimal> revenueMap = new LinkedHashMap<>();
         for (Object[] row : raw) {
-            LocalDate date = ((java.sql.Date) row[0]).toLocalDate();
+            LocalDate date;
+            if (row[0] instanceof java.sql.Date sqlDate) {
+                date = sqlDate.toLocalDate();
+            } else if (row[0] instanceof java.time.LocalDate localDate) {
+                date = localDate;
+            } else if (row[0] instanceof java.time.LocalDateTime localDateTime) {
+                date = localDateTime.toLocalDate();
+            } else {
+                date = LocalDate.parse(row[0].toString());
+            }
             BigDecimal revenue = new BigDecimal(row[1].toString());
             revenueMap.put(date, revenue);
         }
@@ -257,38 +275,63 @@ public class VendorDashboardServiceImpl implements VendorDashboardService {
     // ─── Recent transactions ────────────────────────────────────────
 
     private List<VendorTransactionItem> buildTransactions(UUID vendorId, int limit) {
-        List<Transaction> transactions = transactionRepository.findRecentByVendorId(vendorId, PageRequest.of(0, limit));
+        List<Object[]> rawTransactions = transactionRepository.findRecentTransactionsWithTicketsByVendorIdNative(vendorId, PageRequest.of(0, limit));
 
-        return transactions.stream().map(t -> {
-            String workshopName = extractWorkshopName(t);
-            String statusLabel = switch (t.getStatus()) {
-                case SUCCESS -> "completed";
-                case PENDING -> "pending";
-                case REFUNDED -> "refunded";
-                case FAILED -> "failed";
+        return rawTransactions.stream().map(row -> {
+            String transactionId = row[0] != null ? (row[0] instanceof byte[] ? asUuid((byte[]) row[0]).toString() : row[0].toString()) : null;
+            String status = row[1] != null ? row[1].toString() : "UNKNOWN";
+            String workshopName = row[2] != null ? row[2].toString() : "N/A";
+            String customerName = row[3] != null ? row[3].toString() : "N/A";
+            BigDecimal amount = row[4] != null ? new BigDecimal(row[4].toString()) : BigDecimal.ZERO;
+            String currency = row[5] != null ? row[5].toString() : "VND";
+
+            LocalDateTime paidAt = null;
+            if (row[6] != null) {
+                if (row[6] instanceof java.sql.Timestamp) {
+                    paidAt = ((java.sql.Timestamp) row[6]).toLocalDateTime();
+                } else if (row[6] instanceof LocalDateTime) {
+                    paidAt = (LocalDateTime) row[6];
+                } else {
+                    paidAt = LocalDateTime.parse(row[6].toString().replace(" ", "T"));
+                }
+            }
+
+            String ticketCodes = row[7] != null ? row[7].toString() : null;
+
+            String statusLabel = switch (status) {
+                case "SUCCESS" -> "completed";
+                case "PENDING" -> "pending";
+                case "REFUNDED" -> "refunded";
+                case "FAILED" -> "failed";
+                default -> "unknown";
             };
 
             return VendorTransactionItem.builder()
-                    .id(t.getId().toString())
+                    .id(transactionId)
                     .workshopName(workshopName)
-                    .customerName(t.getOrder().getUser().getFullname())
-                    .amount(t.getAmount())
-                    .currency(t.getCurrency())
-                    .paidAt(t.getTransactionDate())
+                    .customerName(customerName)
+                    .amount(amount)
+                    .currency(currency)
+                    .paidAt(paidAt)
                     .status(statusLabel)
+                    .ticketCodes(ticketCodes)
                     .build();
         }).collect(Collectors.toList());
     }
 
-    private String extractWorkshopName(Transaction t) {
-        if (t.getOrder() != null && t.getOrder().getOrderDetails() != null) {
-            return t.getOrder().getOrderDetails().stream()
-                    .filter(od -> od.getWorkshopSession() != null && od.getWorkshopSession().getWorkshopTemplate() != null)
-                    .map(od -> od.getWorkshopSession().getWorkshopTemplate().getName())
-                    .findFirst()
-                    .orElse("N/A");
+    private UUID asUuid(byte[] bytes) {
+        if (bytes == null || bytes.length != 16) {
+            return null;
         }
-        return "N/A";
+        long msb = 0;
+        long lsb = 0;
+        for (int i = 0; i < 8; i++) {
+            msb = (msb << 8) | (bytes[i] & 0xff);
+        }
+        for (int i = 8; i < 16; i++) {
+            lsb = (lsb << 8) | (bytes[i] & 0xff);
+        }
+        return new UUID(msb, lsb);
     }
 
     // ─── Workshop reviews ───────────────────────────────────────────
