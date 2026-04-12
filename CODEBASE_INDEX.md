@@ -1,6 +1,6 @@
 # NeoNHS-BE Codebase Index
 
-> Last updated: 2026-03-12
+> Last updated: 2026-04-08
 > Scope: Current repository state under `src/main`, `src/test`, `src/main/resources`, and top-level documentation folders.
 
 ## 1. Repository Overview
@@ -15,7 +15,6 @@ NeoNHS-BE/
 |  |- main/java/fpt/project/NeoNHS/
 |  |- main/resources/
 |  |- test/java/fpt/project/NeoNHS/
-|- diagrams/
 |- docs/
 |- pom.xml
 |- Dockerfile
@@ -30,36 +29,41 @@ NeoNHS-BE/
 - Spring modules in use: Web MVC, Data JPA, Security, Redis, Mail, Thymeleaf
 - JWT: `jjwt-*`
 - OpenAPI: `springdoc-openapi-starter-webmvc-ui`
-- Database: MySQL (local via Docker Compose)
+- Database: MySQL (local via Docker Compose), MongoDB (for chat)
 - Build: Maven Wrapper (`mvnw`, `mvnw.cmd`)
 
 ## 3. Source Inventory
 
 High-level counts:
 
-- Main Java files: 388
+- Main Java files: 457
 - Test Java files: 2
-- Main resource files: 12
-- Mermaid diagrams (`.mmd`): 22
+- Main resource files: 14
 
 Core package counts (`src/main/java/fpt/project/NeoNHS`):
 
 | Package | Files |
 | --- | ---: |
-| `controller` | 45 |
-| `controller/admin` | 15 |
-| `controller/vendor` | 1 |
-| `service` | 84 |
-| `service/impl` | 42 |
-| `repository` | 34 |
-| `entity` | 37 |
-| `enums` | 21 |
-| `config` | 9 |
-| `specification` | 12 |
-| `dto/request` | 62 |
-| `dto/response` | 56 |
+| `config` | 15 |
+| `constants` | 6 |
+| `controller` | 32 |
+| `controller/admin` | 18 |
+| `controller/vendor` | 2 |
+| `document` | 2 |
+| `dto/chat` | 7 |
+| `dto/request` | 69 |
+| `dto/response` | 73 |
+| `entity` | 40 |
+| `enums` | 22 |
 | `exception` | 11 |
-| `helpers` | 6 |
+| `helpers` | 7 |
+| `repository` | 37 |
+| `repository/mongo` | 2 |
+| `repository/projection`| 1 |
+| `security` | 4 |
+| `service` | 47 |
+| `service/impl` | 48 |
+| `specification` | 12 |
 | `tasks` | 1 |
 
 ## 4. Package Responsibilities

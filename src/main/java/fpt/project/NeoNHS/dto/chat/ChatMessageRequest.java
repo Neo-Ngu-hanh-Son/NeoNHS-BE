@@ -8,6 +8,9 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class ChatMessageRequest {
-    private String receiverId;
+    private String chatRoomId;
     private String content;
+    private String messageType;
+    private String mediaUrl;
+    private java.util.Map<String, Object> metadata;
 }

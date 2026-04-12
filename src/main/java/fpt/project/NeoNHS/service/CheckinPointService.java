@@ -23,6 +23,8 @@ public interface CheckinPointService {
 
     void deleteCheckinPoint(UUID id, UUID currentUserId);
 
+    void restoreCheckinPoint(UUID id, UUID currentUserId);
+
     CheckinPointResponse getCheckinPointByIdForAdmin(UUID id);
 
     Page<CheckinPointResponse> getAllCheckinPointsForAdmin(int page, int size, String sortBy, String sortDir, String search, boolean includeDeleted);

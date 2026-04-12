@@ -34,6 +34,7 @@ public class MapPointResponse extends PointResponse {
                 .thumbnailUrl(p.getThumbnailUrl())
                 .latitude(p.getLatitude().doubleValue())
                 .longitude(p.getLongitude().doubleValue())
+                .estTimeSpent(p.getEstTimeSpent())
                 .type(p.getType())
                 .attractionId(p.getAttraction() != null ? p.getAttraction().getId() : null)
                 .panoramaImageUrl(p.getPanoramaImageUrl())

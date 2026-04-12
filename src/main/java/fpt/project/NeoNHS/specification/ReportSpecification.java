@@ -22,7 +22,7 @@ public class ReportSpecification {
             }
 
             if (filter.getReporterName() != null && !filter.getReporterName().isEmpty()) {
-                predicates.add(cb.like(cb.lower(root.get("reporter").get("fullName")),
+                predicates.add(cb.like(cb.lower(root.get("reporter").get("fullname")),
                         "%" + filter.getReporterName().toLowerCase() + "%"));
             }
 

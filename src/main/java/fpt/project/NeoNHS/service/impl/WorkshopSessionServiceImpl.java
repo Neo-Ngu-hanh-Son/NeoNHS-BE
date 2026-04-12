@@ -243,6 +243,9 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
 
         // 6. Update price if provided
         if (request.getPrice() != null) {
+            if (session.getCurrentEnrolled() > 0 && session.getPrice().compareTo(request.getPrice()) != 0) {
+                throw new BadRequestException("Cannot update price because tourists have already registered for this session");
+            }
             session.setPrice(request.getPrice());
         }
 
@@ -274,19 +277,44 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
         if (!session.getWorkshopTemplate().getVendor().getUser().getEmail().equals(email)) {
             throw new BadRequestException("You do not have permission to update this workshop session");
         }
+        // Check if the workshop has enrolled
+        if(session.getCurrentEnrolled() > 0) {
+            throw new BadRequestException("Cannot Change the date of the session because there are already tourists registered for this session.");
+        }
 
+        //Check if no tourists are registered in the session.
+        if (session.getCurrentEnrolled() == 0) {
+            throw new BadRequestException("Cannot start the session because no tourists are registered.");
+        }
+
+        //Check if the update status doesn't match the start date.
+        if (status == SessionStatus.ONGOING && session.getStartTime().isAfter(LocalDateTime.now())) {
+            throw new BadRequestException("Cannot update status to ONGOING or COMPLETED because the session has not started yet.");
+        }
+
+        //Check if the update status doesn't match the end date.
+        if (status == SessionStatus.COMPLETED && session.getEndTime().isAfter(LocalDateTime.now())) {
+            throw new BadRequestException("Cannot update status to COMPLETED because the session has not ended yet.");
+        }
+
+        // 1. Validate status update
+        // 1.1. Update status to ONGOING
         if (status == SessionStatus.ONGOING) {
             if (session.getStatus() != SessionStatus.SCHEDULED) {
                 throw new BadRequestException("Can only update status to ONGOING if current status is SCHEDULED. Current status: " + session.getStatus());
             }
+        // 1.2. Update status to COMPLETED
         } else if (status == SessionStatus.COMPLETED) {
             if (session.getStatus() != SessionStatus.ONGOING) {
                 throw new BadRequestException("Can only update status to COMPLETED if current status is ONGOING. Current status: " + session.getStatus());
             }
+        // 1.3. Invalid status update
         } else {
             throw new BadRequestException("Invalid status update. Allowed updates are ONGOING or COMPLETED.");
         }
+        
 
+        // 2. Update status
         session.setStatus(status);
         WorkshopSession updatedSession = workshopSessionRepository.save(session);
         return mapToResponse(updatedSession);

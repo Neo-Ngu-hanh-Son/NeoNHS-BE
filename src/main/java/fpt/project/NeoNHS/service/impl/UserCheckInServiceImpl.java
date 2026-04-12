@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.NotificationMessages;
 import fpt.project.NeoNHS.constants.GeoConstants;
 import fpt.project.NeoNHS.dto.request.usercheckin.CheckinImageRequest;
 import fpt.project.NeoNHS.dto.request.usercheckin.UpdateCheckinImageCaptionRequest;
@@ -20,6 +21,7 @@ import fpt.project.NeoNHS.repository.UserCheckInRepository;
 import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.service.GeoService;
 import fpt.project.NeoNHS.service.ImageUploadService;
+import fpt.project.NeoNHS.service.NotificationService;
 import fpt.project.NeoNHS.service.UserCheckInService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -48,6 +51,7 @@ public class UserCheckInServiceImpl implements UserCheckInService {
     private final GeoService geoService;
     private final UserRepository userRepository;
     private final ImageUploadService imageUploadService;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -55,12 +59,14 @@ public class UserCheckInServiceImpl implements UserCheckInService {
         var checkinPoint = checkinPointRepository.findById(UUID.fromString(request.getCheckinPointId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Check-in point not found"));
         var user = userRepository.findById(getCurrentUserPrincipal().getId())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found, are you sure you are authenticated?"));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("User not found, are you sure you are authenticated?"));
 
-        // If user already checked in, add the checkin image into the current check in. (Point not increase)
-        if (user.getCheckIns() != null) {
-            addImageToExistingCheckin(request, checkinPoint, user);
-        }
+        // If user already checked in, add the checkin image into the current check in.
+        // (Point not increase)
+//        if (user.getCheckIns() != null) {
+//            addImageToExistingCheckin(request, checkinPoint, user);
+//        }
 
         // Calculate the distance between the user's location and the check-in point
         double distance = geoService.calculateDistanceManually(request.getLatitude(), request.getLongitude(),
@@ -94,6 +100,7 @@ public class UserCheckInServiceImpl implements UserCheckInService {
                             .build());
         }
 
+        // TODO: Handle checked-in 2 times in checkin images
         userCheckIn.setCheckinImages(checkinImages);
         userCheckInRepository.save(userCheckIn);
 
@@ -101,6 +108,16 @@ public class UserCheckInServiceImpl implements UserCheckInService {
                 .reduce(0, (sum, checkIn) -> sum + checkIn.getEarnedPoints(),
                         (first, second) -> first + second);
         userTotalPoint += checkinPoint.getRewardPoints();
+
+        if (checkinPoint.getRewardPoints() > 0) {
+            notificationService.createAndSendNotification(
+                    user,
+                    NotificationMessages.checkinTitle(),
+                    NotificationMessages.checkinMessage(checkinPoint.getRewardPoints()),
+                    NotificationMessages.TYPE_CHECKIN_SUCCESS,
+                    checkinPoint.getId());
+        }
+
         return UserCheckinResultResponse.builder()
                 .earnedPoints(userCheckIn.getEarnedPoints())
                 .userTotalPoints(userTotalPoint)
@@ -125,7 +142,6 @@ public class UserCheckInServiceImpl implements UserCheckInService {
                 });
     }
 
-
     @Override
     public Page<UserCheckinResponse> getUserCheckins(int page, int size, String sortBy, String sortDir) {
         UUID currentUserId = getCurrentUserPrincipal().getId();
@@ -140,7 +156,8 @@ public class UserCheckInServiceImpl implements UserCheckInService {
     public UserCheckinResponse getUserCheckinById(UUID id) {
         UUID currentUserId = getCurrentUserPrincipal().getId();
         UserCheckIn checkIn = userCheckInRepository.findByIdAndUser_Id(id, currentUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Checkin not found or you don't have permission to view it."));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Checkin not found or you don't have permission to view it."));
         return mapToResponse(checkIn);
     }
 
@@ -149,7 +166,8 @@ public class UserCheckInServiceImpl implements UserCheckInService {
     public UserCheckinResponse updateUserCheckin(UUID id, UpdateUserCheckinRequest request) {
         UUID currentUserId = getCurrentUserPrincipal().getId();
         UserCheckIn checkIn = userCheckInRepository.findByIdAndUser_Id(id, currentUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Checkin not found or you don't have permission to update it."));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Checkin not found or you don't have permission to update it."));
 
         if (request.getNote() != null) {
             checkIn.setNote(request.getNote());
@@ -157,13 +175,12 @@ public class UserCheckInServiceImpl implements UserCheckInService {
 
         if (request.getImages() != null && !request.getImages().isEmpty()) {
             // Create a lookup map for faster processing
-            java.util.Map<UUID, String> updateMap = request.getImages().stream()
+            Map<UUID, String> updateMap = request.getImages().stream()
                     .filter(img -> img.getImageId() != null)
-                    .collect(java.util.stream.Collectors.toMap(
+                    .collect(Collectors.toMap(
                             UpdateCheckinImageCaptionRequest::getImageId,
                             UpdateCheckinImageCaptionRequest::getCaption,
-                            (existing, replacement) -> replacement
-                    ));
+                            (existing, replacement) -> replacement));
 
             for (CheckinImage image : checkIn.getCheckinImages()) {
                 if (updateMap.containsKey(image.getId())) {
@@ -181,9 +198,11 @@ public class UserCheckInServiceImpl implements UserCheckInService {
     public void deleteUserCheckin(UUID id) {
         UUID currentUserId = getCurrentUserPrincipal().getId();
         UserCheckIn checkIn = userCheckInRepository.findByIdAndUser_Id(id, currentUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Checkin not found or you don't have permission to delete it."));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Checkin not found or you don't have permission to delete it."));
 
-        // This is a hard delete as UserCheckIn does not extend BaseEntity, cascading its CheckinImages.
+        // This is a hard delete as UserCheckIn does not extend BaseEntity, cascading
+        // its CheckinImages.
         userCheckInRepository.delete(checkIn);
     }
 
@@ -192,10 +211,12 @@ public class UserCheckInServiceImpl implements UserCheckInService {
     public void deleteCheckinImage(UUID checkinId, UUID imageId) {
         UUID currentUserId = getCurrentUserPrincipal().getId();
         UserCheckIn checkIn = userCheckInRepository.findByIdAndUser_Id(checkinId, currentUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Checkin not found or you don't have permission to update it."));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Checkin not found or you don't have permission to update it."));
 
         if (checkIn.getCheckinImages().size() <= 1) {
-            throw new BadRequestException("Cannot delete the only image of a check-in. If you want to remove the image, please delete the entire check-in instead.");
+            throw new BadRequestException(
+                    "Cannot delete the only image of a check-in. If you want to remove the image, please delete the entire check-in instead.");
         }
 
         boolean removed = checkIn.getCheckinImages().removeIf(img -> img.getId().equals(imageId));
@@ -203,7 +224,8 @@ public class UserCheckInServiceImpl implements UserCheckInService {
             throw new ResourceNotFoundException("Image with id " + imageId + " not found in this check-in.");
         }
 
-        // Saving the checkIn will cascade the orphanRemoval and delete the CheckinImage entity
+        // Saving the checkIn will cascade the orphanRemoval and delete the CheckinImage
+        // entity
         userCheckInRepository.save(checkIn);
     }
 
@@ -225,12 +247,11 @@ public class UserCheckInServiceImpl implements UserCheckInService {
             stream = stream.filter(img -> !img.getCreatedAt().isAfter(to));
         }
         if (parentPointId != null) {
-            stream = stream.filter(img ->
-                    parentPointId.equals(img.getUserCheckIn().getCheckinPoint().getPoint().getId()));
+            stream = stream
+                    .filter(img -> parentPointId.equals(img.getUserCheckIn().getCheckinPoint().getPoint().getId()));
         }
         if (checkinPointId != null) {
-            stream = stream.filter(img ->
-                    checkinPointId.equals(img.getUserCheckIn().getCheckinPoint().getId()));
+            stream = stream.filter(img -> checkinPointId.equals(img.getUserCheckIn().getCheckinPoint().getId()));
         }
 
         List<UserCheckinGalleryItemResponse> items = stream

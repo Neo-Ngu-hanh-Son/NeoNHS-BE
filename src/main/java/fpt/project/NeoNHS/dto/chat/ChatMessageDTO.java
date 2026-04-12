@@ -12,9 +12,12 @@ import java.time.LocalDateTime;
 @Builder
 public class ChatMessageDTO {
     private String id;
+    private String chatRoomId;
     private String senderId;
-    private String receiverId;
     private String content;
     private LocalDateTime timestamp;
     private MessageStatus status;
+    private String messageType;
+    private String mediaUrl;
+    private java.util.Map<String, Object> metadata;
 }

@@ -37,6 +37,10 @@ public class Event extends BaseEntity {
 
     private String longitude;
 
+    private String lunarStartDate;
+
+    private String lunarEndDate;
+
     @Column(nullable = false)
     private LocalDateTime startTime;
 
@@ -71,5 +75,5 @@ public class Event extends BaseEntity {
     private List<EventImage> eventImages;
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Review> reviews;
+    private List<EventTimeline> eventTimelines;
 }

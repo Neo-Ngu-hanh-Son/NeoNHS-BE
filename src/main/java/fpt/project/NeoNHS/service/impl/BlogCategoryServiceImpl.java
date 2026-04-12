@@ -79,7 +79,7 @@ public class BlogCategoryServiceImpl implements BlogCategoryService {
     @Override
     public void createBlogCategory(BlogCategoryRequest request) {
         UserPrincipal admin = getCurrentUserPrincipal();
-        if (blogCategoryRepository.existsByNameContainingAndDeletedAtIsNull(request.getName())) {
+        if (blogCategoryRepository.existsByNameAndDeletedAtIsNull(request.getName())) {
             throw new BadRequestException("Category name already exists");
         }
         String slug = SlugGenerator.generateSlug(request.getName());

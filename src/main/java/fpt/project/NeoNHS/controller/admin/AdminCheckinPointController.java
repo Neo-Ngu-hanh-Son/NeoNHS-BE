@@ -63,4 +63,13 @@ public class AdminCheckinPointController {
         checkinPointService.deleteCheckinPoint(id, currentUser.getId());
         return ApiResponse.success("CheckinPoint deleted successfully", null);
     }
+
+    @PutMapping("/restore/{id}")
+    public ApiResponse<Void> restoreCheckinPoint(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        checkinPointService.restoreCheckinPoint(id, currentUser.getId());
+        return ApiResponse.success("CheckinPoint restored", null);
+    }
+
 }

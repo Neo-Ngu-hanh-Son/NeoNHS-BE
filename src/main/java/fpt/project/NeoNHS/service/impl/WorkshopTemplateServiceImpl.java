@@ -526,7 +526,7 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
 
     @Override
     @Transactional
-    public WorkshopTemplateResponse approveWorkshopTemplate(String adminEmail, UUID id, String adminNote) {
+    public WorkshopTemplateResponse approveWorkshopTemplate(String adminEmail, UUID id, String adminNote)  {
         // 1. Find the admin user
         User admin = userRepository.findByEmail(adminEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "email", adminEmail));
