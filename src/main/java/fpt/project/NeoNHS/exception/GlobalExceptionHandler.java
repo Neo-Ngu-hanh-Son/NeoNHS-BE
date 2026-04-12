@@ -12,6 +12,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.stream.Collectors;
@@ -77,6 +78,22 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(HttpStatus.BAD_REQUEST, errors));
+    }
+
+    /**
+     * Handles MethodArgumentTypeMismatchException (400 Bad Request)
+     * Thrown when path variable or request param conversion fails (e.g. Invalid UUID string)
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException ex) {
+        log.warn("Argument type mismatch: {}", ex.getMessage());
+        String message = "Invalid parameter value: " + ex.getName();
+        if (ex.getRequiredType() != null && ex.getRequiredType().getSimpleName().equals("UUID")) {
+            message = "Invalid UUID format. UUID must be in standard 36-character format";
+        }
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(HttpStatus.BAD_REQUEST, message));
     }
 
     /**

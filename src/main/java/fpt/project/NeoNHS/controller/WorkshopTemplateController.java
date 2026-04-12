@@ -7,6 +7,7 @@ import fpt.project.NeoNHS.dto.request.workshop.UpdateWorkshopTemplateRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.workshop.WorkshopTemplateResponse;
 import fpt.project.NeoNHS.enums.WorkshopStatus;
+import fpt.project.NeoNHS.exception.UnauthorizedException;
 import fpt.project.NeoNHS.service.WorkshopTemplateService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -101,7 +102,7 @@ public class WorkshopTemplateController {
                         @Valid @RequestBody CreateWorkshopTemplateRequest request,
                         Principal principal) {
                 WorkshopTemplateResponse response = workshopTemplateService.createWorkshopTemplate(
-                                principal.getName(),
+                                requireAuthenticatedEmail(principal),
                                 request);
                 return ResponseEntity.status(HttpStatus.CREATED)
                                 .body(ApiResponse.success(HttpStatus.CREATED, "Workshop template created successfully",
@@ -217,7 +218,7 @@ public class WorkshopTemplateController {
 
                 Pageable pageable = PageRequest.of(page, size, sort);
                 Page<WorkshopTemplateResponse> response = workshopTemplateService
-                                .getMyWorkshopTemplates(principal.getName(), pageable);
+                                .getMyWorkshopTemplates(requireAuthenticatedEmail(principal), pageable);
                 return ResponseEntity
                                 .ok(ApiResponse.success(HttpStatus.OK, "Your workshop templates retrieved successfully",
                                                 response));
@@ -401,7 +402,7 @@ public class WorkshopTemplateController {
                         @Valid @RequestBody UpdateWorkshopTemplateRequest request,
                         Principal principal) {
                 WorkshopTemplateResponse response = workshopTemplateService.updateWorkshopTemplate(
-                                principal.getName(),
+                                requireAuthenticatedEmail(principal),
                                 id,
                                 request);
                 return ResponseEntity
@@ -470,7 +471,7 @@ public class WorkshopTemplateController {
                         @PathVariable UUID id,
                         Principal principal) {
                 WorkshopTemplateResponse response = workshopTemplateService.togglePublishWorkshopTemplate(
-                                principal.getName(),
+                                requireAuthenticatedEmail(principal),
                                 id);
                 return ResponseEntity
                                 .ok(ApiResponse.success(HttpStatus.OK,
@@ -541,7 +542,7 @@ public class WorkshopTemplateController {
                         @PathVariable UUID id,
                         Principal principal) {
                 WorkshopTemplateResponse response = workshopTemplateService.registerWorkshopTemplate(
-                                principal.getName(),
+                                requireAuthenticatedEmail(principal),
                                 id);
                 return ResponseEntity
                                 .ok(ApiResponse.success(HttpStatus.OK,
@@ -614,8 +615,15 @@ public class WorkshopTemplateController {
                         @Parameter(description = "Workshop Template ID to delete", required = true)
                         @PathVariable UUID id,
                         Principal principal) {
-                workshopTemplateService.deleteWorkshopTemplate(principal.getName(), id);
+                workshopTemplateService.deleteWorkshopTemplate(requireAuthenticatedEmail(principal), id);
                 return ResponseEntity
                                 .ok(ApiResponse.success(HttpStatus.OK, "Workshop template deleted successfully", null));
+        }
+
+        private static String requireAuthenticatedEmail(Principal principal) {
+                if (principal == null) {
+                        throw new UnauthorizedException("Authentication required");
+                }
+                return principal.getName();
         }
 }

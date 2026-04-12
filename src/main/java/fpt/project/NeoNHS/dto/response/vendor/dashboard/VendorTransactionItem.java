@@ -20,4 +20,5 @@ public class VendorTransactionItem {
     private String currency;
     private LocalDateTime paidAt;
     private String status;
+    private String ticketCodes;
 }
