@@ -18,6 +18,8 @@ public interface PointService {
 
     void hardDeletePoint(UUID id);
 
+    void restorePoint(UUID id);
+
     PointResponse getPointById(UUID id);
 
     PointResponse getPointByIdForAdmin(UUID id);
@@ -27,11 +29,16 @@ public interface PointService {
     Page<PointResponse> getAllPointsWithPagination(UUID attractionId, int page, int size, String sortBy, String sortDir,
             String search);
 
+    Page<PointResponse> getAllPointsWithPaginationForAdmin(UUID attractionId, int page, int size, String sortBy,
+            String sortDir,
+            String search, boolean includeDeleted);
+
     Page<PointResponse> getAllPoints(int page, int size, String sortBy, String sortDir, String search);
 
     List<MapPointResponse> getAllPointsOnMap();
 
     Page<PointResponse> getAllPointsForAdmin(int page, int size, String sortBy, String sortDir, String search,
-                                             boolean includeDeleted);
+            boolean includeDeleted);
+
     PointPanoramaResponse getPointPanorama(UUID pointId);
 }
