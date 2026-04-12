@@ -9,6 +9,7 @@ import fpt.project.NeoNHS.dto.request.auth.SetPasswordRequest;
 import fpt.project.NeoNHS.dto.response.AuthResponse;
 import fpt.project.NeoNHS.dto.response.auth.UserInfoResponse;
 import fpt.project.NeoNHS.entity.User;
+import fpt.project.NeoNHS.entity.VendorProfile;
 import fpt.project.NeoNHS.enums.UserRole;
 import fpt.project.NeoNHS.exception.BadRequestException;
 import fpt.project.NeoNHS.exception.RequestGoogleAccountException;
@@ -279,6 +280,14 @@ public class AuthServiceImpl implements AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         user.setIsActive(true);
         user.setIsVerified(true);
+
+        if (user.getRole() == UserRole.VENDOR) {
+            VendorProfile profile = user.getVendorProfile();
+            if (profile != null) {
+                profile.setIsVerified(true);
+            }
+        }
+
         userRepository.save(user);
 
         redisAuthService.deleteSetPasswordToken(request.getToken());

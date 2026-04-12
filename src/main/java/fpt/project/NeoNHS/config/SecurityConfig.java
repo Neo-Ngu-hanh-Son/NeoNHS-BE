@@ -101,7 +101,7 @@ public class SecurityConfig {
                 return new BCryptPasswordEncoder();
         }
 
-        @Value("${app.be-url-setpassword}")
+        @Value("${app.fe-url-setpassword}")
         private String feWebUrl;
 
         @Bean
@@ -112,7 +112,6 @@ public class SecurityConfig {
                                 "http://localhost:3000",
                                 "https://fwbgft4w-5173.asse.devtunnels.ms",
                                 "https://neonhs-fe-web.vercel.app",
-                                "https://alma-curdier-unmanually.ngrok-free.dev",
                                 feWebUrl));
                 configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
                 configuration.setAllowedHeaders(List.of("*"));
