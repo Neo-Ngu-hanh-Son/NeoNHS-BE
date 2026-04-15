@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.NotificationMessages;
 import fpt.project.NeoNHS.dto.request.admin.ReportFilterRequest;
 import fpt.project.NeoNHS.dto.request.admin.ResolveReportRequest;
 import fpt.project.NeoNHS.dto.request.report.CreateReportRequest;
@@ -14,6 +15,7 @@ import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.repository.EventRepository;
 import fpt.project.NeoNHS.repository.PointRepository;
 import fpt.project.NeoNHS.repository.WorkshopTemplateRepository;
+import fpt.project.NeoNHS.service.NotificationService;
 import fpt.project.NeoNHS.service.ReportService;
 import fpt.project.NeoNHS.specification.ReportSpecification;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +36,7 @@ public class ReportServiceImpl implements ReportService {
     private final EventRepository eventRepository;
     private final PointRepository pointRepository;
     private final WorkshopTemplateRepository workshopTemplateRepository;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional(readOnly = true)
@@ -65,7 +68,34 @@ public class ReportServiceImpl implements ReportService {
         report.setHandlerId(adminId.toString());
         report.setResolvedAt(LocalDateTime.now());
 
-        return mapToResponse(reportRepository.save(report));
+        Report savedReport = reportRepository.save(report);
+
+        // Send thank-you notification to the reporter
+        sendReportNotification(savedReport);
+
+        return mapToResponse(savedReport);
+    }
+
+    private void sendReportNotification(Report report) {
+        User reporter = report.getReporter();
+        String targetName = fetchTargetName(report.getTargetType(), report.getTargetId());
+        String adminNote = report.getHandleNote();
+
+        String title;
+        String message;
+        String type;
+
+        if (report.getStatus() == ReportStatus.RESOLVED) {
+            title = NotificationMessages.reportResolvedTitle();
+            message = NotificationMessages.reportResolvedMessage(targetName, adminNote);
+            type = NotificationMessages.TYPE_REPORT_RESOLVED;
+        } else {
+            title = NotificationMessages.reportRejectedTitle();
+            message = NotificationMessages.reportRejectedMessage(targetName, adminNote);
+            type = NotificationMessages.TYPE_REPORT_REJECTED;
+        }
+
+        notificationService.createAndSendNotification(reporter, title, message, type, report.getId());
     }
 
     private ReportResponse mapToResponse(Report report) {
@@ -87,7 +117,8 @@ public class ReportServiceImpl implements ReportService {
     }
 
     private String fetchTargetName(String targetType, UUID targetId) {
-        if (targetType == null || targetId == null) return "Unknown";
+        if (targetType == null || targetId == null)
+            return "Unknown";
 
         return switch (targetType.toUpperCase()) {
             case "POINT" -> pointRepository.findById(targetId)
