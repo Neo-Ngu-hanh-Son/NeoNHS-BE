@@ -50,7 +50,7 @@ public class ReviewServiceImpl implements ReviewService {
         validateReviewTarget(request.getReviewTypeId(), request.getReviewTypeFlg());
 
         // Check if user already reviewed this target
-        if (reviewRepository.existsByUser_IdAndReviewTypeIdAndReviewTypeFlgAndDeletedAtIsNull(userId, request.getReviewTypeId(), request.getReviewTypeFlg())) {
+        if (reviewRepository.existsByUser_IdAndReviewTypeIdAndReviewTypeFlgAndDeletedAtIsNull(userId, request.getReviewTypeId(), fpt.project.NeoNHS.enums.ReviewTypeFlg.fromValue(request.getReviewTypeFlg()))) {
             throw new BadRequestException("You have already reviewed this item. Please update your existing review instead.");
         }
 
@@ -58,7 +58,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .rating(request.getRating())
                 .comment(request.getComment())
                 .user(user)
-                .reviewTypeFlg(request.getReviewTypeFlg())
+                .reviewTypeFlg(fpt.project.NeoNHS.enums.ReviewTypeFlg.fromValue(request.getReviewTypeFlg()))
                 .reviewTypeId(request.getReviewTypeId())
                 .status(ReviewStatus.VISIBLE)
                 .build();
@@ -74,7 +74,7 @@ public class ReviewServiceImpl implements ReviewService {
         }
 
         Review savedReview = reviewRepository.save(review);
-        updateStatsIfNeeded(request.getReviewTypeId(), request.getReviewTypeFlg());
+        updateStatsIfNeeded(request.getReviewTypeId(), fpt.project.NeoNHS.enums.ReviewTypeFlg.fromValue(request.getReviewTypeFlg()));
 
         return mapToResponse(savedReview);
     }
@@ -192,8 +192,8 @@ public class ReviewServiceImpl implements ReviewService {
         }
     }
 
-    private void updateStatsIfNeeded(UUID reviewTypeId, Integer reviewTypeFlg) {
-        if (reviewTypeFlg != null && reviewTypeFlg == 1) { // Workshop has average rating fields
+    private void updateStatsIfNeeded(UUID reviewTypeId, fpt.project.NeoNHS.enums.ReviewTypeFlg reviewTypeFlg) {
+        if (reviewTypeFlg != null && reviewTypeFlg == fpt.project.NeoNHS.enums.ReviewTypeFlg.WORKSHOP) { // Workshop has average rating fields
             WorkshopTemplate workshopTemplate = workshopTemplateRepository.findById(reviewTypeId).orElse(null);
             if (workshopTemplate != null) {
                 Double avgRating = reviewRepository.getAverageRatingByReviewType(reviewTypeId, reviewTypeFlg, ReviewStatus.VISIBLE);
@@ -223,7 +223,7 @@ public class ReviewServiceImpl implements ReviewService {
         return ReviewResponse.builder()
                 .id(review.getId())
                 .reviewTypeId(review.getReviewTypeId())
-                .reviewTypeFlg(review.getReviewTypeFlg())
+                .reviewTypeFlg(review.getReviewTypeFlg() != null ? review.getReviewTypeFlg().getValue() : null)
                 .user(userResponse)
                 .rating(review.getRating())
                 .comment(review.getComment())

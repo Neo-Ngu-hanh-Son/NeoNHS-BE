@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.security.Principal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -102,6 +103,22 @@ public class WorkshopSessionController {
             return ResponseEntity.status(HttpStatus.CREATED)
                             .body(ApiResponse.success(HttpStatus.CREATED, "Workshop session created successfully",
                                             response));
+    }
+
+    @PostMapping("/sessions/batch")
+    @PreAuthorize("hasRole('VENDOR')")
+    @Operation(
+            summary = "Create multiple workshop sessions at once (Vendor only)",
+            description = "Creates a batch of scheduled workshop sessions from the same ACTIVE template."
+    )
+    public ResponseEntity<ApiResponse<List<WorkshopSessionResponse>>> createWorkshopSessionBatch(
+            @RequestBody List<CreateWorkshopSessionRequest> requests,
+            Principal principal
+    ) {
+        String email = principal.getName();
+        List<WorkshopSessionResponse> responses = workshopSessionService.createWorkshopSessionBatch(email, requests);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(HttpStatus.CREATED, "Workshop sessions batch created successfully", responses));
     }
 
     // ==================== READ WORKSHOP SESSION ====================
