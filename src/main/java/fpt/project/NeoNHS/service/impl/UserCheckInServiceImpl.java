@@ -114,6 +114,8 @@ public class UserCheckInServiceImpl implements UserCheckInService {
         return UserCheckinResultResponse.builder()
                 .earnedPoints(userCheckIn.getEarnedPoints())
                 .userTotalPoints(userTotalPoint)
+                .checkinPointId(checkinPoint.getId())
+                .parentCheckinPointId(checkinPoint.getPoint().getId())
                 .build();
     }
 

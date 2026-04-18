@@ -48,8 +48,8 @@ public class SecurityConfig {
                         "/api/reviews/workshops/**",
                         "/api/reviews/events/**",
                         "/api/reviews/points/**",
-                        "/ws/**", // WebSocket endpoint
-                        "/index.html", // Chat test page (remove in production)
+                        "/ws/**",
+                        "/index.html",
         };
 
         // Swagger / docs

@@ -40,7 +40,7 @@ public class ReviewController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('ROLE_TOURIST')")
-    @Operation(summary = "Create a review for a workshop template", description = "Only TOURIST can create reviews")
+    @Operation(summary = "Create a generic review (Review target change depends on the type flag)", description = "Only TOURIST can create reviews")
     public ResponseEntity<ApiResponse<ReviewResponse>> createReview(
             Principal principal,
             @RequestBody @Valid CreateReviewRequest request) {

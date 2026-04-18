@@ -20,7 +20,7 @@ import java.util.Map;
 
 @Service
 @AllArgsConstructor
-public class GetServiceImpl implements GeoService {
+public class GeoServiceImpl implements GeoService {
     private final RedisTemplate<String, String> redisTemplate;
     private final CheckinPointRepository repository;
 

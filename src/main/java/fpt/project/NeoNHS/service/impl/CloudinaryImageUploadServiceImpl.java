@@ -2,6 +2,7 @@ package fpt.project.NeoNHS.service.impl;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import fpt.project.NeoNHS.dto.response.upload.ImageUploadResponse;
 import fpt.project.NeoNHS.exception.AppIOException;
 import fpt.project.NeoNHS.service.ImageUploadService;
 import lombok.RequiredArgsConstructor;
@@ -23,17 +24,19 @@ public class CloudinaryImageUploadServiceImpl implements ImageUploadService {
     private final Cloudinary cloudinary;
 
     @Override
-    public String uploadImage(MultipartFile file) {
+    public ImageUploadResponse uploadImage(MultipartFile file) {
+        log.info("Uploading image to Cloudinary for file: " + file.getOriginalFilename() + " " + file.getContentType()
+                + " " + file.getSize());
         try {
             @SuppressWarnings("unchecked")
-            Map<String, Object> uploadResult = cloudinary.uploader().upload(
-                    file.getBytes(),
-                    ObjectUtils.emptyMap()
-            );
-
+            Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
             String secureUrl = (String) uploadResult.get("secure_url");
-            log.info("Successfully uploaded image to Cloudinary. URL: {}", secureUrl);
-            return secureUrl;
+            String publicId = (String) uploadResult.get("public_id");
+
+            return ImageUploadResponse.builder()
+                    .mediaUrl(secureUrl)
+                    .publicId(publicId)
+                    .build();
         } catch (IOException e) {
             log.error("Failed to upload image to Cloudinary", e);
             throw new AppIOException("Failed to upload image: " + e.getMessage());
@@ -41,7 +44,7 @@ public class CloudinaryImageUploadServiceImpl implements ImageUploadService {
     }
 
     @Override
-    public List<String> uploadImages(MultipartFile[] files) {
+    public List<ImageUploadResponse> uploadImages(MultipartFile[] files) {
         return Arrays.stream(files)
                 .map(this::uploadImage)
                 .collect(Collectors.toList());
@@ -61,6 +64,17 @@ public class CloudinaryImageUploadServiceImpl implements ImageUploadService {
         } catch (IOException e) {
             log.error("Failed to upload image to Cloudinary", e);
             throw new AppIOException("Failed to upload image: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public String deleteResource(String publicId) {
+        try {
+            Map result = cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+            return (String) result.get("result");
+        } catch (Exception e) {
+            log.error("Failed to delete resource from Cloudinary. PublicId: {}", publicId);
+            throw new AppIOException("Failed to delete resource: " + e.getMessage());
         }
     }
 }

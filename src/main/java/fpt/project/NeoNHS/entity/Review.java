@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.entity;
 
+import fpt.project.NeoNHS.enums.ReviewTypeFlagEnum;
 import fpt.project.NeoNHS.enums.ReviewStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -37,8 +38,12 @@ public class Review extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "review_type_flg", nullable = false)
-    private Integer reviewTypeFlg; // 1: Workshop, 2: Event, 3: Point
+//    @Column(name = "review_type_flg", nullable = false)
+//    private Integer reviewTypeFlg; // 1: Workshop, 2: Event, 3: Point
+
+    @Column(name = "review_type_flg")
+    @Enumerated(EnumType.STRING)
+    private ReviewTypeFlagEnum reviewTypeFlg;
 
     @Column(name = "review_type_id", nullable = false)
     private UUID reviewTypeId;

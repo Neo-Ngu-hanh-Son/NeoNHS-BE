@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.dto.request.review;
 
+import fpt.project.NeoNHS.enums.ReviewTypeFlagEnum;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -19,8 +20,13 @@ public class CreateReviewRequest {
     @NotNull(message = "Review type ID is required")
     UUID reviewTypeId;
 
+    /**
+     *     WORKSHOP,
+     *     EVENT,
+     *     POINT
+     */
     @NotNull(message = "Review type flag is required")
-    Integer reviewTypeFlg; // 1: Workshop, 2: Event, 3: Point
+    ReviewTypeFlagEnum reviewTypeFlg;
 
     @NotNull(message = "Rating is required")
     @Min(value = 1, message = "Rating must be at least 1")
