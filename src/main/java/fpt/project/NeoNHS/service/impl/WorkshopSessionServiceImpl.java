@@ -101,6 +101,79 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
         return mapToResponse(savedSession);
     }
 
+    @Override
+    @Transactional
+    public List<WorkshopSessionResponse> createWorkshopSessionBatch(String email, List<CreateWorkshopSessionRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            throw new BadRequestException("Session requests cannot be empty");
+        }
+
+        // Tối ưu hóa: Lấy workshopTemplateId từ request đầu tiên
+        // (Giả định tất cả các phiên được tạo cùng lúc đều thuộc về 1 template)
+        UUID templateId = requests.get(0).getWorkshopTemplateId();
+
+        // 1. Tìm và xác thực template chỉ 1 lần duy nhất cho toàn bộ batch
+        WorkshopTemplate template = workshopTemplateRepository.findById(templateId)
+                .orElseThrow(() -> new ResourceNotFoundException("WorkshopTemplate", "id", templateId));
+
+        // 2 & 3. Kiểm tra trạng thái và quyền sở hữu (chỉ cần làm 1 lần)
+        if (template.getStatus() != WorkshopStatus.ACTIVE) {
+            throw new BadRequestException("Can only create sessions from ACTIVE templates. Current status: " + template.getStatus());
+        }
+        if (!template.getVendor().getUser().getEmail().equals(email)) {
+            throw new BadRequestException("You do not have permission to create sessions for this workshop template");
+        }
+
+        // Khởi tạo danh sách các Entity cần lưu
+        List<WorkshopSession> sessionsToSave = new ArrayList<>();
+
+        // 4. Lặp qua từng request để validate thời gian và build Entity
+        for (CreateWorkshopSessionRequest request : requests) {
+            // Đảm bảo request không truyền sai templateId trong cùng 1 batch
+            if (!request.getWorkshopTemplateId().equals(templateId)) {
+                throw new BadRequestException("All sessions in a batch must belong to the same workshop template");
+            }
+
+            // Validate thời gian cho từng phiên
+            if (request.getStartTime().isBefore(LocalDateTime.now())) {
+                throw new BadRequestException("Start time must be in the future");
+            }
+            if (request.getEndTime().isBefore(request.getStartTime()) || request.getEndTime().equals(request.getStartTime())) {
+                throw new BadRequestException("End time must be after start time");
+            }
+
+            // Set giá trị mặc định nếu null
+            BigDecimal sessionPrice = request.getPrice() != null ? request.getPrice() : template.getDefaultPrice();
+            Integer sessionMaxParticipants = request.getMaxParticipants() != null ? request.getMaxParticipants() : template.getMaxParticipants();
+
+            if (sessionMaxParticipants < template.getMinParticipants()) {
+                throw new BadRequestException("Session max participants (" + sessionMaxParticipants +
+                        ") cannot be less than template's minimum participants (" + template.getMinParticipants() + ")");
+            }
+
+            // Build Entity
+            WorkshopSession session = WorkshopSession.builder()
+                    .startTime(request.getStartTime())
+                    .endTime(request.getEndTime())
+                    .price(sessionPrice)
+                    .maxParticipants(sessionMaxParticipants)
+                    .currentEnrolled(0)
+                    .status(SessionStatus.SCHEDULED)
+                    .workshopTemplate(template)
+                    .build();
+
+            sessionsToSave.add(session);
+        }
+
+        // 5. Lưu toàn bộ danh sách vào database bằng saveAll
+        List<WorkshopSession> savedSessions = workshopSessionRepository.saveAll(sessionsToSave);
+
+        // 6. Map kết quả trả về
+        return savedSessions.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
     // ==================== READ ====================
 
     @Override

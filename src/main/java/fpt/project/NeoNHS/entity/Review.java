@@ -38,7 +38,7 @@ public class Review extends BaseEntity {
     private User user;
 
     @Column(name = "review_type_flg", nullable = false)
-    private Integer reviewTypeFlg; // 1: Workshop, 2: Event, 3: Point
+    private fpt.project.NeoNHS.enums.ReviewTypeFlg reviewTypeFlg;
 
     @Column(name = "review_type_id", nullable = false)
     private UUID reviewTypeId;

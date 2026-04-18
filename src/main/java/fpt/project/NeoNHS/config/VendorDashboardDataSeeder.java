@@ -259,7 +259,7 @@ public class VendorDashboardDataSeeder implements CommandLineRunner {
                         .user(tourist)
 //                        .workshopTemplate(wt)
                         .reviewTypeId(wt.getId())
-                        .reviewTypeFlg(1)
+//                        .reviewTypeFlg(1)
                         .rating(rating)
                         .comment(comments[reviewCount % comments.length])
                         .status(ReviewStatus.VISIBLE)
