@@ -49,7 +49,6 @@ public class CreateEventRequest {
     @Positive(message = "Max participants must be positive")
     private Integer maxParticipants;
 
-    @NotBlank(message = "Thumbnail URL is required")
     @Size(max = 255, message = "Thumbnail URL must not exceed 255 characters")
     private String thumbnailUrl;
 

@@ -157,16 +157,17 @@ public class EventServiceImpl implements EventService {
         if (request.getThumbnailUrl() != null) {
             Optional<EventImage> existingThumbnail = eventImageRepository.findByEventIdAndIsThumbnailTrue(id);
             if (existingThumbnail.isPresent()) {
-                existingThumbnail.get().setImageUrl(request.getThumbnailUrl());
-                eventImageRepository.save(existingThumbnail.get());
-            } else {
-                EventImage thumbnail = EventImage.builder()
-                        .imageUrl(request.getThumbnailUrl())
-                        .isThumbnail(true)
-                        .event(event)
-                        .build();
-                eventImageRepository.save(thumbnail);
+                EventImage oldThumbnail = existingThumbnail.get();
+                oldThumbnail.setIsThumbnail(false);
+                eventImageRepository.save(oldThumbnail);
             }
+            
+            EventImage newThumbnail = EventImage.builder()
+                    .imageUrl(request.getThumbnailUrl())
+                    .isThumbnail(true)
+                    .event(event)
+                    .build();
+            eventImageRepository.save(newThumbnail);
         }
 
         // Update tags if provided
