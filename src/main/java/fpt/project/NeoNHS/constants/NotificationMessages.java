@@ -48,4 +48,40 @@ public final class NotificationMessages {
     public static String orderSuccessMessage(BigDecimal finalAmount) {
         return String.format(ORDER_SUCCESS_MESSAGE_TEMPLATE, finalAmount.toString());
     }
+
+    // ──── Report Notifications ───────────────────────────────────────────────
+    public static final String TYPE_REPORT_RESOLVED = "REPORT_RESOLVED";
+    public static final String TYPE_REPORT_REJECTED = "REPORT_REJECTED";
+
+    public static final String REPORT_RESOLVED_TITLE = "✅ Report Resolved";
+    public static final String REPORT_RESOLVED_MESSAGE_TEMPLATE = "Thank you for your contribution! Your report about \"%s\" has been reviewed and resolved. We appreciate your effort to improve Ngu Hanh Son.";
+
+    public static final String REPORT_REJECTED_TITLE = "📋 Report Reviewed";
+    public static final String REPORT_REJECTED_MESSAGE_TEMPLATE = "Thank you for your report about \"%s\". After careful review, we determined no further action is needed at this time. We still appreciate your vigilance!";
+
+    public static final String ADMIN_NOTE_SUFFIX = "\n\nAdmin's note: \"%s\"";
+
+    public static String reportResolvedTitle() {
+        return REPORT_RESOLVED_TITLE;
+    }
+
+    public static String reportResolvedMessage(String targetName, String adminNote) {
+        String base = String.format(REPORT_RESOLVED_MESSAGE_TEMPLATE, targetName);
+        if (adminNote != null && !adminNote.isBlank()) {
+            base += String.format(ADMIN_NOTE_SUFFIX, adminNote);
+        }
+        return base;
+    }
+
+    public static String reportRejectedTitle() {
+        return REPORT_REJECTED_TITLE;
+    }
+
+    public static String reportRejectedMessage(String targetName, String adminNote) {
+        String base = String.format(REPORT_REJECTED_MESSAGE_TEMPLATE, targetName);
+        if (adminNote != null && !adminNote.isBlank()) {
+            base += String.format(ADMIN_NOTE_SUFFIX, adminNote);
+        }
+        return base;
+    }
 }
