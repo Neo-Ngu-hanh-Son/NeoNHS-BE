@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.config;
 
+import fpt.project.NeoNHS.enums.ReviewTypeFlagEnum;
 import fpt.project.NeoNHS.entity.*;
 import fpt.project.NeoNHS.enums.*;
 import fpt.project.NeoNHS.repository.*;
@@ -259,7 +260,7 @@ public class VendorDashboardDataSeeder implements CommandLineRunner {
                         .user(tourist)
 //                        .workshopTemplate(wt)
                         .reviewTypeId(wt.getId())
-                        .reviewTypeFlg(1)
+                        .reviewTypeFlg(ReviewTypeFlagEnum.WORKSHOP)
                         .rating(rating)
                         .comment(comments[reviewCount % comments.length])
                         .status(ReviewStatus.VISIBLE)

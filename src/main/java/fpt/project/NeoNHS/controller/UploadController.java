@@ -1,7 +1,8 @@
 package fpt.project.NeoNHS.controller;
 
 import fpt.project.NeoNHS.dto.response.ApiResponse;
-import fpt.project.NeoNHS.service.impl.CloudinaryImageUploadServiceImpl;
+import fpt.project.NeoNHS.dto.response.upload.ImageUploadResponse;
+import fpt.project.NeoNHS.service.ImageUploadService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -15,15 +16,15 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/upload")
 @RequiredArgsConstructor
-@Tag(name = "Upload resource", description = "Test upload resource with cloudinary")
+@Tag(name = "Upload resource", description = "Upload images and videos to a service (Cloudinary)")
 public class UploadController {
-    private final CloudinaryImageUploadServiceImpl cloudinaryImageUploadServiceImpl;
+    private final ImageUploadService uploadService;
 
     @PostMapping(value = "/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<String>> uploadImage(@RequestParam MultipartFile imageFile) {
-        var res = cloudinaryImageUploadServiceImpl.uploadImage(imageFile);
+    public ResponseEntity<ApiResponse<ImageUploadResponse>> uploadImage(@RequestParam MultipartFile imageFile) {
+        var res = uploadService.uploadImage(imageFile);
         return new ResponseEntity<>(
-                ApiResponse.<String>builder()
+                ApiResponse.<ImageUploadResponse>builder()
                         .data(res)
                         .message("Upload successful")
                         .success(true)
@@ -33,7 +34,7 @@ public class UploadController {
 
     @PostMapping(value = "/video", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<String>> uploadVideo(@RequestParam MultipartFile videoFile) {
-        var res = cloudinaryImageUploadServiceImpl.uploadVideo(videoFile);
+        var res = uploadService.uploadVideo(videoFile);
         return new ResponseEntity<>(
                 ApiResponse.<String>builder()
                         .data(res)
@@ -44,14 +45,25 @@ public class UploadController {
     }
 
     @PostMapping(value = "/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<List<String>>> uploadImages(@RequestParam MultipartFile[] imageFiles) {
-        var res = cloudinaryImageUploadServiceImpl.uploadImages(imageFiles);
+    public ResponseEntity<ApiResponse<List<ImageUploadResponse>>> uploadImages(@RequestParam MultipartFile[] imageFiles) {
+        var res = uploadService.uploadImages(imageFiles);
         return new ResponseEntity<>(
-                ApiResponse.<List<String>>builder()
+                ApiResponse.<List<ImageUploadResponse>>builder()
                         .data(res)
                         .message("Batch upload successful")
                         .success(true)
                         .build(),
                 HttpStatus.CREATED);
+    }
+
+    @DeleteMapping(value = "/image/{publicId}")
+    public ResponseEntity<ApiResponse<String>> deleteResource( @PathVariable String publicId) {
+        var res = uploadService.deleteResource(publicId);
+        return new ResponseEntity<>(
+                ApiResponse.<String>builder()
+                        .data(res)
+                        .message("Deletion successful")
+                        .success(true).build(),
+                HttpStatus.OK);
     }
 }

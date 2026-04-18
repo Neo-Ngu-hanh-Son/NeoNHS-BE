@@ -11,4 +11,5 @@ public class UserCheckinResultResponse {
     private UUID checkinPointId;
     private int earnedPoints;
     private int userTotalPoints;
+    private UUID parentCheckinPointId;
 }

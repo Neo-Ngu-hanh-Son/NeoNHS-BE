@@ -1,8 +1,10 @@
 package fpt.project.NeoNHS.controller;
 
 import fpt.project.NeoNHS.dto.chat.*;
+import fpt.project.NeoNHS.dto.response.upload.ImageUploadResponse;
 import fpt.project.NeoNHS.security.UserPrincipal;
 import fpt.project.NeoNHS.service.ChatService;
+import fpt.project.NeoNHS.service.ImageUploadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -104,10 +106,8 @@ public class ChatRestController {
      * Upload an image before sending an IMAGE type message.
      */
     @PostMapping(value = "/media", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Map<String, String>> uploadMedia(@RequestParam("file") MultipartFile file) {
-        String url = cloudinaryImageUploadService.uploadImage(file);
-        Map<String, String> response = new HashMap<>();
-        response.put("mediaUrl", url);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    public ResponseEntity<ImageUploadResponse> uploadMedia(@RequestParam("file") MultipartFile file) {
+        ImageUploadResponse res = cloudinaryImageUploadService.uploadImage(file);
+        return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
 }

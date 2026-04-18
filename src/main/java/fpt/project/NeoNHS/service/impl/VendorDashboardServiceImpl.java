@@ -4,6 +4,7 @@ import fpt.project.NeoNHS.dto.response.vendor.dashboard.*;
 import fpt.project.NeoNHS.entity.Transaction;
 import fpt.project.NeoNHS.entity.VendorProfile;
 import fpt.project.NeoNHS.entity.WorkshopSession;
+import fpt.project.NeoNHS.enums.ReviewTypeFlagEnum;
 import fpt.project.NeoNHS.enums.WorkshopStatus;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.helpers.AuthHelper;
@@ -338,7 +339,7 @@ public class VendorDashboardServiceImpl implements VendorDashboardService {
 
     private List<VendorWorkshopReviewItem> buildWorkshopReviews(UUID vendorId, LocalDateTime now, int limit) {
         LocalDateTime weekAgo = now.minusWeeks(1);
-        List<Object[]> raw = reviewRepository.findWorkshopReviewSummariesByVendorId(vendorId, weekAgo);
+        List<Object[]> raw = reviewRepository.findWorkshopReviewSummariesByVendorId(vendorId, weekAgo, ReviewTypeFlagEnum.WORKSHOP);
 
         return raw.stream()
                 .limit(limit)

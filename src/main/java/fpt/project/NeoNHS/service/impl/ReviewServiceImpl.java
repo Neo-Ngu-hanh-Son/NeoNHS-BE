@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.enums.ReviewTypeFlagEnum;
 import fpt.project.NeoNHS.dto.request.review.CreateReviewRequest;
 import fpt.project.NeoNHS.dto.request.review.UpdateReviewRequest;
 import fpt.project.NeoNHS.dto.response.PagedResponse;
@@ -128,25 +129,25 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional(readOnly = true)
     public PagedResponse<ReviewResponse> getReviewsForWorkshopTemplate(UUID workshopTemplateId, Pageable pageable) {
-        validateReviewTarget(workshopTemplateId, 1);
+        validateReviewTarget(workshopTemplateId, ReviewTypeFlagEnum.WORKSHOP);
         Page<Review> reviewPage = reviewRepository.pageVisibleReviewsForWorkshopTemplate(
-                workshopTemplateId, ReviewStatus.VISIBLE, pageable);
+                workshopTemplateId, ReviewStatus.VISIBLE, ReviewTypeFlagEnum.WORKSHOP, pageable);
         return toPagedReviewResponse(reviewPage);
     }
 
     @Override
     @Transactional(readOnly = true)
     public PagedResponse<ReviewResponse> getReviewsForEvent(UUID eventId, Pageable pageable) {
-        validateReviewTarget(eventId, 2);
-        Page<Review> reviewPage = reviewRepository.pageVisibleReviewsForEvent(eventId, ReviewStatus.VISIBLE, pageable);
+        validateReviewTarget(eventId, ReviewTypeFlagEnum.EVENT);
+        Page<Review> reviewPage = reviewRepository.pageVisibleReviewsForEvent(eventId, ReviewStatus.VISIBLE, ReviewTypeFlagEnum.EVENT, pageable);
         return toPagedReviewResponse(reviewPage);
     }
 
     @Override
     @Transactional(readOnly = true)
     public PagedResponse<ReviewResponse> getReviewsForPoint(UUID pointId, Pageable pageable) {
-        validateReviewTarget(pointId, 3);
-        Page<Review> reviewPage = reviewRepository.pageVisibleReviewsForPoint(pointId, ReviewStatus.VISIBLE, pageable);
+        validateReviewTarget(pointId, ReviewTypeFlagEnum.POINT);
+        Page<Review> reviewPage = reviewRepository.pageVisibleReviewsForPoint(pointId, ReviewStatus.VISIBLE, ReviewTypeFlagEnum.POINT, pageable);
         return toPagedReviewResponse(reviewPage);
     }
 
@@ -164,7 +165,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .build();
     }
 
-    private void validateReviewTarget(UUID reviewTypeId, Integer reviewTypeFlg) {
+    private void validateReviewTarget(UUID reviewTypeId, ReviewTypeFlagEnum reviewTypeFlg) {
         if (reviewTypeFlg == null) {
             throw new BadRequestException("Review type flag must not be null");
         }
@@ -172,17 +173,17 @@ public class ReviewServiceImpl implements ReviewService {
             throw new BadRequestException("Review type ID must not be null");
         }
         switch (reviewTypeFlg) {
-            case 1: // Workshop
+            case ReviewTypeFlagEnum.WORKSHOP: // Workshop
                 if (!workshopTemplateRepository.existsById(reviewTypeId)) {
                     throw new ResourceNotFoundException("WorkshopTemplate", "id", reviewTypeId);
                 }
                 break;
-            case 2: // Event
+            case ReviewTypeFlagEnum.EVENT: // Event
                 if (!eventRepository.existsById(reviewTypeId)) {
                     throw new ResourceNotFoundException("Event", "id", reviewTypeId);
                 }
                 break;
-            case 3: // Point
+            case ReviewTypeFlagEnum.POINT: // Point
                 if (!pointRepository.existsById(reviewTypeId)) {
                     throw new ResourceNotFoundException("Point", "id", reviewTypeId);
                 }
@@ -192,8 +193,8 @@ public class ReviewServiceImpl implements ReviewService {
         }
     }
 
-    private void updateStatsIfNeeded(UUID reviewTypeId, Integer reviewTypeFlg) {
-        if (reviewTypeFlg != null && reviewTypeFlg == 1) { // Workshop has average rating fields
+    private void updateStatsIfNeeded(UUID reviewTypeId, ReviewTypeFlagEnum reviewTypeFlg) {
+        if (reviewTypeFlg != null && reviewTypeFlg == ReviewTypeFlagEnum.WORKSHOP) { // Workshop has average rating fields
             WorkshopTemplate workshopTemplate = workshopTemplateRepository.findById(reviewTypeId).orElse(null);
             if (workshopTemplate != null) {
                 Double avgRating = reviewRepository.getAverageRatingByReviewType(reviewTypeId, reviewTypeFlg, ReviewStatus.VISIBLE);

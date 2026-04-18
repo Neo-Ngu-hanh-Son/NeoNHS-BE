@@ -1,6 +1,6 @@
 # NeoNHS-BE Codebase Index
 
-> Last updated: 2026-04-08
+> Last updated: 2026-04-11
 > Scope: Current repository state under `src/main`, `src/test`, `src/main/resources`, and top-level documentation folders.
 
 ## 1. Repository Overview
@@ -36,7 +36,7 @@ NeoNHS-BE/
 
 High-level counts:
 
-- Main Java files: 457
+- Main Java files: 461
 - Test Java files: 2
 - Main resource files: 14
 
@@ -51,8 +51,8 @@ Core package counts (`src/main/java/fpt/project/NeoNHS`):
 | `controller/vendor` | 2 |
 | `document` | 2 |
 | `dto/chat` | 7 |
-| `dto/request` | 69 |
-| `dto/response` | 73 |
+| `dto/request/*` | 69 |
+| `dto/response/*` | 74 |
 | `entity` | 40 |
 | `enums` | 22 |
 | `exception` | 11 |
@@ -61,8 +61,9 @@ Core package counts (`src/main/java/fpt/project/NeoNHS`):
 | `repository/mongo` | 2 |
 | `repository/projection`| 1 |
 | `security` | 4 |
-| `service` | 47 |
-| `service/impl` | 48 |
+| `service` | 48 |
+| `service/impl` | 49 |
+| `service/validator` | 1 |
 | `specification` | 12 |
 | `tasks` | 1 |
 
@@ -86,17 +87,17 @@ Primary controller groups by base path:
 
 - Auth and identity: `/api/auth`, `/api/users`, `/api/vendors`
 - Attractions/points/check-in: `/api/attractions`, `/api/points`, `/api/points/{pointId}/check-ins`, `/api/points/{pointId}/history-audios`, `/api/users/check-ins`
-- Events/workshops/tags: `/api/events`, `/api/workshops`, `/api/tags`, `/api/wtags`, `/api/public/workshops`
+- Events/workshops/tags: `/api/events`, `/api/events/{eventId}/timelines`, `/api/workshops`, `/api/tags`, `/api/wtags`, `/api/public/workshops`
 - Commerce: `/api/cart`, `/api/orders`, `/api/tickets`, `/api/ticket-catalogs`, `/api/payment`, `/api/transactions`, `/api/vouchers`, `/api/v1/payouts`
 - Content/community: `/api/blogs`, `/api/reviews`, `/api/reports`, `/api/notifications`, `/api/public/statistics`
-- Admin namespace: `/api/admin/*` (users, vendors, attractions, events, points, tags, vouchers, reports, dashboard, revenue, etc.)
-- Vendor namespace: `/api/vendor/vouchers`
+- Admin namespace: `/api/admin/*` (users, vendors, attractions, events, event timelines, points, tags, vouchers, reports, dashboard, revenue, etc.)
+- Vendor namespace: `/api/vendor/dashboard`, `/api/vendor/vouchers`
 
 Representative top-level controllers (`controller`):
 
 - `AuthController`, `UserController`, `VendorProfileController`
 - `AttractionController`, `PointController`, `CheckinPointController`, `HistoryAudioController`, `UserCheckinController`
-- `EventController`, `WorkshopTemplateController`, `WorkshopSessionController`, `WorkshopTouristController`, `ETagController`, `WTagController`
+- `EventController`, `EventTimelineController`, `WorkshopTemplateController`, `WorkshopSessionController`, `WorkshopTouristController`, `ETagController`, `WTagController`
 - `CartController`, `OrderController`, `TicketController`, `TicketCatalogController`, `PaymentController`, `TransactionController`, `PayoutController`, `VoucherController`
 - `BlogController`, `ReviewController`, `ReportController`, `NotificationController`, `StatisticsController`, `UploadController`
 - `AdminVendorManagementController`
@@ -104,7 +105,7 @@ Representative top-level controllers (`controller`):
 Admin controllers (`controller/admin`):
 
 - `AdminAttractionController`, `AdminPointController`, `AdminCheckinPointController`, `AdminHistoryAudioController`, `AdminPanoramaController`
-- `AdminEventController`, `AdminTicketCatalogController`, `AdminETagController`
+- `AdminEventController`, `AdminEventTimelineController`, `AdminEventPointController`, `AdminEventPointTagController`, `AdminTicketCatalogController`, `AdminETagController`
 - `AdminBlogController`, `AdminBlogCategoryController`
 - `AdminUserController`, `AdminVoucherController`, `AdminReportController`
 - `AdminDashboardController`, `AdminRevenueController`
@@ -115,7 +116,7 @@ Key domain aggregates represented in entities/repositories:
 
 - Identity and access: `User`, `VendorProfile`
 - Tourism map model: `Attraction`, `Point`, `CheckinPoint`, `PointHistoryAudio`, `PanoramaHotSpot`
-- Event/workshop model: `Event`, `EventImage`, `ETag`, `EventTag`, `WorkshopTemplate`, `WorkshopSession`, `WorkshopImage`, `WTag`, `WorkshopTag`
+- Event/workshop model: `Event`, `EventImage`, `EventTimeline`, `EventPoint`, `EventPointTag`, `ETag`, `EventTag`, `WorkshopTemplate`, `WorkshopSession`, `WorkshopImage`, `WTag`, `WorkshopTag`
 - Commerce model: `TicketCatalog`, `Ticket`, `Cart`, `CartItem`, `Order`, `OrderDetail`, `Transaction`, `Voucher`, `UserVoucher`
 - Community/content: `Blog`, `BlogCategory`, `Review`, `ReviewImage`, `Report`, `Notification`
 - User activity: `UserCheckIn`, `UserVisitedPoint`
