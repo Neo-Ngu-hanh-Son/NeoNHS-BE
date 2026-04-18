@@ -48,6 +48,7 @@ public class SecurityConfig {
                         "/api/reviews/workshops/**",
                         "/api/reviews/events/**",
                         "/api/reviews/points/**",
+                        "/api/translate/**",
                         "/ws/**", // WebSocket endpoint
                         "/index.html", // Chat test page (remove in production)
         };
