@@ -5,7 +5,6 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import fpt.project.NeoNHS.dto.request.workshop.CreateWorkshopSessionRequest;
 import fpt.project.NeoNHS.dto.request.workshop.UpdateWorkshopSessionRequest;
 import fpt.project.NeoNHS.dto.request.workshop.UpdateWorkshopSessionStatusRequest;
-import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.workshop.WorkshopSessionResponse;
 import fpt.project.NeoNHS.enums.SessionStatus;
 import fpt.project.NeoNHS.exception.BadRequestException;
@@ -36,11 +35,13 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.security.Principal;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -279,6 +280,87 @@ class WorkshopSessionControllerTest {
                             .content(objectMapper.writeValueAsString(request)))
                     .andDo(print())
                     .andExpect(status().isInternalServerError());
+        }
+
+        @Test
+        @DisplayName("UTCID10 - Not vendor role -> 403 Forbidden")
+        @WithMockUser(roles = "TOURIST")
+        void utcid10_notVendorRole_shouldReturn403() throws Exception {
+            CreateWorkshopSessionRequest request = buildValidCreateRequest();
+
+            mockMvc.perform(post("/api/workshops/sessions")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isForbidden());
+        }
+    }
+
+    @Nested
+    @DisplayName("Create Workshop Session Batch Tests")
+    class CreateWorkshopSessionBatchTests {
+
+        @Test
+        @DisplayName("UTCID01 - Valid batch request with 3 sessions -> 201 Created")
+        @WithMockUser(roles = "VENDOR")
+        void utcid01_validBatchRequest_shouldReturn201() throws Exception {
+            List<CreateWorkshopSessionRequest> requests = Arrays.asList(
+                    buildValidCreateRequest(LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(1).plusHours(2)),
+                    buildValidCreateRequest(LocalDateTime.now().plusDays(2), LocalDateTime.now().plusDays(2).plusHours(2)),
+                    buildValidCreateRequest(LocalDateTime.now().plusDays(3), LocalDateTime.now().plusDays(3).plusHours(2))
+            );
+
+            List<WorkshopSessionResponse> responses = Arrays.asList(
+                    buildResponseWithId(UUID.randomUUID()),
+                    buildResponseWithId(UUID.randomUUID()),
+                    buildResponseWithId(UUID.randomUUID())
+            );
+
+            Mockito.when(workshopSessionService.createWorkshopSessionBatch(
+                    eq(vendorEmail), anyList())).thenReturn(responses);
+
+            mockMvc.perform(post("/api/workshops/sessions/batch")
+                            .principal(mockPrincipal)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(requests)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.message").value("Workshop sessions batch created successfully"))
+                    .andExpect(jsonPath("$.data").isArray())
+                    .andExpect(jsonPath("$.data.length()").value(3));
+        }
+
+        @Test
+        @DisplayName("UTCID02 - Empty batch request -> 400 Bad Request")
+        @WithMockUser(roles = "VENDOR")
+        void utcid02_emptyBatchRequest_shouldReturn400() throws Exception {
+            List<CreateWorkshopSessionRequest> requests = java.util.Collections.emptyList();
+
+            mockMvc.perform(post("/api/workshops/sessions/batch")
+                            .principal(mockPrincipal)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(requests)))
+                    .andExpect(status().isBadRequest());
+        }
+
+        private CreateWorkshopSessionRequest buildValidCreateRequest(LocalDateTime start, LocalDateTime end) {
+            CreateWorkshopSessionRequest request = new CreateWorkshopSessionRequest();
+            request.setWorkshopTemplateId(templateId);
+            request.setStartTime(start);
+            request.setEndTime(end);
+            request.setPrice(BigDecimal.valueOf(100.00));
+            request.setMaxParticipants(20);
+            return request;
+        }
+
+        private WorkshopSessionResponse buildResponseWithId(UUID id) {
+            return WorkshopSessionResponse.builder()
+                    .id(id)
+                    .workshopTemplateId(templateId)
+                    .price(BigDecimal.valueOf(100.00))
+                    .maxParticipants(20)
+                    .currentEnrolled(0)
+                    .status(fpt.project.NeoNHS.enums.SessionStatus.SCHEDULED)
+                    .build();
         }
     }
 
