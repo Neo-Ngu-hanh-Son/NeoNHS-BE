@@ -48,8 +48,9 @@ public class SecurityConfig {
                         "/api/reviews/workshops/**",
                         "/api/reviews/events/**",
                         "/api/reviews/points/**",
-                        "/ws/**",
-                        "/index.html",
+                        "/api/translate/**",
+                        "/ws/**", // WebSocket endpoint
+                        "/index.html", // Chat test page (remove in production)
         };
 
         // Swagger / docs
@@ -122,6 +123,5 @@ public class SecurityConfig {
                 source.registerCorsConfiguration("/**", configuration);
                 return source;
         }
-
 
 }
