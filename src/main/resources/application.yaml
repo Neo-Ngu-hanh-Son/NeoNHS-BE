@@ -71,3 +71,9 @@ cloudinary:
 #github token
 github:
   token: ${GITHUB_TOKEN}
+
+# OpenAI Configuration
+openai:
+  api-key: ${OPENAI_API_KEY}
+  model: gpt-4o-mini
+  base-url: https://api.openai.com/v1
