@@ -296,7 +296,12 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
             throw new BadRequestException("Can only update SCHEDULED sessions. Current status: " + session.getStatus());
         }
 
-        // 4. Update fields if provided
+        // 4. KIỂM TRA ĐĂNG KÝ: Chặn mọi update nếu đã có người đăng ký
+        if (session.getCurrentEnrolled() > 0) {
+            throw new BadRequestException("Cannot update this session because tourists have already registered");
+        }
+
+        // 5. Update fields if provided
         if (request.getStartTime() != null) {
             if (request.getStartTime().isBefore(LocalDateTime.now())) {
                 throw new BadRequestException("Start time must be in the future");
@@ -308,26 +313,21 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
             session.setEndTime(request.getEndTime());
         }
 
-        // 5. Validate time constraints
-        if (session.getEndTime().isBefore(session.getStartTime())
-                || session.getEndTime().equals(session.getStartTime())) {
-            throw new BadRequestException("End time must be after start time");
+        // 6. Validate time constraints
+        if (session.getEndTime() != null && session.getStartTime() != null) {
+            if (session.getEndTime().isBefore(session.getStartTime())
+                    || session.getEndTime().equals(session.getStartTime())) {
+                throw new BadRequestException("End time must be after start time");
+            }
         }
 
-        // 6. Update price if provided
+        // 7. Update price if provided (Đã xóa logic check enrolled)
         if (request.getPrice() != null) {
-            if (session.getCurrentEnrolled() > 0 && session.getPrice().compareTo(request.getPrice()) != 0) {
-                throw new BadRequestException("Cannot update price because tourists have already registered for this session");
-            }
             session.setPrice(request.getPrice());
         }
 
-        // 7. Update maxParticipants with validation
+        // 8. Update maxParticipants with validation (Đã xóa logic check enrolled)
         if (request.getMaxParticipants() != null) {
-            if (request.getMaxParticipants() < session.getCurrentEnrolled()) {
-                throw new BadRequestException("Cannot reduce max participants (" + request.getMaxParticipants() +
-                        ") below current enrollments (" + session.getCurrentEnrolled() + ")");
-            }
             if (request.getMaxParticipants() < session.getWorkshopTemplate().getMinParticipants()) {
                 throw new BadRequestException("Max participants (" + request.getMaxParticipants() +
                         ") cannot be less than template's minimum participants (" +
@@ -336,7 +336,7 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
             session.setMaxParticipants(request.getMaxParticipants());
         }
 
-        // 8. Save and return
+        // 9. Save and return
         WorkshopSession updatedSession = workshopSessionRepository.save(session);
         return mapToResponse(updatedSession);
     }
