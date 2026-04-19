@@ -15,7 +15,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -71,6 +71,12 @@ cloudinary:
 #github token
 github:
   token: ${GITHUB_TOKEN}
+
+# Translation Service (FastAPI — HuggingFace Space)
+translation:
+  endpoint: ${TRANSLATION_SERVICE_URL:https://huydoan961z-translation-service.hf.space}
+  cache-ttl: 86400  # 24 giờ (giây)
+
 
 # OpenAI Configuration
 openai:

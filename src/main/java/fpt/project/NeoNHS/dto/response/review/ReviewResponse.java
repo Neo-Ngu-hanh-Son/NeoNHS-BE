@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.dto.response.review;
 
 import fpt.project.NeoNHS.dto.response.user.UserResponse;
+import fpt.project.NeoNHS.enums.ReviewTypeFlagEnum;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -16,7 +17,7 @@ import java.util.UUID;
 public class ReviewResponse {
     UUID id;
     UUID reviewTypeId;
-    Integer reviewTypeFlg;
+    ReviewTypeFlagEnum reviewTypeFlg;
     UserResponse user;
     Integer rating;
     String comment;

@@ -19,16 +19,15 @@ import fpt.project.NeoNHS.repository.EventRepository;
 import fpt.project.NeoNHS.repository.EventTimelineRepository;
 import fpt.project.NeoNHS.service.EventTimelineService;
 import fpt.project.NeoNHS.service.ImageUploadService;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.time.LocalTime;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -53,6 +52,8 @@ public class EventTimelineServiceImpl implements EventTimelineService {
 
         String lunarDate = LunarDateUtil.convertSolarToLunar(request.getDate());
 
+        validateEventTimelineDate(event, request);
+
         EventTimeline timeline = EventTimeline.builder()
                 .name(request.getName())
                 .description(request.getDescription())
@@ -67,6 +68,30 @@ public class EventTimelineServiceImpl implements EventTimelineService {
                 .build();
 
         return EventTimelineResponse.fromEntity(timelineRepository.save(timeline));
+    }
+
+    /**
+     * Check if the date of the request is in range of the current event.
+     *
+     * @param event
+     * @param req
+     * @return
+     */
+    private void validateEventTimelineDate(Event event, EventTimelineRequest req) {
+        LocalDateTime reqStart = LocalDateTime.of(req.getDate(), req.getStartTime());
+        LocalDateTime reqEnd = LocalDateTime.of(req.getDate(), req.getEndTime());
+
+        if (reqStart.isAfter(reqEnd) || reqStart.isEqual(reqEnd)) {
+            throw new BadRequestException("Timeline start time must be strictly before end time.");
+        }
+
+        if (reqStart.isBefore(event.getStartTime())) {
+            throw new BadRequestException("Timeline cannot start before the main event begins.");
+        }
+
+        if (reqEnd.isAfter(event.getEndTime())) {
+            throw new BadRequestException("Timeline cannot end after the main event finishes.");
+        }
     }
 
     private EventPoint resolvePointForCreate(EventTimelineRequest request) {
@@ -170,7 +195,7 @@ public class EventTimelineServiceImpl implements EventTimelineService {
      * Otherwise, it creates a new tag from the request.
      */
     private EventPointTag resolvePointTag(EventPointRequest pointRequest,
-            EventTimeline timeline) {
+                                          EventTimeline timeline) {
         var tagRequest = pointRequest.getEventPointTagRequest();
 
         EventPointTag tag = (timeline.getEventPoint() != null && timeline.getEventPoint().getEventPointTag() != null)
@@ -196,8 +221,8 @@ public class EventTimelineServiceImpl implements EventTimelineService {
      * Otherwise, it creates a new point from the request.
      */
     private EventPoint resolvePoint(EventPointRequest pointRequest,
-            EventTimeline timeline,
-            EventPointTag tag) {
+                                    EventTimeline timeline,
+                                    EventPointTag tag) {
         EventPoint point = (timeline.getEventPoint() != null)
                 ? timeline.getEventPoint()
                 : new EventPoint();
@@ -292,18 +317,24 @@ public class EventTimelineServiceImpl implements EventTimelineService {
 
     @Override
     public List<EventPointResponse> getAllEventPointByEventId(UUID eventId) {
-        return timelineRepository.findByEventId(eventId).stream()
-                .map(EventTimeline::getEventPoint)
-                .filter(Objects::nonNull)
+        var eventTimeline =  timelineRepository.findByEventId(eventId);
+        Map<UUID, EventPoint> eventPointMap = new HashMap<>();
+        for (var timeline : eventTimeline) {
+            eventPointMap.put(timeline.getEventPoint().getId(), timeline.getEventPoint());
+        }
+        return eventPointMap.values().stream()
                 .map(EventPointResponse::fromEntity)
                 .toList();
     }
 
     @Override
     public List<EventPointTagResponse> getAllEventPointTagByEventId(UUID eventId) {
-        return timelineRepository.findByEventId(eventId).stream()
-                .map(EventTimeline::getEventPoint)
-                .map(EventPoint::getEventPointTag)
+        var eventTimeline =  timelineRepository.findByEventId(eventId);
+        Map<UUID, EventPointTag> eventPointMap = new HashMap<>();
+        for (var timeline : eventTimeline) {
+            eventPointMap.put(timeline.getEventPoint().getId(), timeline.getEventPoint().getEventPointTag());
+        }
+        return eventPointMap.values().stream()
                 .map(EventPointTagResponse::fromEntity)
                 .toList();
     }

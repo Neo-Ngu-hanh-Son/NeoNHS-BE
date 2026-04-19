@@ -9,6 +9,7 @@ import fpt.project.NeoNHS.dto.response.event.EventResponse;
 import fpt.project.NeoNHS.enums.EventStatus;
 import fpt.project.NeoNHS.security.UserPrincipal;
 import fpt.project.NeoNHS.service.EventService;
+import fpt.project.NeoNHS.service.ImageUploadService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,7 +23,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -41,14 +44,18 @@ import java.util.UUID;
 public class AdminEventController {
 
     private final EventService eventService;
+    private final ImageUploadService imageUploadService;
 
     @Operation(
             summary = "Create event",
             description = "Create a new event with the provided details"
     )
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<EventResponse>> createEvent(
-            @Valid @RequestBody CreateEventRequest request) {
+            @RequestPart("event") @Valid CreateEventRequest request,
+            @RequestPart("thumbnail") MultipartFile thumbnailFile) {
+        var uploadRes = imageUploadService.uploadImage(thumbnailFile);
+        request.setThumbnailUrl(uploadRes.getMediaUrl());
         EventResponse event = eventService.createEvent(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(HttpStatus.CREATED, "Event created successfully", event));
@@ -58,10 +65,15 @@ public class AdminEventController {
             summary = "Update event",
             description = "Update an existing event by ID"
     )
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<EventResponse>> updateEvent(
             @Parameter(description = "Event ID") @PathVariable UUID id,
-            @Valid @RequestBody UpdateEventRequest request) {
+            @RequestPart("event") @Valid UpdateEventRequest request,
+            @RequestPart(value = "thumbnail", required = false) MultipartFile thumbnailFile) {
+        if (thumbnailFile != null && !thumbnailFile.isEmpty()) {
+            var uploadRes = imageUploadService.uploadImage(thumbnailFile);
+            request.setThumbnailUrl(uploadRes.getMediaUrl());
+        }
         EventResponse event = eventService.updateEvent(id, request);
         return ResponseEntity.ok(ApiResponse.success("Event updated successfully", event));
     }
