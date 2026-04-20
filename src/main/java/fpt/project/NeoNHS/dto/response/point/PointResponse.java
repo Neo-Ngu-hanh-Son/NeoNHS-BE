@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,6 +25,7 @@ public class PointResponse {
     protected UUID id;
     protected String name;
     protected String description;
+    protected String history;
     protected String thumbnailUrl;
     protected Double latitude;
     protected Double longitude;
@@ -31,13 +33,9 @@ public class PointResponse {
     protected Integer estTimeSpent;
     protected PointType type;
     protected UUID attractionId;
-    protected String panoramaImageUrl;
-    @Builder.Default
-    protected Double defaultYaw = 0.0;
-    @Builder.Default
-    protected Double defaultPitch = 0.0;
+    protected List<PointPanoramaResponse> panoramas;
     protected String googlePlaceId;
     protected Integer historyAudioCount;
     private List<CheckinPointResponse> checkinPoints;
-    protected java.time.LocalDateTime deletedAt;
+    protected LocalDateTime deletedAt;
 }
