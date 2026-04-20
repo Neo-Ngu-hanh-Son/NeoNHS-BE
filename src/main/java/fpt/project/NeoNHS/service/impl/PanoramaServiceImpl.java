@@ -1,16 +1,18 @@
 package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.dto.request.point.PanoramaHotSpotRequest;
+import fpt.project.NeoNHS.dto.request.point.PanoramaHotSpotsBatchRequest;
 import fpt.project.NeoNHS.dto.request.point.PanoramaRequest;
+import fpt.project.NeoNHS.dto.response.point.LinkingPanoramaResponse;
 import fpt.project.NeoNHS.dto.response.point.PanoramaHotSpotResponse;
 import fpt.project.NeoNHS.dto.response.point.PointPanoramaResponse;
-import fpt.project.NeoNHS.entity.CheckinPoint;
 import fpt.project.NeoNHS.entity.PanoramaHotSpot;
 import fpt.project.NeoNHS.entity.Point;
-import fpt.project.NeoNHS.exception.BadRequestException;
+import fpt.project.NeoNHS.entity.PointPanorama;
+import fpt.project.NeoNHS.enums.PanoramaHotSpotType;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
-import fpt.project.NeoNHS.repository.CheckinPointRepository;
 import fpt.project.NeoNHS.repository.PanoramaHotSpotRepository;
+import fpt.project.NeoNHS.repository.PointPanoramaRepository;
 import fpt.project.NeoNHS.repository.PointRepository;
 import fpt.project.NeoNHS.service.PanoramaService;
 import jakarta.transaction.Transactional;
@@ -26,294 +28,264 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class PanoramaServiceImpl implements PanoramaService {
 
-  private final PointRepository pointRepository;
-  private final CheckinPointRepository checkinPointRepository;
-  private final PanoramaHotSpotRepository hotSpotRepository;
+    private final PointRepository pointRepository;
+    private final PointPanoramaRepository pointPanoramaRepository;
+    private final PanoramaHotSpotRepository hotSpotRepository;
 
-  // ═══════════════════════════════════════════════════════
-  // Point Panorama CRUD
-  // ═══════════════════════════════════════════════════════
+    @Override
+    @Transactional
+    public PointPanoramaResponse addPanoramaToPoint(UUID pointId, PanoramaRequest request) {
+        Point point = pointRepository.findById(pointId)
+                .orElseThrow(() -> new ResourceNotFoundException("Point not found with id: " + pointId));
 
-  @Override
-  @Transactional
-  public PointPanoramaResponse createOrUpdatePointPanorama(UUID pointId, PanoramaRequest request) {
-    Point point = pointRepository.findById(pointId)
-        .orElseThrow(() -> new ResourceNotFoundException("Point not found with id: " + pointId));
+        boolean isFirst = point.getPanoramas() == null || point.getPanoramas().isEmpty();
+        boolean shouldBeDefault = isFirst || request.getIsDefault() == true;
 
-    // Update panorama config on the point
-    point.setPanoramaImageUrl(request.getPanoramaImageUrl());
-    point.setDefaultYaw(request.getDefaultYaw() != null ? request.getDefaultYaw() : 0.0);
-    point.setDefaultPitch(request.getDefaultPitch() != null ? request.getDefaultPitch() : 0.0);
+        if (shouldBeDefault && !isFirst) {
+            // Update others to false
+            for (PointPanorama p : point.getPanoramas()) {
+                p.setIsDefault(false);
+            }
+        }
 
-    // Replace all existing hot spots with the new ones
-    point.getPanoramaHotSpots().clear();
+        PointPanorama panorama = PointPanorama.builder()
+                .point(point)
+                .title(request.getTitle())
+                .panoramaImageUrl(request.getPanoramaImageUrl())
+                .defaultYaw(request.getDefaultYaw() != null ? request.getDefaultYaw() : 0.0)
+                .defaultPitch(request.getDefaultPitch() != null ? request.getDefaultPitch() : 0.0)
+                .isDefault(shouldBeDefault)
+                .build();
 
-    if (request.getHotSpots() != null) {
-      for (int i = 0; i < request.getHotSpots().size(); i++) {
-        PanoramaHotSpotRequest hsReq = request.getHotSpots().get(i);
+        panorama = pointPanoramaRepository.save(panorama);
+        addHotSpotsToPanorama(request, panorama);
+        return mapPointPanoramaToResponse(pointPanoramaRepository.save(panorama));
+    }
+
+    private void addHotSpotsToPanorama(PanoramaRequest request, PointPanorama panorama) {
+        if (request.getHotSpots() != null) {
+            for (int i = 0; i < request.getHotSpots().size(); i++) {
+                PanoramaHotSpotRequest hsReq = request.getHotSpots().get(i);
+                PanoramaHotSpot hotSpot = buildHotSpotFromRequest(hsReq, panorama.getId());
+                hotSpot.setPointPanorama(panorama);
+                hotSpot.setOrderIndex(hsReq.getOrderIndex() != null ? hsReq.getOrderIndex() : i);
+                panorama.getPanoramaHotSpots().add(hotSpot);
+
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    public PointPanoramaResponse updatePanorama(UUID panoramaId, PanoramaRequest request) {
+        PointPanorama panorama = pointPanoramaRepository.findById(panoramaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Panorama not found with id: " + panoramaId));
+
+        if (Boolean.TRUE.equals(request.getIsDefault())) {
+            pointPanoramaRepository.findByIsDefaultAndPoint_Id(true, panorama.getPoint().getId())
+                    .ifPresent(existingDefault -> {
+                        if (!existingDefault.getId().equals(panorama.getId())) {
+                            existingDefault.setIsDefault(false);
+                            pointPanoramaRepository.save(existingDefault);
+                        }
+                    });
+            panorama.setIsDefault(true);
+        }
+
+        if (request.getTitle() != null)
+            panorama.setTitle(request.getTitle());
+        if (request.getPanoramaImageUrl() != null)
+            panorama.setPanoramaImageUrl(request.getPanoramaImageUrl());
+        if (request.getDefaultYaw() != null)
+            panorama.setDefaultYaw(request.getDefaultYaw());
+        if (request.getDefaultPitch() != null)
+            panorama.setDefaultPitch(request.getDefaultPitch());
+
+        panorama.getPanoramaHotSpots().clear();
+
+        addHotSpotsToPanorama(request, panorama);
+        return mapPointPanoramaToResponse(pointPanoramaRepository.save(panorama));
+    }
+
+    @Override
+    public PointPanoramaResponse getPanoramaById(UUID panoramaId) {
+        PointPanorama panorama = pointPanoramaRepository.findById(panoramaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Panorama not found with id: " + panoramaId));
+        return mapPointPanoramaToResponse(panorama);
+    }
+
+    @Override
+    public List<PointPanoramaResponse> getPanoramasByPoint(UUID pointId) {
+        List<PointPanorama> panoramas = pointPanoramaRepository.findByPointId(pointId);
+        return panoramas.stream().map(this::mapPointPanoramaToResponse).toList();
+    }
+
+    @Override
+    @Transactional
+    public void deletePanorama(UUID panoramaId) {
+        PointPanorama panorama = pointPanoramaRepository.findById(panoramaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Panorama not found with id: " + panoramaId));
+        boolean wasDefault = Boolean.TRUE.equals(panorama.getIsDefault());
+        Point point = panorama.getPoint();
+
+        pointPanoramaRepository.delete(panorama);
+
+        if (wasDefault) {
+            point.getPanoramas().remove(panorama);
+            if (!point.getPanoramas().isEmpty()) {
+                point.getPanoramas().getFirst().setIsDefault(true);
+                pointRepository.save(point);
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Single HotSpot CRUD
+    // ═══════════════════════════════════════════════════════
+
+    @Override
+    @Transactional
+    public PanoramaHotSpotResponse addHotSpotToPanorama(UUID panoramaId, PanoramaHotSpotRequest request) {
+        PointPanorama panorama = pointPanoramaRepository.findById(panoramaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Panorama not found with id: " + panoramaId));
+
+        PanoramaHotSpot hotSpot = buildHotSpotFromRequest(request, panorama.getId());
+        hotSpot.setPointPanorama(panorama);
+
+        return mapHotSpotToResponse(hotSpotRepository.save(hotSpot));
+    }
+
+    @Override
+    public List<PanoramaHotSpotResponse> addHotSpotsToPanorama(UUID panoramaId, PanoramaHotSpotsBatchRequest request) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    @Transactional
+    public PanoramaHotSpotResponse updateHotSpot(UUID hotSpotId, PanoramaHotSpotRequest request) {
+        PanoramaHotSpot hotSpot = hotSpotRepository.findById(hotSpotId)
+                .orElseThrow(() -> new ResourceNotFoundException("HotSpot not found with id: " + hotSpotId));
+
+        if (request.getYaw() != null)
+            hotSpot.setYaw(request.getYaw());
+        if (request.getPitch() != null)
+            hotSpot.setPitch(request.getPitch());
+        if (request.getTooltip() != null)
+            hotSpot.setTooltip(request.getTooltip());
+        if (request.getTitle() != null)
+            hotSpot.setTitle(request.getTitle());
+        if (request.getDescription() != null)
+            hotSpot.setDescription(request.getDescription());
+        if (request.getImageUrl() != null)
+            hotSpot.setImageUrl(request.getImageUrl());
+        if (request.getOrderIndex() != null)
+            hotSpot.setOrderIndex(request.getOrderIndex());
+
+        var requestType = request.getType() != null ? PanoramaHotSpotType.valueOf(request.getType()) : PanoramaHotSpotType.INFO;
+        hotSpot.setType(PanoramaHotSpotType.valueOf(request.getType()));
+
+        if (requestType == PanoramaHotSpotType.LINK && request.getTargetPanoramaId() != null) {
+            PointPanorama target = pointPanoramaRepository.findById(request.getTargetPanoramaId())
+                    .orElseThrow(
+                            () -> new ResourceNotFoundException("Target panorama not found: " + request.getTargetPanoramaId()));
+            hotSpot.setTargetPanorama(target);
+        } else {
+            hotSpot.setTargetPanorama(null);
+        }
+
+        return mapHotSpotToResponse(hotSpotRepository.save(hotSpot));
+    }
+
+    @Override
+    @Transactional
+    public void deleteHotSpot(UUID hotSpotId) {
+        if (!hotSpotRepository.existsById(hotSpotId)) {
+            throw new ResourceNotFoundException("HotSpot not found with id: " + hotSpotId);
+        }
+        hotSpotRepository.deleteById(hotSpotId);
+    }
+
+    @Override
+    public List<PanoramaHotSpotResponse> getHotSpotsByPanorama(UUID panoramaId) {
+        if (!pointPanoramaRepository.existsById(panoramaId)) {
+            throw new ResourceNotFoundException("Panorama not found with id: " + panoramaId);
+        }
+        return hotSpotRepository.findByPointPanoramaIdOrderByOrderIndexAsc(panoramaId)
+                .stream()
+                .map(this::mapHotSpotToResponse)
+                .toList();
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Private mapping helpers
+    // ═══════════════════════════════════════════════════════
+
+    private PanoramaHotSpot buildHotSpotFromRequest(PanoramaHotSpotRequest request, UUID currentPanoramaId) {
+        if (currentPanoramaId.equals(request.getTargetPanoramaId())) {
+            throw new IllegalArgumentException("A panorama cannot link to itself.");
+        }
         PanoramaHotSpot hotSpot = PanoramaHotSpot.builder()
-            .point(point)
-            .yaw(hsReq.getYaw())
-            .pitch(hsReq.getPitch())
-            .tooltip(hsReq.getTooltip())
-            .title(hsReq.getTitle())
-            .description(hsReq.getDescription())
-            .imageUrl(hsReq.getImageUrl())
-            .orderIndex(hsReq.getOrderIndex() != null ? hsReq.getOrderIndex() : i)
-            .build();
-        point.getPanoramaHotSpots().add(hotSpot);
-      }
+                .yaw(request.getYaw())
+                .pitch(request.getPitch())
+                .tooltip(request.getTooltip() == null ? request.getTitle() : request.getTooltip())
+                .title(request.getTitle())
+                .description(request.getDescription())
+                .imageUrl(request.getImageUrl())
+                .orderIndex(request.getOrderIndex() != null ? request.getOrderIndex() : 0)
+                .type(request.getType() != null ? PanoramaHotSpotType.valueOf(request.getType()) : PanoramaHotSpotType.INFO)
+                .build();
+
+        if (request.getTargetPanoramaId() != null && hotSpot.getType() == PanoramaHotSpotType.LINK) {
+            PointPanorama target = pointPanoramaRepository.findById(request.getTargetPanoramaId())
+                    .orElseThrow(
+                            () -> new ResourceNotFoundException("Target panorama not found: " + request.getTargetPanoramaId()));
+            hotSpot.setTargetPanorama(target);
+        }
+        return hotSpot;
     }
 
-    Point saved = pointRepository.save(point);
-    return mapPointToPanoramaResponse(saved);
-  }
-
-  @Override
-  public PointPanoramaResponse getPointPanorama(UUID pointId) {
-    Point point = pointRepository.findById(pointId)
-        .orElseThrow(() -> new ResourceNotFoundException("Point not found with id: " + pointId));
-    return mapPointToPanoramaResponse(point);
-  }
-
-  @Override
-  @Transactional
-  public void deletePointPanorama(UUID pointId) {
-    Point point = pointRepository.findById(pointId)
-        .orElseThrow(() -> new ResourceNotFoundException("Point not found with id: " + pointId));
-
-    point.setPanoramaImageUrl(null);
-    point.setDefaultYaw(0.0);
-    point.setDefaultPitch(0.0);
-    point.getPanoramaHotSpots().clear();
-
-    pointRepository.save(point);
-  }
-
-  // ═══════════════════════════════════════════════════════
-  // CheckinPoint Panorama CRUD
-  // ═══════════════════════════════════════════════════════
-
-  @Override
-  @Transactional
-  public PointPanoramaResponse createOrUpdateCheckinPointPanorama(UUID checkinPointId, PanoramaRequest request) {
-    CheckinPoint cp = checkinPointRepository.findById(checkinPointId)
-        .orElseThrow(() -> new ResourceNotFoundException("CheckinPoint not found with id: " + checkinPointId));
-
-    cp.setPanoramaImageUrl(request.getPanoramaImageUrl());
-    cp.setDefaultYaw(request.getDefaultYaw() != null ? request.getDefaultYaw() : 0.0);
-    cp.setDefaultPitch(request.getDefaultPitch() != null ? request.getDefaultPitch() : 0.0);
-
-    // Replace all existing hot spots
-    cp.getPanoramaHotSpots().clear();
-
-    if (request.getHotSpots() != null) {
-      for (int i = 0; i < request.getHotSpots().size(); i++) {
-        PanoramaHotSpotRequest hsReq = request.getHotSpots().get(i);
-        PanoramaHotSpot hotSpot = PanoramaHotSpot.builder()
-            .checkinPoint(cp)
-            .yaw(hsReq.getYaw())
-            .pitch(hsReq.getPitch())
-            .tooltip(hsReq.getTooltip())
-            .title(hsReq.getTitle())
-            .description(hsReq.getDescription())
-            .imageUrl(hsReq.getImageUrl())
-            .orderIndex(hsReq.getOrderIndex() != null ? hsReq.getOrderIndex() : i)
-            .build();
-        cp.getPanoramaHotSpots().add(hotSpot);
-      }
+    private PanoramaHotSpotResponse mapHotSpotToResponse(PanoramaHotSpot entity) {
+        return PanoramaHotSpotResponse.builder()
+                .id(entity.getId().toString())
+                .yaw(entity.getYaw())
+                .pitch(entity.getPitch())
+                .tooltip(entity.getTooltip())
+                .title(entity.getTitle())
+                .description(entity.getDescription())
+                .imageUrl(entity.getImageUrl())
+                .orderIndex(entity.getOrderIndex())
+                .type(entity.getType() != null ? entity.getType().name() : null)
+                .targetPanoramaId(entity.getTargetPanorama() != null ? entity.getTargetPanorama().getId().toString() : null)
+                .build();
     }
 
-    CheckinPoint saved = checkinPointRepository.save(cp);
-    return mapCheckinPointToPanoramaResponse(saved);
-  }
-
-  @Override
-  public PointPanoramaResponse getCheckinPointPanorama(UUID checkinPointId) {
-    CheckinPoint cp = checkinPointRepository.findById(checkinPointId)
-        .orElseThrow(() -> new ResourceNotFoundException("CheckinPoint not found with id: " + checkinPointId));
-
-    if (cp.getPanoramaImageUrl() == null || cp.getPanoramaImageUrl().isBlank()) {
-      throw new BadRequestException("CheckinPoint does not have a panorama image configured");
+    private List<PanoramaHotSpotResponse> mapHotSpotsToResponses(List<PanoramaHotSpot> hotSpots) {
+        if (hotSpots == null)
+            return new ArrayList<>();
+        return hotSpots.stream()
+                .sorted(Comparator.comparingInt(m -> m.getOrderIndex() != null ? m.getOrderIndex() : 0))
+                .map(this::mapHotSpotToResponse)
+                .toList();
     }
 
-    return mapCheckinPointToPanoramaResponse(cp);
-  }
-
-  @Override
-  @Transactional
-  public void deleteCheckinPointPanorama(UUID checkinPointId) {
-    CheckinPoint cp = checkinPointRepository.findById(checkinPointId)
-        .orElseThrow(() -> new ResourceNotFoundException("CheckinPoint not found with id: " + checkinPointId));
-
-    cp.setPanoramaImageUrl(null);
-    cp.setDefaultYaw(0.0);
-    cp.setDefaultPitch(0.0);
-    cp.getPanoramaHotSpots().clear();
-
-    checkinPointRepository.save(cp);
-  }
-
-  // ═══════════════════════════════════════════════════════
-  // Single HotSpot CRUD
-  // ═══════════════════════════════════════════════════════
-
-  @Override
-  @Transactional
-  public PanoramaHotSpotResponse addHotSpotToPoint(UUID pointId, PanoramaHotSpotRequest request) {
-    Point point = pointRepository.findById(pointId)
-        .orElseThrow(() -> new ResourceNotFoundException("Point not found with id: " + pointId));
-
-    if (point.getPanoramaImageUrl() == null || point.getPanoramaImageUrl().isBlank()) {
-      throw new BadRequestException("Point does not have a panorama image configured. Set up panorama first.");
+    private PointPanoramaResponse mapPointPanoramaToResponse(PointPanorama panorama) {
+        return PointPanoramaResponse.builder()
+                .id(panorama.getId().toString())
+                .title(panorama.getTitle())
+                .panoramaImageUrl(panorama.getPanoramaImageUrl())
+                .defaultYaw(panorama.getDefaultYaw() != null ? panorama.getDefaultYaw() : 0.0)
+                .defaultPitch(panorama.getDefaultPitch() != null ? panorama.getDefaultPitch() : 0.0)
+                .isDefault(panorama.getIsDefault())
+                .placeId(panorama.getPoint().getId().toString())
+                .hotSpots(mapHotSpotsToResponses(panorama.getPanoramaHotSpots()))
+                .build();
     }
 
-    PanoramaHotSpot hotSpot = buildHotSpotFromRequest(request);
-    hotSpot.setPoint(point);
-
-    return mapHotSpotToResponse(hotSpotRepository.save(hotSpot));
-  }
-
-  @Override
-  @Transactional
-  public PanoramaHotSpotResponse addHotSpotToCheckinPoint(UUID checkinPointId, PanoramaHotSpotRequest request) {
-    CheckinPoint cp = checkinPointRepository.findById(checkinPointId)
-        .orElseThrow(() -> new ResourceNotFoundException("CheckinPoint not found with id: " + checkinPointId));
-
-    if (cp.getPanoramaImageUrl() == null || cp.getPanoramaImageUrl().isBlank()) {
-      throw new BadRequestException("CheckinPoint does not have a panorama image configured. Set up panorama first.");
+    @Override
+    public List<LinkingPanoramaResponse> getAllPanoramaForLinking() {
+        // Fetch all point info along with their panorama
+        var pointList = pointPanoramaRepository.getAllPanoramaForLinking();
+        List<LinkingPanoramaResponse> list = pointList.stream().map(LinkingPanoramaResponse::fromEntity).toList();
+        return list;
     }
-
-    PanoramaHotSpot hotSpot = buildHotSpotFromRequest(request);
-    hotSpot.setCheckinPoint(cp);
-
-    return mapHotSpotToResponse(hotSpotRepository.save(hotSpot));
-  }
-
-  @Override
-  @Transactional
-  public PanoramaHotSpotResponse updateHotSpot(UUID hotSpotId, PanoramaHotSpotRequest request) {
-    PanoramaHotSpot hotSpot = hotSpotRepository.findById(hotSpotId)
-        .orElseThrow(() -> new ResourceNotFoundException("HotSpot not found with id: " + hotSpotId));
-
-    if (request.getYaw() != null)
-      hotSpot.setYaw(request.getYaw());
-    if (request.getPitch() != null)
-      hotSpot.setPitch(request.getPitch());
-    if (request.getTooltip() != null)
-      hotSpot.setTooltip(request.getTooltip());
-    if (request.getTitle() != null)
-      hotSpot.setTitle(request.getTitle());
-    if (request.getDescription() != null)
-      hotSpot.setDescription(request.getDescription());
-    if (request.getImageUrl() != null)
-      hotSpot.setImageUrl(request.getImageUrl());
-    if (request.getOrderIndex() != null)
-      hotSpot.setOrderIndex(request.getOrderIndex());
-
-    return mapHotSpotToResponse(hotSpotRepository.save(hotSpot));
-  }
-
-  @Override
-  @Transactional
-  public void deleteHotSpot(UUID hotSpotId) {
-    if (!hotSpotRepository.existsById(hotSpotId)) {
-      throw new ResourceNotFoundException("HotSpot not found with id: " + hotSpotId);
-    }
-    hotSpotRepository.deleteById(hotSpotId);
-  }
-
-  @Override
-  public List<PanoramaHotSpotResponse> getHotSpotsByPoint(UUID pointId) {
-    if (!pointRepository.existsById(pointId)) {
-      throw new ResourceNotFoundException("Point not found with id: " + pointId);
-    }
-    return hotSpotRepository.findByPointIdOrderByOrderIndexAsc(pointId)
-        .stream()
-        .map(this::mapHotSpotToResponse)
-        .toList();
-  }
-
-  @Override
-  public List<PanoramaHotSpotResponse> getHotSpotsByCheckinPoint(UUID checkinPointId) {
-    if (!checkinPointRepository.existsById(checkinPointId)) {
-      throw new ResourceNotFoundException("CheckinPoint not found with id: " + checkinPointId);
-    }
-    return hotSpotRepository.findByCheckinPointIdOrderByOrderIndexAsc(checkinPointId)
-        .stream()
-        .map(this::mapHotSpotToResponse)
-        .toList();
-  }
-
-  // ═══════════════════════════════════════════════════════
-  // Private mapping helpers
-  // ═══════════════════════════════════════════════════════
-
-  private PanoramaHotSpot buildHotSpotFromRequest(PanoramaHotSpotRequest request) {
-    return PanoramaHotSpot.builder()
-        .yaw(request.getYaw())
-        .pitch(request.getPitch())
-        .tooltip(request.getTooltip())
-        .title(request.getTitle())
-        .description(request.getDescription())
-        .imageUrl(request.getImageUrl())
-        .orderIndex(request.getOrderIndex() != null ? request.getOrderIndex() : 0)
-        .build();
-  }
-
-  private PanoramaHotSpotResponse mapHotSpotToResponse(PanoramaHotSpot entity) {
-    return PanoramaHotSpotResponse.builder()
-        .id(entity.getId().toString())
-        .yaw(entity.getYaw())
-        .pitch(entity.getPitch())
-        .tooltip(entity.getTooltip())
-        .title(entity.getTitle())
-        .description(entity.getDescription())
-        .imageUrl(entity.getImageUrl())
-        .orderIndex(entity.getOrderIndex())
-        .build();
-  }
-
-  private List<PanoramaHotSpotResponse> mapHotSpotsToResponses(List<PanoramaHotSpot> hotSpots) {
-    if (hotSpots == null)
-      return new ArrayList<>();
-    return hotSpots.stream()
-        .sorted(Comparator.comparingInt(m -> m.getOrderIndex() != null ? m.getOrderIndex() : 0))
-        .map(this::mapHotSpotToResponse)
-        .toList();
-  }
-
-  private PointPanoramaResponse mapPointToPanoramaResponse(Point point) {
-    String address = point.getAttraction() != null ? point.getAttraction().getAddress() : "";
-    return PointPanoramaResponse.builder()
-        .id(point.getId().toString())
-        .name(point.getName())
-        .address(address != null ? address : "")
-        .description(point.getDescription())
-        .panoramaImageUrl(point.getPanoramaImageUrl())
-        .thumbnailUrl(point.getThumbnailUrl())
-        .defaultYaw(point.getDefaultYaw() != null ? point.getDefaultYaw() : 0.0)
-        .defaultPitch(point.getDefaultPitch() != null ? point.getDefaultPitch() : 0.0)
-        .hotSpots(mapHotSpotsToResponses(point.getPanoramaHotSpots()))
-        .build();
-  }
-
-  private PointPanoramaResponse mapCheckinPointToPanoramaResponse(CheckinPoint cp) {
-    // Traverse CheckinPoint -> Point -> Attraction for address
-    String address = "";
-    if (cp.getPoint() != null && cp.getPoint().getAttraction() != null) {
-      address = cp.getPoint().getAttraction().getAddress();
-    }
-    return PointPanoramaResponse.builder()
-        .id(cp.getId().toString())
-        .name(cp.getName())
-        .address(address != null ? address : "")
-        .description(cp.getDescription())
-        .panoramaImageUrl(cp.getPanoramaImageUrl())
-        .thumbnailUrl(null) // CheckinPoint doesn't have a thumbnail
-        .defaultYaw(cp.getDefaultYaw() != null ? cp.getDefaultYaw() : 0.0)
-        .defaultPitch(cp.getDefaultPitch() != null ? cp.getDefaultPitch() : 0.0)
-        .hotSpots(mapHotSpotsToResponses(cp.getPanoramaHotSpots()))
-        .build();
-  }
 }

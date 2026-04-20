@@ -3,6 +3,7 @@ package fpt.project.NeoNHS.service;
 import fpt.project.NeoNHS.dto.request.review.CreateReviewRequest;
 import fpt.project.NeoNHS.dto.request.review.UpdateReviewRequest;
 import fpt.project.NeoNHS.dto.response.PagedResponse;
+import fpt.project.NeoNHS.dto.response.review.PointReviewResponseWrapper;
 import fpt.project.NeoNHS.dto.response.review.ReviewResponse;
 import org.springframework.data.domain.Pageable;
 
@@ -16,5 +17,5 @@ public interface ReviewService {
 
     PagedResponse<ReviewResponse> getReviewsForEvent(UUID eventId, Pageable pageable);
 
-    PagedResponse<ReviewResponse> getReviewsForPoint(UUID pointId, Pageable pageable);
+    PointReviewResponseWrapper getReviewsForPoint(UUID pointId, Pageable pageable);
 }

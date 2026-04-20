@@ -321,6 +321,7 @@ public class PointServiceImpl implements PointService {
                 .id(entity.getId())
                 .name(entity.getName())
                 .description(entity.getDescription())
+                .history(entity.getHistory())
                 .thumbnailUrl(entity.getThumbnailUrl())
                 .latitude(entity.getLatitude().doubleValue())
                 .longitude(entity.getLongitude().doubleValue())
@@ -328,17 +329,18 @@ public class PointServiceImpl implements PointService {
                 .estTimeSpent(entity.getEstTimeSpent())
                 .type(entity.getType())
                 .attractionId(entity.getAttraction().getId())
-                .panoramaImageUrl(entity.getPanoramaImageUrl())
-                .defaultPitch(entity.getDefaultPitch())
-                .defaultYaw(entity.getDefaultYaw())
+                .panoramas(entity.getPanoramas() != null ? entity.getPanoramas().stream()
+                        .map(p -> PointPanoramaResponse.builder()
+                                .id(p.getId().toString())
+                                .panoramaImageUrl(p.getPanoramaImageUrl())
+                                .defaultYaw(p.getDefaultYaw() != null ? p.getDefaultYaw() : 0.0)
+                                .defaultPitch(p.getDefaultPitch() != null ? p.getDefaultPitch() : 0.0)
+                                .isDefault(p.getIsDefault())
+                                .build())
+                        .toList() : Collections.emptyList())
                 .googlePlaceId(entity.getGooglePlaceId())
                 .historyAudioCount(historyAudioCount)
                 .deletedAt(entity.getDeletedAt())
                 .build();
-    }
-
-    @Override
-    public PointPanoramaResponse getPointPanorama(UUID pointId) {
-        return panoramaService.getPointPanorama(pointId);
     }
 }

@@ -40,5 +40,4 @@ public interface PointService {
     Page<PointResponse> getAllPointsForAdmin(int page, int size, String sortBy, String sortDir, String search,
             boolean includeDeleted);
 
-    PointPanoramaResponse getPointPanorama(UUID pointId);
 }
