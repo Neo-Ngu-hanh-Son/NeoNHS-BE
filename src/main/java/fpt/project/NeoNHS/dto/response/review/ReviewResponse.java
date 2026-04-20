@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.dto.response.review;
 
 import fpt.project.NeoNHS.dto.response.user.UserResponse;
+import fpt.project.NeoNHS.entity.Review;
 import fpt.project.NeoNHS.enums.ReviewTypeFlagEnum;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -8,6 +9,8 @@ import lombok.experimental.FieldDefaults;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+
+import static java.util.stream.Collectors.toList;
 
 @Data
 @NoArgsConstructor
@@ -22,5 +25,16 @@ public class ReviewResponse {
     Integer rating;
     String comment;
     LocalDateTime createdAt;
-    List<String> imageUrls;
+
+    public static ReviewResponse fromEntity(Review r) {
+        return ReviewResponse.builder()
+                .id(r.getId())
+                .reviewTypeId(r.getReviewTypeId())
+                .reviewTypeFlg(r.getReviewTypeFlg())
+                .user(r.getUser() != null ? UserResponse.fromEntity(r.getUser()) : null)
+                .rating(r.getRating())
+                .comment(r.getComment())
+                .createdAt(r.getCreatedAt())
+                .build();
+    }
 }

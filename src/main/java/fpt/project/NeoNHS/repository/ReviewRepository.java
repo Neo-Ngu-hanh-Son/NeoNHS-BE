@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.repository;
 
+import fpt.project.NeoNHS.dto.response.review.ReviewMetadata;
 import fpt.project.NeoNHS.entity.Review;
 import fpt.project.NeoNHS.enums.ReviewStatus;
 import fpt.project.NeoNHS.enums.ReviewTypeFlagEnum;
@@ -41,16 +42,37 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
             @Param("type") ReviewTypeFlagEnum type,
             Pageable pageable);
 
-    @Query("""
-            SELECT r FROM Review r
-            JOIN Point p ON r.reviewTypeId = p.id
-            WHERE p.id = :pointId AND r.reviewTypeFlg = :type AND r.status = :status
-            """)
+
+    @Query(
+            value = """
+        SELECT r FROM Review r
+        WHERE r.reviewTypeId = :pointId
+          AND r.reviewTypeFlg = :type
+          AND r.status = :status
+    """,
+            countQuery = """
+        SELECT count(r) FROM Review r
+        WHERE r.reviewTypeId = :pointId
+          AND r.reviewTypeFlg = :type
+          AND r.status = :status
+    """
+    )
     Page<Review> pageVisibleReviewsForPoint(
             @Param("pointId") UUID pointId,
             @Param("status") ReviewStatus status,
             @Param("type") ReviewTypeFlagEnum type,
             Pageable pageable);
+
+    @Query("""
+                SELECT new  fpt.project.NeoNHS.dto.response.review.ReviewMetadata (AVG(r.rating), COUNT(r))
+                FROM Review r
+                WHERE r.reviewTypeId = :reviewId
+                  AND r.reviewTypeFlg = :type
+                  AND r.status = :status
+            """)
+    ReviewMetadata getReviewStats(@Param("reviewId") UUID reviewId,
+                                  @Param("type") ReviewTypeFlagEnum type,
+                                  @Param("status") ReviewStatus status);
 
     Long countByReviewTypeIdAndReviewTypeFlgAndStatus(UUID reviewTypeId, ReviewTypeFlagEnum reviewTypeFlg, ReviewStatus status);
 
