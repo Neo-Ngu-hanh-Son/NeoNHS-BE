@@ -92,7 +92,7 @@ public class AiChatServiceImpl implements AiChatService {
             4. **HỖ TRỢ HÌNH ẢNH**: Khi cung cấp thông tin về Workshop, Sự kiện hoặc Bài viết, hãy LUÔN LUÔN đính kèm hình ảnh (imageUrl) nếu công cụ trả về. Sử dụng cú pháp Markdown: ![Tên](url).
             5. **HỖ TRỢ ĐẶT VÉ**: Nếu người dùng muốn đặt vé/workshop, khi hỏi lịch trình của workshop, hãy luôn đưa thêm thông tin là ngày xảy ra buổi workshop đó, khung giờ mấy và số chỗ còn trống là bao nhiêu. Nếu người dùng hỏi về giá vé, hãy hướng dẫn họ chọn buổi/loại vé và nhắc họ có thể hoàn tất thanh toán trong ứng dụng. Bạn có thể cung cấp thông tin chi tiết để họ dễ dành lựa chọn.
             6. KHÔNG bịa đặt thông tin. Nếu không có dữ liệu, hãy báo là chưa cập nhật.
-            7. Nếu câu hỏi nằm ngoài phạm vi và bạn không thể trả lời, hãy bắt đầu bằng câu "xin lỗi, tôi không có thông tin ..... ", sau đó nhắn thêm "bạn có muốn trò chuyện với người hỗ trợ không?" và gửi kèm với [TRANSFER_TO_HUMAN] ở cuối tin nhắn để kích hoạt chuyển tiếp cho nhân viên hỗ trợ.
+            7. Nếu câu hỏi nằm ngoài phạm vi và bạn không thể trả lời, hãy bắt đầu bằng câu "xin lỗi, tôi không có thông tin ..... ", sau đó nhắn thêm "bạn có muốn trò chuyện với người hỗ trợ không?" và LUÔN LUÔN gửi kèm với [TRANSFER_TO_HUMAN] ở cuối tin nhắn để kích hoạt chuyển tiếp cho nhân viên hỗ trợ. Bắt buộc phải có thẻ [TRANSFER_TO_HUMAN].
             Ví dụ: "Xin lỗi, tôi không có thông tin về lịch trình tour du lịch quanh Đà Nẵng. Bạn có muốn trò chuyện với người hỗ trợ không? [TRANSFER_TO_HUMAN]"
             8. Giữ câu trả lời thân thiện, sử dụng emoji phù hợp 🌸.
             9. **NGÔN NGỮ**: Trả lời bằng ngôn ngữ mà người dùng đang sử dụng. Nếu người dùng hỏi bằng tiếng Anh, hãy trả lời bằng tiếng Anh. Nếu hỏi bằng tiếng Nhật, hãy trả lời bằng tiếng Nhật. Mặc định là tiếng Việt.
@@ -431,6 +431,12 @@ public class AiChatServiceImpl implements AiChatService {
             if (content.length() > 500) {
                 content = content.substring(0, 500);
             }
+
+            // Re-inject the [TRANSFER_TO_HUMAN] tag for context so the model remembers its behavior
+            if ("AI_ASSISTANT".equals(msg.getSenderId()) && msg.getMetadata() != null && Boolean.TRUE.equals(msg.getMetadata().get("transferToHuman"))) {
+                content += " [TRANSFER_TO_HUMAN]";
+            }
+
             msgNode.put("content", content);
             messages.add(msgNode);
         }
@@ -482,6 +488,11 @@ public class AiChatServiceImpl implements AiChatService {
 
                 if (cachedResponse != null) {
                     log.info("[AI] Cache hit for message: {}", normalizedMsg);
+                    if (cachedResponse.contains("[TRANSFER_TO_HUMAN]") || cachedResponse.toLowerCase().contains("người hỗ trợ không")) {
+                        String cleanText = cachedResponse.replaceAll("(?i)\\s*\\[TRANSFER_TO_HUMAN\\]\\s*", "").trim();
+                        handleTransferToHuman(roomId, senderId, emitter, cleanText);
+                        return;
+                    }
                     streamTextToClient(emitter, cachedResponse);
                     saveAndBroadcastAiMessage(roomId, cachedResponse);
                     emitter.complete();
@@ -509,8 +520,9 @@ public class AiChatServiceImpl implements AiChatService {
                 System.out.println("AI Reply after processing: " + aiReplyText);
 
                 // 5. Check for handover signal
-                if (aiReplyText.contains("[TRANSFER_TO_HUMAN]")) {
-                    handleTransferToHuman(roomId, senderId, emitter);
+                if (aiReplyText.contains("[TRANSFER_TO_HUMAN]") || aiReplyText.toLowerCase().contains("người hỗ trợ không")) {
+                    String cleanText = aiReplyText.replaceAll("(?i)\\s*\\[TRANSFER_TO_HUMAN\\]\\s*", "").trim();
+                    handleTransferToHuman(roomId, senderId, emitter, cleanText);
                     return;
                 }
 
@@ -521,7 +533,7 @@ public class AiChatServiceImpl implements AiChatService {
                 saveAndBroadcastAiMessage(roomId, aiReplyText);
 
                 // 9. Cache the response (Lưu cache cho các câu hỏi sau)
-                if (!aiReplyText.contains("[TRANSFER_TO_HUMAN]") && aiReplyText.length() > 20) {
+                if (aiReplyText.length() > 20) {
                     redisTemplate.opsForValue().set(cacheKey, aiReplyText, 1, TimeUnit.DAYS);
                 }
 
@@ -615,11 +627,20 @@ public class AiChatServiceImpl implements AiChatService {
     }
 
     private void saveAndBroadcastAiMessage(String roomId, String aiText) {
-        ChatMessageRequest aiRequest = ChatMessageRequest.builder()
+        saveAndBroadcastAiMessageWithMetadata(roomId, aiText, null);
+    }
+
+    private void saveAndBroadcastAiMessageWithMetadata(String roomId, String aiText, Map<String, Object> metadata) {
+        var builder = ChatMessageRequest.builder()
                 .chatRoomId(roomId)
                 .content(aiText)
-                .messageType("TEXT")
-                .build();
+                .messageType("TEXT");
+
+        if (metadata != null) {
+            builder.metadata(metadata);
+        }
+
+        ChatMessageRequest aiRequest = builder.build();
         ChatMessageDTO savedMsg = chatService.sendMessage("AI_ASSISTANT", aiRequest);
 
         // Broadcast to all participants via WebSocket
@@ -667,16 +688,17 @@ public class AiChatServiceImpl implements AiChatService {
                 .data("{\"fullText\": " + objectMapper.writeValueAsString(text) + "}"));
     }
 
-    private void handleTransferToHuman(String roomId, String senderId, SseEmitter emitter) throws IOException {
-        String transferMessage = "Xin lỗi, tôi chưa có thông tin để có thể trả lời câu hỏi này, bạn có muốn trò chuyện với người hỗ trợ không?";
-
-        // Save transfer system message
-        saveAndBroadcastAiMessage(roomId, transferMessage);
+    private void handleTransferToHuman(String roomId, String senderId, SseEmitter emitter, String cleanText) throws IOException {
+        // Save transfer system message with metadata
+        saveAndBroadcastAiMessageWithMetadata(roomId, cleanText, Map.of("transferToHuman", true));
 
         // Stream to client
         emitter.send(SseEmitter.event()
                 .name("transfer")
-                .data("{\"message\": " + objectMapper.writeValueAsString(transferMessage) + "}"));
+                .data("{\"message\": " + objectMapper.writeValueAsString(cleanText) + "}"));
+        emitter.send(SseEmitter.event()
+                .name("done")
+                .data("{\"fullText\": " + objectMapper.writeValueAsString(cleanText) + "}"));
         emitter.complete();
     }
 
