@@ -37,6 +37,9 @@ public class Point extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(columnDefinition = "TEXT")
+    private String history;
+
     private String thumbnailUrl;
 
     @Column(precision = 10, scale = 7)
@@ -49,9 +52,6 @@ public class Point extends BaseEntity {
 
     private Integer estTimeSpent;
 
-    @Column(columnDefinition = "TEXT")
-    private String historyText;
-
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -63,16 +63,16 @@ public class Point extends BaseEntity {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-    @Column(name = "panorama_image_url", length = 2048)
-    private String panoramaImageUrl;
-
-    @Column(name = "default_yaw")
-    @Builder.Default
-    private Double defaultYaw = 0.0;
-
-    @Column(name = "default_pitch")
-    @Builder.Default
-    private Double defaultPitch = 0.0;
+//    @Column(name = "panorama_image_url", length = 2048)
+//    private String panoramaImageUrl;
+//
+//    @Column(name = "default_yaw")
+//    @Builder.Default
+//    private Double defaultYaw = 0.0;
+//
+//    @Column(name = "default_pitch")
+//    @Builder.Default
+//    private Double defaultPitch = 0.0;
 
     @Column(name = "google_place_id")
     private String googlePlaceId;
@@ -87,11 +87,12 @@ public class Point extends BaseEntity {
     private List<CheckinPoint> checkinPoints = new ArrayList<>();
 
     @OneToMany(mappedBy = "point", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<UserVisitedPoint> userVisitedPoints;
-
     @Builder.Default
-    @OneToMany(mappedBy = "point", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<PanoramaHotSpot> panoramaHotSpots = new ArrayList<>();
+    private List<UserVisitedPoint> userVisitedPoints = new ArrayList<>();
+
+//    @Builder.Default
+//    @OneToMany(mappedBy = "point", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+//    private List<PanoramaHotSpot> panoramaHotSpots = new ArrayList<>();
 
     @BatchSize(size = 25)
     @Builder.Default
@@ -103,4 +104,7 @@ public class Point extends BaseEntity {
     )
     private List<PointHistoryAudio> historyAudios = new ArrayList<>();
 
+    @OneToMany(mappedBy = "point", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<PointPanorama> panoramas = new ArrayList<>();
 }

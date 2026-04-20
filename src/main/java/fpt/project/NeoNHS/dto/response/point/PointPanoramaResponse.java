@@ -11,12 +11,11 @@ import java.util.List;
 @Builder
 public class PointPanoramaResponse {
   private String id;
-  private String name;
-  private String address;
-  private String description;
+  private String title;
   private String panoramaImageUrl;
-  private String thumbnailUrl;
   private Double defaultYaw;
   private Double defaultPitch;
+  private Boolean isDefault;
+  private String placeId;
   private List<PanoramaHotSpotResponse> hotSpots;
 }

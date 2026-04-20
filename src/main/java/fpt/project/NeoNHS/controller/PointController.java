@@ -70,18 +70,8 @@ public class PointController {
      * Returns the 360° image URL, camera defaults, and all interactive hot spots.
      */
     @GetMapping("/{pointId}/panorama")
-    public ApiResponse<PointPanoramaResponse> getPointPanorama(@PathVariable UUID pointId) {
-        PointPanoramaResponse response = pointService.getPointPanorama(pointId);
-        return ApiResponse.success("Panorama data retrieved successfully", response);
-    }
-
-    /**
-     * Get panorama data for a specific checkin point.
-     * Returns the 360° image URL, camera defaults, and all interactive hot spots.
-     */
-    @GetMapping("/checkin-points/{checkinPointId}/panorama")
-    public ApiResponse<PointPanoramaResponse> getCheckinPointPanorama(@PathVariable UUID checkinPointId) {
-        PointPanoramaResponse response = panoramaService.getCheckinPointPanorama(checkinPointId);
+    public ApiResponse<List<PointPanoramaResponse>> getPointPanoramas(@PathVariable UUID pointId) {
+        List<PointPanoramaResponse> response = panoramaService.getPanoramasByPoint(pointId);
         return ApiResponse.success("Panorama data retrieved successfully", response);
     }
 }

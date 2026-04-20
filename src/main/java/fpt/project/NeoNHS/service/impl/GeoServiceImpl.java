@@ -27,23 +27,29 @@ public class GeoServiceImpl implements GeoService {
     // Run this to sync with redis whenever you CRUD or when the server is up and running
     public void syncCheckinsToRedis() {
         List<CheckinPoint> points = repository.findAll();
-
+        if (points.isEmpty()) {
+            return;
+        }
         Map<String, Point> memberCoordsMap = new HashMap<>();
         for (CheckinPoint p : points) {
-            memberCoordsMap.put(p.getId().toString(), new Point(p.getLongitude().doubleValue(),
-                    p.getLatitude().doubleValue()));
+            if (p.getLongitude() != null && p.getLatitude() != null) {
+                memberCoordsMap.put(p.getId().toString(),
+                        new Point(p.getLongitude().doubleValue(), p.getLatitude().doubleValue()));
+            }
         }
-        redisTemplate.opsForGeo().add(GeoConstants.GEO_KEY, memberCoordsMap);
+        if (!memberCoordsMap.isEmpty()) {
+            redisTemplate.opsForGeo().add(GeoConstants.CHECKIN_GEO_KEY, memberCoordsMap);
+        }
     }
 
     @Override
     public void addCheckinToRedis(String checkinId, double longitude, double latitude) {
-        redisTemplate.opsForGeo().add(GeoConstants.GEO_KEY, new Point(longitude, latitude), checkinId);
+        redisTemplate.opsForGeo().add(GeoConstants.CHECKIN_GEO_KEY, new Point(longitude, latitude), checkinId);
     }
 
     @Override
     public void removeCheckinFromRedis(String checkinId) {
-        redisTemplate.opsForGeo().remove(GeoConstants.GEO_KEY, checkinId);
+        redisTemplate.opsForGeo().remove(GeoConstants.CHECKIN_GEO_KEY, checkinId);
     }
 
     @Override
@@ -56,9 +62,9 @@ public class GeoServiceImpl implements GeoService {
     public List<String> getCheckinsInRadius(double latitude, double longitude, double radiusMeters) {
         Circle circle = new Circle(new Point(longitude, latitude), new Distance(radiusMeters, Metrics.METERS));
         GeoResults<RedisGeoCommands.GeoLocation<String>> results = redisTemplate.opsForGeo()
-                .radius(GeoConstants.GEO_KEY, circle);
+                .radius(GeoConstants.CHECKIN_GEO_KEY, circle);
 
-        List<String> idList =  results.getContent().stream()
+        List<String> idList = results.getContent().stream()
                 .map(res -> res.getContent().getName()) // Returns the ID of the points
                 .toList();
         return idList;
@@ -70,7 +76,7 @@ public class GeoServiceImpl implements GeoService {
 
     // Extracted helper method for the math
     private double haversineDistance(double lat1, double lon1, double lat2, double lon2) {
-        final double R = 6371000.0; // Earth's radius in meters
+        final double R = GeoConstants.EARTH_RADIUS_KM;
 
         // Convert decimal degrees to radians
         double lat1Rad = Math.toRadians(lat1);

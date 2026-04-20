@@ -1,5 +1,7 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.dto.response.review.PointReviewResponse;
+import fpt.project.NeoNHS.dto.response.review.PointReviewResponseWrapper;
 import fpt.project.NeoNHS.enums.ReviewTypeFlagEnum;
 import fpt.project.NeoNHS.dto.request.review.CreateReviewRequest;
 import fpt.project.NeoNHS.dto.request.review.UpdateReviewRequest;
@@ -145,10 +147,33 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<ReviewResponse> getReviewsForPoint(UUID pointId, Pageable pageable) {
+    public PointReviewResponseWrapper getReviewsForPoint(UUID pointId, Pageable pageable) {
         validateReviewTarget(pointId, ReviewTypeFlagEnum.POINT);
         Page<Review> reviewPage = reviewRepository.pageVisibleReviewsForPoint(pointId, ReviewStatus.VISIBLE, ReviewTypeFlagEnum.POINT, pageable);
-        return toPagedReviewResponse(reviewPage);
+        var pagedResp =  toPagedPointReviewResponse(reviewPage);
+        // Get the metadata
+        var stats = reviewRepository.getReviewStats(pointId, ReviewTypeFlagEnum.POINT, ReviewStatus.VISIBLE);
+        return PointReviewResponseWrapper.builder()
+                .reviews(pagedResp)
+                .totalReviews(stats.count() != null ?  stats.count() : 0)
+                .avgRating(stats.averageRating() != null ? stats.averageRating() : 0)
+                .build();
+    }
+
+    private PagedResponse<PointReviewResponse> toPagedPointReviewResponse(Page<Review> reviewPage) {
+        List<PointReviewResponse> responses = reviewPage.getContent().stream()
+                .map(PointReviewResponse::fromEntity)
+                .collect(Collectors.toList());
+        return PagedResponse.<PointReviewResponse>builder()
+                .page(reviewPage.getNumber())
+                .size(reviewPage.getSize())
+                .totalPages(reviewPage.getTotalPages())
+                .totalElements(reviewPage.getTotalElements())
+                .content(responses)
+                .first(reviewPage.isFirst())
+                .last(reviewPage.isLast())
+                .empty(reviewPage.isEmpty())
+                .build();
     }
 
     private PagedResponse<ReviewResponse> toPagedReviewResponse(Page<Review> reviewPage) {
@@ -162,6 +187,9 @@ public class ReviewServiceImpl implements ReviewService {
                 .totalPages(reviewPage.getTotalPages())
                 .totalElements(reviewPage.getTotalElements())
                 .content(reviewResponses)
+                .first(reviewPage.isFirst())
+                .last(reviewPage.isLast())
+                .empty(reviewPage.isEmpty())
                 .build();
     }
 
@@ -229,7 +257,6 @@ public class ReviewServiceImpl implements ReviewService {
                 .rating(review.getRating())
                 .comment(review.getComment())
                 .createdAt(review.getCreatedAt())
-                .imageUrls(imageUrls)
                 .build();
     }
 }
