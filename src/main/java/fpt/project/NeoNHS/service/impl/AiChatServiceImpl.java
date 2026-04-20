@@ -32,6 +32,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -43,6 +44,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.client.RestClientResponseException;
 
@@ -68,6 +70,7 @@ public class AiChatServiceImpl implements AiChatService {
     private final TicketCatalogRepository ticketCatalogRepository;
     private final KnowledgeRepository knowledgeRepository;
     private final BlogRepository blogRepository;
+    private final TransactionTemplate transactionTemplate;
 
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
@@ -76,27 +79,31 @@ public class AiChatServiceImpl implements AiChatService {
     // ═══════════════════════════════════════════════════════════════════
     private static final String SYSTEM_PROMPT = """
             Bạn là trợ lý du lịch ảo của Khu di tích Ngũ Hành Sơn (NeoNHS), Đà Nẵng, Việt Nam.
-
+            
             Vai trò:
             - Hỗ trợ du khách với thông tin về khu di tích, các điểm tham quan, sự kiện, workshop và các bài viết tin tức/văn hóa (blog).
             - Trả lời bằng tiếng Việt, thân thiện, ngắn gọn và chính xác.
             - Khi được hỏi về thông tin cụ thể (giá vé, lịch workshop, sự kiện, bài viết), hãy sử dụng các công cụ (tools/functions) được cung cấp để tra cứu dữ liệu thực tế.
-
+            
             Quy tắc quan trọng:
             1. Tuyệt đối KHÔNG sử dụng các công cụ (tools) nếu người dùng chỉ đang chào hỏi hoặc hỏi những câu giao tiếp thông thường.
             2. Khi người dùng hỏi về giá vé, hãy LIỆT KÊ TẤT CẢ các loại vé bạn tìm thấy được từ công cụ, không được bỏ sót loại nào (ví dụ: vé người lớn, trẻ em, người nước ngoài, v.v.).
             3. Trình bày danh sách vé một cách đẹp mắt bằng Markdown (ví dụ: dùng bảng hoặc danh sách có gạch đầu dòng).
             4. **HỖ TRỢ HÌNH ẢNH**: Khi cung cấp thông tin về Workshop, Sự kiện hoặc Bài viết, hãy LUÔN LUÔN đính kèm hình ảnh (imageUrl) nếu công cụ trả về. Sử dụng cú pháp Markdown: ![Tên](url).
-            5. **HỖ TRỢ ĐẶT VÉ**: Nếu người dùng muốn đặt vé/workshop, hãy hướng dẫn họ chọn buổi/loại vé và nhắc họ có thể hoàn tất thanh toán trong ứng dụng. Bạn có thể cung cấp thông tin chi tiết để họ dễ dành lựa chọn.
+            5. **HỖ TRỢ ĐẶT VÉ**: Nếu người dùng muốn đặt vé/workshop, khi hỏi lịch trình của workshop, hãy luôn đưa thêm thông tin là ngày xảy ra buổi workshop đó, khung giờ mấy và số chỗ còn trống là bao nhiêu. Nếu người dùng hỏi về giá vé, hãy hướng dẫn họ chọn buổi/loại vé và nhắc họ có thể hoàn tất thanh toán trong ứng dụng. Bạn có thể cung cấp thông tin chi tiết để họ dễ dành lựa chọn.
             6. KHÔNG bịa đặt thông tin. Nếu không có dữ liệu, hãy báo là chưa cập nhật.
-            7. Nếu câu hỏi nằm ngoài phạm vi hoặc cần hỗ trợ trực tiếp từ nhân viên, hãy trả lời CHÍNH XÁC bằng chuỗi: [TRANSFER_TO_HUMAN].
+            7. Nếu câu hỏi nằm ngoài phạm vi và bạn không thể trả lời, hãy bắt đầu bằng câu "xin lỗi, tôi không có thông tin ..... ", sau đó nhắn thêm "bạn có muốn trò chuyện với người hỗ trợ không?" và gửi kèm với [TRANSFER_TO_HUMAN] ở cuối tin nhắn để kích hoạt chuyển tiếp cho nhân viên hỗ trợ.
+            Ví dụ: "Xin lỗi, tôi không có thông tin về lịch trình tour du lịch quanh Đà Nẵng. Bạn có muốn trò chuyện với người hỗ trợ không? [TRANSFER_TO_HUMAN]"
             8. Giữ câu trả lời thân thiện, sử dụng emoji phù hợp 🌸.
             9. **NGÔN NGỮ**: Trả lời bằng ngôn ngữ mà người dùng đang sử dụng. Nếu người dùng hỏi bằng tiếng Anh, hãy trả lời bằng tiếng Anh. Nếu hỏi bằng tiếng Nhật, hãy trả lời bằng tiếng Nhật. Mặc định là tiếng Việt.
             """;
 
-    private String getSystemPrompt() {
+    private String getSystemPrompt(String userMessage) {
         StringBuilder prompt = new StringBuilder(SYSTEM_PROMPT);
-        List<KnowledgeDocument> knowledgeBase = knowledgeRepository.findByIsActiveTrue();
+        // Save tokens by only loading relevant documents based on the user's message
+        List<KnowledgeDocument> knowledgeBase = knowledgeRepository.searchByKeyword(userMessage).stream()
+                .limit(3)
+                .toList();
         if (!knowledgeBase.isEmpty()) {
             prompt.append("\n\n---\n")
                     .append("DỮ LIỆU KIẾN THỨC NỘI BỘ (Chỉ sử dụng khi cần trả lời các câu hỏi cụ thể):\n");
@@ -228,18 +235,22 @@ public class AiChatServiceImpl implements AiChatService {
     private String executeSearchWorkshops(JsonNode args) {
         String keyword = args.has("keyword") ? args.get("keyword").asText("") : "";
         var workshops = workshopTemplateRepository.findAll().stream()
-                .filter(w -> w.getIsPublished() && keyword.isEmpty() ||
-                        w.getName().toLowerCase().contains(keyword.toLowerCase()))
-                .limit(5)
+                .filter(w -> Boolean.TRUE.equals(w.getIsPublished()) &&
+                        (keyword.isEmpty() || w.getName().toLowerCase().contains(keyword.toLowerCase())))
+                .limit(3)
                 .map(w -> Map.of(
                         "id", w.getId().toString(),
                         "name", w.getName(),
                         "description", w.getShortDescription() != null ? w.getShortDescription() : "",
                         "price", w.getDefaultPrice() != null ? w.getDefaultPrice().toString() + " VND" : "Liên hệ",
                         "status", w.getStatus().name(),
-                        "rating", w.getAverageRating().toString(),
+                        "rating", w.getAverageRating() != null ? w.getAverageRating().toString() : "0.0",
                         "imageUrl", (w.getWorkshopImages() != null && !w.getWorkshopImages().isEmpty())
-                                ? w.getWorkshopImages().get(0).getImageUrl()
+                                ? w.getWorkshopImages().stream()
+                                .filter(img -> Boolean.TRUE.equals(img.getIsThumbnail()))
+                                .findFirst()
+                                .map(fpt.project.NeoNHS.entity.WorkshopImage::getImageUrl)
+                                .orElse(w.getWorkshopImages().getFirst().getImageUrl())
                                 : ""))
                 .toList();
         if (workshops.isEmpty())
@@ -398,12 +409,12 @@ public class AiChatServiceImpl implements AiChatService {
         // System prompt first for OpenAI
         ObjectNode systemMsg = objectMapper.createObjectNode();
         systemMsg.put("role", "system");
-        systemMsg.put("content", getSystemPrompt());
+        systemMsg.put("content", getSystemPrompt(userMessage));
         messages.add(systemMsg);
 
-        // Fetch last 10 messages from MongoDB
+        // Fetch last 5 messages from MongoDB
         var recentMessages = chatMessageRepository.findByChatRoomIdOrderByTimestampDesc(
-                roomId, PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "timestamp"))).getContent();
+                roomId, PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "timestamp"))).getContent();
 
         // Reverse to chronological order
         List<ChatMessage> chronological = new ArrayList<>(recentMessages);
@@ -416,7 +427,11 @@ public class AiChatServiceImpl implements AiChatService {
             } else {
                 msgNode.put("role", "user");
             }
-            msgNode.put("content", msg.getContent());
+            String content = msg.getContent();
+            if (content.length() > 500) {
+                content = content.substring(0, 500);
+            }
+            msgNode.put("content", content);
             messages.add(msgNode);
         }
 
@@ -437,7 +452,6 @@ public class AiChatServiceImpl implements AiChatService {
         request.put("model", openAiConfig.getModel());
         request.set("messages", messages);
         request.set("tools", buildToolDeclarations());
-        request.put("tool_choice", "auto");
         request.put("temperature", 0.7);
         request.put("max_tokens", 1024);
         return request;
@@ -478,6 +492,7 @@ public class AiChatServiceImpl implements AiChatService {
                 ArrayNode messages = buildConversationHistory(roomId, message);
                 ObjectNode requestBody = buildOpenAiRequest(messages);
 
+                System.out.println("Request to OpenAI: " + requestBody.toString());
                 // 3. Call OpenAI
                 log.info("[AI] Attempting to call OpenAI with model: {}", openAiConfig.getModel());
                 String responseJson = openAiRestClient.post()
@@ -491,6 +506,7 @@ public class AiChatServiceImpl implements AiChatService {
 
                 // 4. Check for function calls
                 String aiReplyText = processOpenAiResponse(response, messages);
+                System.out.println("AI Reply after processing: " + aiReplyText);
 
                 // 5. Check for handover signal
                 if (aiReplyText.contains("[TRANSFER_TO_HUMAN]")) {
@@ -548,20 +564,22 @@ public class AiChatServiceImpl implements AiChatService {
                 String toolCallId = toolCall.path("id").asText();
                 JsonNode functionArgs = objectMapper.readTree(toolCall.path("function").path("arguments").asText("{}"));
 
-                // Execute the function
-                String functionResult = executeFunctionCall(functionName, functionArgs);
+                // Execute the function inside a transaction to prevent LazyInitializationException
+                String functionResult = transactionTemplate.execute(status -> executeFunctionCall(functionName, functionArgs));
 
                 // Add tool result to messages
                 ObjectNode toolResultNode = objectMapper.createObjectNode();
                 toolResultNode.put("role", "tool");
                 toolResultNode.put("tool_call_id", toolCallId);
                 toolResultNode.put("content", functionResult);
+                System.out.println("toolResultNode: " + toolResultNode.toString());
                 messages.add(toolResultNode);
             }
 
             // Call OpenAI again with tool results
             ObjectNode followUpRequest = buildOpenAiRequest(messages);
-            followUpRequest.remove("tools"); // Optional: prevent recursive tool calls
+            followUpRequest.remove("tools"); // prevent recursive tool calls
+            followUpRequest.remove("tool_choice"); // fix 400 bad request
 
             String followUpJson = openAiRestClient.post()
                     .uri(openAiConfig.getChatCompletionUrl())
@@ -650,7 +668,7 @@ public class AiChatServiceImpl implements AiChatService {
     }
 
     private void handleTransferToHuman(String roomId, String senderId, SseEmitter emitter) throws IOException {
-        String transferMessage = "Câu hỏi vượt quá khả năng trả lời của tôi bạn có muốn trò chuyện với Admin để được giải đáp không";
+        String transferMessage = "Xin lỗi, tôi chưa có thông tin để có thể trả lời câu hỏi này, bạn có muốn trò chuyện với người hỗ trợ không?";
 
         // Save transfer system message
         saveAndBroadcastAiMessage(roomId, transferMessage);
