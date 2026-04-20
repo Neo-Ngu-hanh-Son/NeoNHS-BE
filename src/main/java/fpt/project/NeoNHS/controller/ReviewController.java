@@ -5,6 +5,8 @@ import fpt.project.NeoNHS.dto.request.review.CreateReviewRequest;
 import fpt.project.NeoNHS.dto.request.review.UpdateReviewRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.PagedResponse;
+import fpt.project.NeoNHS.dto.response.review.PointReviewResponse;
+import fpt.project.NeoNHS.dto.response.review.PointReviewResponseWrapper;
 import fpt.project.NeoNHS.dto.response.review.ReviewResponse;
 import fpt.project.NeoNHS.entity.User;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
@@ -40,7 +42,7 @@ public class ReviewController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('ROLE_TOURIST')")
-    @Operation(summary = "Create a review for a workshop template", description = "Only TOURIST can create reviews")
+    @Operation(summary = "Create a generic review (Review target change depends on the type flag)", description = "Only TOURIST can create reviews")
     public ResponseEntity<ApiResponse<ReviewResponse>> createReview(
             Principal principal,
             @RequestBody @Valid CreateReviewRequest request) {
@@ -102,7 +104,7 @@ public class ReviewController {
 
     @GetMapping("/points/{pointId}")
     @Operation(summary = "List reviews for a point", description = "Joins reviews with points so only reviews for that point are returned.")
-    public ResponseEntity<ApiResponse<PagedResponse<ReviewResponse>>> getReviewsForPoint(
+    public ResponseEntity<ApiResponse<PointReviewResponseWrapper>> getReviewsForPoint(
             @PathVariable UUID pointId,
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_PAGE) int page,
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_SIZE) int size,
@@ -110,7 +112,7 @@ public class ReviewController {
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_BY) String sortBy,
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_DIR) String sortDir) {
 
-        PagedResponse<ReviewResponse> response = reviewService.getReviewsForPoint(
+        var response = reviewService.getReviewsForPoint(
                 pointId, buildReviewPageable(page, size, sortBy, sortDir));
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Reviews retrieved successfully", response));
     }

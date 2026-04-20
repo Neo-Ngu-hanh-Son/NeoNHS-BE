@@ -96,9 +96,6 @@ public class CheckinPointServiceImpl implements CheckinPointService {
                 .longitude(request.getLongitude())
                 .latitude(request.getLatitude())
                 .rewardPoints(request.getRewardPoints())
-                .panoramaImageUrl(request.getPanoramaImageUrl())
-                .defaultYaw(request.getDefaultYaw() != null ? request.getDefaultYaw() : 0.0)
-                .defaultPitch(request.getDefaultPitch() != null ? request.getDefaultPitch() : 0.0)
                 .build();
 
         CheckinPoint saved = checkinPointRepository.save(checkinPoint);
@@ -128,9 +125,6 @@ public class CheckinPointServiceImpl implements CheckinPointService {
         if (request.getLongitude() != null) checkinPoint.setLongitude(request.getLongitude());
         if (request.getLatitude() != null) checkinPoint.setLatitude(request.getLatitude());
         if (request.getRewardPoints() != null) checkinPoint.setRewardPoints(request.getRewardPoints());
-        if (request.getPanoramaImageUrl() != null) checkinPoint.setPanoramaImageUrl(request.getPanoramaImageUrl());
-        if (request.getDefaultYaw() != null) checkinPoint.setDefaultYaw(request.getDefaultYaw());
-        if (request.getDefaultPitch() != null) checkinPoint.setDefaultPitch(request.getDefaultPitch());
 
         CheckinPoint saved = checkinPointRepository.save(checkinPoint);
         if (request.getLatitude() != null || request.getLongitude() != null) {

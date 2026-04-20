@@ -49,7 +49,7 @@ public class AdminVendorManagementServiceImpl implements AdminVendorManagementSe
     private final MailService mailService;
     private final RedisAuthService redisAuthService;
 
-    @Value("${app.be-url-setpassword}")
+    @Value("${app.fe-url-setpassword}")
     private String feUrl;
 
     @Override

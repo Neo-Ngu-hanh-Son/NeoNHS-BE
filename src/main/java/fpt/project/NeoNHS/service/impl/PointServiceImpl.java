@@ -154,6 +154,18 @@ public class PointServiceImpl implements PointService {
     }
 
     @Override
+    @Transactional
+    public void restorePoint(UUID id) {
+        Point point = pointRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Point not found with id: " + id));
+
+        point.setDeletedAt(null);
+        point.setDeletedBy(null);
+
+        pointRepository.save(point);
+    }
+
+    @Override
     public PointResponse getPointById(UUID id) {
         Point point = pointRepository.findById(id)
                 .filter(p -> p.getDeletedAt() == null)
@@ -194,6 +206,23 @@ public class PointServiceImpl implements PointService {
         Pageable pageable = PageRequest.of(page, Math.min(size, PaginationConstants.MAX_PAGE_SIZE), sort);
 
         return pointRepository.findByAttractionIdWithSearch(attractionId, search, pageable)
+                .map(this::mapToResponse);
+    }
+
+    @Override
+    public Page<PointResponse> getAllPointsWithPaginationForAdmin(UUID attractionId, int page, int size, String sortBy,
+            String sortDir, String search, boolean includeDeleted) {
+        if (!attractionRepository.existsById(attractionId)) {
+            throw new RuntimeException("Attraction not found");
+        }
+
+        Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        Pageable pageable = PageRequest.of(page, Math.min(size, PaginationConstants.MAX_PAGE_SIZE), sort);
+
+        return pointRepository.findByAttractionIdWithSearchForAdmin(attractionId, search, includeDeleted, pageable)
                 .map(this::mapToResponse);
     }
 
@@ -251,7 +280,8 @@ public class PointServiceImpl implements PointService {
                     .type(p.getType())
                     .attractionId(p.getAttraction() != null ? p.getAttraction().getId() : null)
                     .googlePlaceId(p.getGooglePlaceId())
-                    .historyAudioCount((int) p.getHistoryAudios().stream().filter(historyAudio -> historyAudio.getDeletedAt() == null).count())
+                    .historyAudioCount((int) p.getHistoryAudios().stream()
+                            .filter(historyAudio -> historyAudio.getDeletedAt() == null).count())
                     .checkinPoints(p.getCheckinPoints().stream()
                             .filter(cp -> cp.getIsActive() == true && cp.getDeletedAt() == null)
                             .map(cp -> {
@@ -291,6 +321,7 @@ public class PointServiceImpl implements PointService {
                 .id(entity.getId())
                 .name(entity.getName())
                 .description(entity.getDescription())
+                .history(entity.getHistory())
                 .thumbnailUrl(entity.getThumbnailUrl())
                 .latitude(entity.getLatitude().doubleValue())
                 .longitude(entity.getLongitude().doubleValue())
@@ -298,16 +329,18 @@ public class PointServiceImpl implements PointService {
                 .estTimeSpent(entity.getEstTimeSpent())
                 .type(entity.getType())
                 .attractionId(entity.getAttraction().getId())
-                .panoramaImageUrl(entity.getPanoramaImageUrl())
-                .defaultPitch(entity.getDefaultPitch())
-                .defaultYaw(entity.getDefaultYaw())
+                .panoramas(entity.getPanoramas() != null ? entity.getPanoramas().stream()
+                        .map(p -> PointPanoramaResponse.builder()
+                                .id(p.getId().toString())
+                                .panoramaImageUrl(p.getPanoramaImageUrl())
+                                .defaultYaw(p.getDefaultYaw() != null ? p.getDefaultYaw() : 0.0)
+                                .defaultPitch(p.getDefaultPitch() != null ? p.getDefaultPitch() : 0.0)
+                                .isDefault(p.getIsDefault())
+                                .build())
+                        .toList() : Collections.emptyList())
                 .googlePlaceId(entity.getGooglePlaceId())
                 .historyAudioCount(historyAudioCount)
+                .deletedAt(entity.getDeletedAt())
                 .build();
-    }
-
-    @Override
-    public PointPanoramaResponse getPointPanorama(UUID pointId) {
-        return panoramaService.getPointPanorama(pointId);
     }
 }

@@ -5,7 +5,7 @@ public enum PointType {
     CAVE,
     VIEWPOINT,
     GENERAL,
-    CHECKIN,
+    //    CHECKIN,
     STATUE,
     GATE,
     SHOP,

@@ -61,13 +61,6 @@ public class UserCheckInServiceImpl implements UserCheckInService {
         var user = userRepository.findById(getCurrentUserPrincipal().getId())
                 .orElseThrow(
                         () -> new ResourceNotFoundException("User not found, are you sure you are authenticated?"));
-
-        // If user already checked in, add the checkin image into the current check in.
-        // (Point not increase)
-//        if (user.getCheckIns() != null) {
-//            addImageToExistingCheckin(request, checkinPoint, user);
-//        }
-
         // Calculate the distance between the user's location and the check-in point
         double distance = geoService.calculateDistanceManually(request.getLatitude(), request.getLongitude(),
                 checkinPoint.getLatitude().doubleValue(), checkinPoint.getLongitude().doubleValue());
@@ -121,6 +114,8 @@ public class UserCheckInServiceImpl implements UserCheckInService {
         return UserCheckinResultResponse.builder()
                 .earnedPoints(userCheckIn.getEarnedPoints())
                 .userTotalPoints(userTotalPoint)
+                .checkinPointId(checkinPoint.getId())
+                .parentCheckinPointId(checkinPoint.getPoint().getId())
                 .build();
     }
 

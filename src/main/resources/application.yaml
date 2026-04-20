@@ -15,7 +15,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -45,7 +45,7 @@ app:
     secret: dGhpc2lzYXZlcnlsb25nc2VjcmV0a2V5Zm9yand0c2lnbmluZ3B1cnBvc2Vz
     expiration-ms: 86400000 # 24 hours
   fe-url: http://localhost:3000
-  be-url-setpassword: ${BE_URL:http://localhost:8080}
+  fe-url-setpassword: ${FE_URL:http://localhost:8080}
 
 google-auth:
   client-id: ${GOOGLE_AUTH_CLIENT_ID}
@@ -71,3 +71,8 @@ cloudinary:
 #github token
 github:
   token: ${GITHUB_TOKEN}
+
+# Translation Service (FastAPI — HuggingFace Space)
+translation:
+  endpoint: ${TRANSLATION_SERVICE_URL:https://huydoan961z-translation-service.hf.space}
+  cache-ttl: 86400  # 24 giờ (giây)

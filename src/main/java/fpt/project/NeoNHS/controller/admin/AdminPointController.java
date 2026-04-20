@@ -44,9 +44,11 @@ public class AdminPointController {
             @RequestParam(value = "size", defaultValue = PaginationConstants.DEFAULT_SIZE, required = false) int size,
             @RequestParam(value = "sortBy", defaultValue = "createdAt", required = false) String sortBy,
             @RequestParam(value = "sortDir", defaultValue = PaginationConstants.SORT_DESC, required = false) String sortDir,
-            @RequestParam(value = "search", required = false) String search) {
+            @RequestParam(value = "search", required = false) String search,
+            @RequestParam(value = "includeDeleted", defaultValue = "true", required = false) boolean includeDeleted) {
         return ApiResponse.success(
-                pointService.getAllPointsWithPagination(attractionId, page, size, sortBy, sortDir, search));
+                pointService.getAllPointsWithPaginationForAdmin(attractionId, page, size, sortBy, sortDir, search,
+                        includeDeleted));
     }
 
     @GetMapping("/all")
@@ -80,5 +82,11 @@ public class AdminPointController {
     public ApiResponse<Void> hardDeletePoint(@PathVariable UUID id) {
         pointService.hardDeletePoint(id);
         return ApiResponse.success("Point hard deleted successfully", null);
+    }
+
+    @PutMapping("/{id}/restore")
+    public ApiResponse<Void> restorePoint(@PathVariable UUID id) {
+        pointService.restorePoint(id);
+        return ApiResponse.success("Point restored successfully", null);
     }
 }
