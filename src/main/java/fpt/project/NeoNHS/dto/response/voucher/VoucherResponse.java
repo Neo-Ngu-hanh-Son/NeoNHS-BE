@@ -36,19 +36,11 @@ public class VoucherResponse {
     private String giftDescription;
     private String giftImageUrl;
 
-    // Bonus points
-    private Integer bonusPointsValue;
-
-    // Free service
-    private UUID freeTicketCatalogId;
-    private String freeTicketCatalogName;
-
     // Time & Usage
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private Integer usageLimit;
     private Integer usageCount;
-    private Integer maxUsagePerUser;
     private VoucherStatus status;
 
     // Creator info
@@ -75,12 +67,10 @@ public class VoucherResponse {
                 .minOrderValue(voucher.getMinOrderValue())
                 .giftDescription(voucher.getGiftDescription())
                 .giftImageUrl(voucher.getGiftImageUrl())
-                .bonusPointsValue(voucher.getBonusPointsValue())
                 .startDate(voucher.getStartDate())
                 .endDate(voucher.getEndDate())
                 .usageLimit(voucher.getUsageLimit())
                 .usageCount(voucher.getUsageCount())
-                .maxUsagePerUser(voucher.getMaxUsagePerUser())
                 .status(voucher.getStatus())
                 .createdAt(voucher.getCreatedAt())
                 .updatedAt(voucher.getUpdatedAt())
@@ -94,11 +84,6 @@ public class VoucherResponse {
         if (voucher.getVendor() != null) {
             builder.vendorId(voucher.getVendor().getId());
             builder.vendorName(voucher.getVendor().getBusinessName());
-        }
-
-        if (voucher.getFreeTicketCatalog() != null) {
-            builder.freeTicketCatalogId(voucher.getFreeTicketCatalog().getId());
-            builder.freeTicketCatalogName(voucher.getFreeTicketCatalog().getName());
         }
 
         return builder.build();

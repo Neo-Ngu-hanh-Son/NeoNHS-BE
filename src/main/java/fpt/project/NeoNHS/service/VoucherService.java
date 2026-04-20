@@ -54,6 +54,7 @@ public interface VoucherService {
 
     Page<UserVoucherRespone> getMyVouchers(Boolean isUsed, Pageable pageable);
 
+    UserVoucherRespone redeemVoucher(UUID userVoucherId);
     // ===== Cart / Pre-Checkout // Tourist =====
     VoucherClassificationResult classifyVouchersForCart(
             User user,
