@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import fpt.project.NeoNHS.config.OpenAiConfig;
 import fpt.project.NeoNHS.document.ChatMessage;
+import fpt.project.NeoNHS.document.KnowledgeDocument;
 import fpt.project.NeoNHS.dto.chat.ChatMessageDTO;
 import fpt.project.NeoNHS.dto.chat.ChatMessageRequest;
 import fpt.project.NeoNHS.enums.EventStatus;
@@ -16,14 +17,14 @@ import fpt.project.NeoNHS.repository.TicketCatalogRepository;
 import fpt.project.NeoNHS.repository.WorkshopSessionRepository;
 import fpt.project.NeoNHS.repository.WorkshopTemplateRepository;
 import fpt.project.NeoNHS.repository.mongo.ChatMessageRepository;
-import fpt.project.NeoNHS.repository.mongo.ChatRoomRepository;
 import fpt.project.NeoNHS.repository.BlogRepository;
 import fpt.project.NeoNHS.repository.mongo.KnowledgeRepository;
-import fpt.project.NeoNHS.document.KnowledgeDocument;
-import fpt.project.NeoNHS.entity.Blog;
 import fpt.project.NeoNHS.enums.BlogStatus;
+import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.service.AiChatService;
+import fpt.project.NeoNHS.service.CartService;
 import fpt.project.NeoNHS.service.ChatService;
+import fpt.project.NeoNHS.dto.request.cart.AddToCartRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -37,16 +38,12 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.web.client.RestClientResponseException;
 
 @Service
 @RequiredArgsConstructor
@@ -56,10 +53,11 @@ public class AiChatServiceImpl implements AiChatService {
     private final OpenAiConfig openAiConfig;
     private final RestClient openAiRestClient;
     private final ChatMessageRepository chatMessageRepository;
-    private final ChatRoomRepository chatRoomRepository;
     private final ChatService chatService;
     private final SimpMessagingTemplate messagingTemplate;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final UserRepository userRepository;
+    private final CartService cartService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -79,18 +77,29 @@ public class AiChatServiceImpl implements AiChatService {
     // ═══════════════════════════════════════════════════════════════════
     private static final String SYSTEM_PROMPT = """
             Bạn là trợ lý du lịch ảo của Khu di tích Ngũ Hành Sơn (NeoNHS), Đà Nẵng, Việt Nam.
-            
+
             Vai trò:
             - Hỗ trợ du khách với thông tin về khu di tích, các điểm tham quan, sự kiện, workshop và các bài viết tin tức/văn hóa (blog).
             - Trả lời bằng tiếng Việt, thân thiện, ngắn gọn và chính xác.
             - Khi được hỏi về thông tin cụ thể (giá vé, lịch workshop, sự kiện, bài viết), hãy sử dụng các công cụ (tools/functions) được cung cấp để tra cứu dữ liệu thực tế.
-            
+
             Quy tắc quan trọng:
             1. Tuyệt đối KHÔNG sử dụng các công cụ (tools) nếu người dùng chỉ đang chào hỏi hoặc hỏi những câu giao tiếp thông thường.
             2. Khi người dùng hỏi về giá vé, hãy LIỆT KÊ TẤT CẢ các loại vé bạn tìm thấy được từ công cụ, không được bỏ sót loại nào (ví dụ: vé người lớn, trẻ em, người nước ngoài, v.v.).
             3. Trình bày danh sách vé một cách đẹp mắt bằng Markdown (ví dụ: dùng bảng hoặc danh sách có gạch đầu dòng).
-            4. **HỖ TRỢ HÌNH ẢNH**: Khi cung cấp thông tin về Workshop, Sự kiện hoặc Bài viết, hãy LUÔN LUÔN đính kèm hình ảnh (imageUrl) nếu công cụ trả về. Sử dụng cú pháp Markdown: ![Tên](url).
-            5. **HỖ TRỢ ĐẶT VÉ**: Nếu người dùng muốn đặt vé/workshop, khi hỏi lịch trình của workshop, hãy luôn đưa thêm thông tin là ngày xảy ra buổi workshop đó, khung giờ mấy và số chỗ còn trống là bao nhiêu. Nếu người dùng hỏi về giá vé, hãy hướng dẫn họ chọn buổi/loại vé và nhắc họ có thể hoàn tất thanh toán trong ứng dụng. Bạn có thể cung cấp thông tin chi tiết để họ dễ dành lựa chọn.
+            4. **HỖ TRỢ HÌNH ÁNH & CARD**: Khi cung cấp thông tin về Workshop, Sự kiện hoặc Bài viết từ công cụ, hãy LUÔN LUÔN sử dụng cú pháp: ![Tên | ID:mã_id | Type:loại](url_hình_ảnh).
+               Hệ thống sẽ tự động hiển thị mỗi hình ảnh này thành một Card đẹp mắt có thể nhấn vào được. Bạn có thể liệt kê nhiều Card nếu có nhiều kết quả.
+               TRÁNH tự ý hiển thị thêm đường dẫn văn bản [Xem chi tiết] vì Card đã có thể nhấn vào để xem.
+            5. **HỖ TRỢ ĐẶT VÉ & GIỎ HÀNG (QUY TRÌNH BẮT BUỘC)**:
+               - Khi người dùng muốn đặt vé/chỗ, bạn PHẢI sử dụng công cụ `addToCart`.
+               - **BƯỚC 1 (Tra cứu)**: Luôn dùng `getWorkshopSessions` (cho workshop) hoặc `getTicketPrices` (cho sự kiện) để lấy danh sách Session ID hoặc Ticket Catalog ID.
+               - **BƯỚC 2 (Xác nhận)**: Hiển thị danh sách cho người dùng chọn (ngày/giờ/loại vé).
+               - **BƯỚC 3 (ĐẶT VÉ)**: Ngay khi người dùng chọn xong (vd: "đặt buổi chiều nay", "book vé người lớn"), bạn PHẢI gọi công cụ `addToCart` ngay lập tức.
+               - **LƯU Ý QUAN TRỌNG VỀ ID & SỐ LƯỢNG**:
+                 + Khi người dùng chọn "buổi số 1" hoặc "loại vé đầu tiên", bạn PHẢI lấy đúng mã UUID từ kết quả tra cứu.
+                 + **PHẢI KHỚP YÊU CẦU**: Nếu khách nói "vé người lớn" hay "vé trẻ em", hãy chọn đúng `ticketCatalogId` có tên (field `name`) tương ứng. KHÔNG chọn bừa.
+                 + **SỐ LƯỢNG**: Nếu khách nói "đặt 2 chỗ" hoặc "mua 3 vé", hãy truyền tham số `quantity` tương ứng vào công cụ `addToCart`.
+               - **BƯỚC 4 (Thông báo)**: Sau khi tool báo SUCCESS, hãy nhắn: "Đã thêm vào giỏ hàng thành công! Bạn có muốn tới My Cart để thanh toán ngay không?" để hệ thống hiển thị nút điều hướng.
             6. KHÔNG bịa đặt thông tin. Nếu không có dữ liệu, hãy báo là chưa cập nhật.
             7. Nếu câu hỏi nằm ngoài phạm vi và bạn không thể trả lời, hãy bắt đầu bằng câu "xin lỗi, tôi không có thông tin ..... ", sau đó nhắn thêm "bạn có muốn trò chuyện với người hỗ trợ không?" và gửi kèm với [TRANSFER_TO_HUMAN] ở cuối tin nhắn để kích hoạt chuyển tiếp cho nhân viên hỗ trợ.
             Ví dụ: "Xin lỗi, tôi không có thông tin về lịch trình tour du lịch quanh Đà Nẵng. Bạn có muốn trò chuyện với người hỗ trợ không? [TRANSFER_TO_HUMAN]"
@@ -202,6 +211,31 @@ public class AiChatServiceImpl implements AiChatService {
                             }
                           }
                         }
+                      },
+                      {
+                        "type": "function",
+                        "function": {
+                          "name": "addToCart",
+                          "description": "Thực hiện lệnh thêm một workshop hoặc vé sự kiện vào giỏ hàng thật của người dùng. Hãy gọi lệnh này ngay khi người dùng đồng ý đặt chỗ/vé.",
+                          "parameters": {
+                            "type": "object",
+                            "properties": {
+                              "workshopSessionId": {
+                                "type": "string",
+                                "description": "ID của buổi workshop (Session ID - chuỗi UUID) được lấy từ getWorkshopSessions. KHÔNG dùng số thứ tự."
+                              },
+                              "ticketCatalogId": {
+                                "type": "string",
+                                "description": "ID của loại vé sự kiện (Ticket Catalog ID - chuỗi UUID) được lấy từ getTicketPrices. KHÔNG dùng số thứ tự."
+                              },
+                              "quantity": {
+                                "type": "integer",
+                                "description": "Số lượng vé/chỗ cần đặt. Mặc định là 1.",
+                                "default": 1
+                              }
+                            }
+                          }
+                        }
                       }
                     ]
                     """;
@@ -215,8 +249,8 @@ public class AiChatServiceImpl implements AiChatService {
     // ═══════════════════════════════════════════════════════════════════
     // Function Calling Execution
     // ═══════════════════════════════════════════════════════════════════
-    private String executeFunctionCall(String functionName, JsonNode args) {
-        log.info("[AI] Executing function: {} with args: {}", functionName, args);
+    private String executeFunctionCall(String functionName, JsonNode args, String senderId) {
+        log.info("[AI] Executing function: {} with args: {} for user: {}", functionName, args, senderId);
         try {
             return switch (functionName) {
                 case "searchWorkshops" -> executeSearchWorkshops(args);
@@ -224,6 +258,7 @@ public class AiChatServiceImpl implements AiChatService {
                 case "searchEvents" -> executeSearchEvents(args);
                 case "getTicketPrices" -> executeGetTicketPrices(args);
                 case "searchBlogs" -> executeSearchBlogs(args);
+                case "addToCart" -> executeAddToCart(args, senderId);
                 default -> "Không tìm thấy công cụ: " + functionName;
             };
         } catch (Exception e) {
@@ -247,10 +282,10 @@ public class AiChatServiceImpl implements AiChatService {
                         "rating", w.getAverageRating() != null ? w.getAverageRating().toString() : "0.0",
                         "imageUrl", (w.getWorkshopImages() != null && !w.getWorkshopImages().isEmpty())
                                 ? w.getWorkshopImages().stream()
-                                .filter(img -> Boolean.TRUE.equals(img.getIsThumbnail()))
-                                .findFirst()
-                                .map(fpt.project.NeoNHS.entity.WorkshopImage::getImageUrl)
-                                .orElse(w.getWorkshopImages().getFirst().getImageUrl())
+                                        .filter(img -> Boolean.TRUE.equals(img.getIsThumbnail()))
+                                        .findFirst()
+                                        .map(fpt.project.NeoNHS.entity.WorkshopImage::getImageUrl)
+                                        .orElse(w.getWorkshopImages().getFirst().getImageUrl())
                                 : ""))
                 .toList();
         if (workshops.isEmpty())
@@ -276,15 +311,17 @@ public class AiChatServiceImpl implements AiChatService {
                         && s.getStartTime().isAfter(LocalDateTime.now())
                         && s.getStatus() == SessionStatus.SCHEDULED)
                 .limit(5)
-                .map(s -> Map.of(
-                        "startTime", s.getStartTime().toString(),
-                        "endTime", s.getEndTime().toString(),
-                        "price",
-                        s.getPrice() != null ? s.getPrice().toString() + " VND" : template.getDefaultPrice() + " VND",
-                        "maxParticipants", s.getMaxParticipants() != null ? s.getMaxParticipants() : 0,
-                        "currentEnrolled", s.getCurrentEnrolled() != null ? s.getCurrentEnrolled() : 0,
-                        "availableSlots", (s.getMaxParticipants() != null ? s.getMaxParticipants() : 0) -
-                                (s.getCurrentEnrolled() != null ? s.getCurrentEnrolled() : 0)))
+                .map(s -> {
+                    Map<String, Object> sessionMap = new java.util.HashMap<>();
+                    sessionMap.put("sessionId", s.getId().toString());
+                    sessionMap.put("startTime", s.getStartTime().toString());
+                    sessionMap.put("endTime", s.getEndTime().toString());
+                    sessionMap.put("price", s.getPrice() != null ? s.getPrice().toString() + " VND"
+                            : template.getDefaultPrice() + " VND");
+                    sessionMap.put("availableSlots", (s.getMaxParticipants() != null ? s.getMaxParticipants() : 0)
+                            - (s.getCurrentEnrolled() != null ? s.getCurrentEnrolled() : 0));
+                    return sessionMap;
+                })
                 .toList();
         if (sessions.isEmpty())
             return "Workshop '" + template.getName() + "' hiện không có buổi nào sắp diễn ra.";
@@ -359,6 +396,7 @@ public class AiChatServiceImpl implements AiChatService {
             var catalogs = ticketCatalogRepository.findAll().stream()
                     .filter(tc -> tc.getEvent() != null && tc.getEvent().getId().equals(event.getId()))
                     .map(tc -> Map.of(
+                            "ticketCatalogId", tc.getId().toString(),
                             "name", tc.getName(),
                             "price", tc.getPrice().toString() + " VND",
                             "description", tc.getDescription() != null ? tc.getDescription() : "",
@@ -374,6 +412,30 @@ public class AiChatServiceImpl implements AiChatService {
             } catch (JsonProcessingException e) {
                 return catalogs.toString();
             }
+        }
+    }
+
+    private String executeAddToCart(JsonNode args, String senderId) {
+        log.info("[AI] Executing addToCart for user: {} with args: {}", senderId, args);
+        try {
+            UUID userId = UUID.fromString(senderId);
+            var user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin khách hàng."));
+
+            AddToCartRequest request = new AddToCartRequest();
+            if (args.has("ticketCatalogId") && !args.get("ticketCatalogId").asText().isEmpty()) {
+                request.setTicketCatalogId(UUID.fromString(args.get("ticketCatalogId").asText()));
+            }
+            if (args.has("workshopSessionId") && !args.get("workshopSessionId").asText().isEmpty()) {
+                request.setWorkshopSessionId(UUID.fromString(args.get("workshopSessionId").asText()));
+            }
+            request.setQuantity(args.has("quantity") ? args.get("quantity").asInt() : 1);
+
+            cartService.addToCart(user.getEmail(), request);
+            return "SUCCESS: Đã thêm vào giỏ hàng thành công. Hãy hỏi người dùng có muốn tới My Cart để thanh toán ngay không.";
+        } catch (Exception e) {
+            log.error("[AI] Add to cart failed", e);
+            return "ERROR: Thất bại khi thêm vào giỏ hàng. Lỗi: " + e.getMessage();
         }
     }
 
@@ -475,20 +537,6 @@ public class AiChatServiceImpl implements AiChatService {
                 // 2. Save user message to MongoDB and broadcast via WebSocket for real-time
                 saveAndBroadcastUserMessage(roomId, senderId, message);
 
-                // 3. Cache Lookup (Sử dụng lại câu trả lời cũ cho câu hỏi giống hệt)
-                String normalizedMsg = message.trim().toLowerCase();
-                String cacheKey = "ai_cache:" + normalizedMsg;
-                String cachedResponse = (String) redisTemplate.opsForValue().get(cacheKey);
-
-                if (cachedResponse != null) {
-                    log.info("[AI] Cache hit for message: {}", normalizedMsg);
-                    streamTextToClient(emitter, cachedResponse);
-                    saveAndBroadcastAiMessage(roomId, cachedResponse);
-                    emitter.complete();
-                    return;
-                }
-
-                // 4. Build conversation context
                 ArrayNode messages = buildConversationHistory(roomId, message);
                 ObjectNode requestBody = buildOpenAiRequest(messages);
 
@@ -505,7 +553,11 @@ public class AiChatServiceImpl implements AiChatService {
                 log.debug("[AI] OpenAI raw response: {}", responseJson);
 
                 // 4. Check for function calls
-                String aiReplyText = processOpenAiResponse(response, messages);
+                Map<String, Object> result = processOpenAiResponse(response, messages, senderId);
+                String aiReplyText = (String) result.get("text");
+                String messageType = (String) result.get("messageType");
+                Map<String, Object> aiMetadata = (Map<String, Object>) result.get("metadata");
+
                 System.out.println("AI Reply after processing: " + aiReplyText);
 
                 // 5. Check for handover signal
@@ -518,12 +570,7 @@ public class AiChatServiceImpl implements AiChatService {
                 streamTextToClient(emitter, aiReplyText);
 
                 // 8. Save AI response to MongoDB and broadcast via WebSocket
-                saveAndBroadcastAiMessage(roomId, aiReplyText);
-
-                // 9. Cache the response (Lưu cache cho các câu hỏi sau)
-                if (!aiReplyText.contains("[TRANSFER_TO_HUMAN]") && aiReplyText.length() > 20) {
-                    redisTemplate.opsForValue().set(cacheKey, aiReplyText, 1, TimeUnit.DAYS);
-                }
+                saveAndBroadcastAiMessage(roomId, aiReplyText, messageType, aiMetadata);
 
                 emitter.complete();
 
@@ -549,9 +596,13 @@ public class AiChatServiceImpl implements AiChatService {
     /**
      * Process the OpenAI response, handling tool calls if needed.
      */
-    private String processOpenAiResponse(JsonNode response, ArrayNode messages) throws Exception {
+    private Map<String, Object> processOpenAiResponse(JsonNode response, ArrayNode messages, String senderId)
+            throws Exception {
         JsonNode choice = response.path("choices").path(0);
         JsonNode message = choice.path("message");
+
+        Map<String, Object> metadata = new java.util.HashMap<>();
+        String messageType = "TEXT";
 
         if (message.has("tool_calls")) {
             JsonNode toolCalls = message.get("tool_calls");
@@ -564,8 +615,10 @@ public class AiChatServiceImpl implements AiChatService {
                 String toolCallId = toolCall.path("id").asText();
                 JsonNode functionArgs = objectMapper.readTree(toolCall.path("function").path("arguments").asText("{}"));
 
-                // Execute the function inside a transaction to prevent LazyInitializationException
-                String functionResult = transactionTemplate.execute(status -> executeFunctionCall(functionName, functionArgs));
+                // Execute the function inside a transaction to prevent
+                // LazyInitializationException
+                String functionResult = transactionTemplate
+                        .execute(status -> executeFunctionCall(functionName, functionArgs, senderId));
 
                 // Add tool result to messages
                 ObjectNode toolResultNode = objectMapper.createObjectNode();
@@ -588,11 +641,34 @@ public class AiChatServiceImpl implements AiChatService {
                     .body(String.class);
 
             JsonNode followUpResponse = objectMapper.readTree(followUpJson);
-            return followUpResponse.path("choices").path(0).path("message").path("content").asText();
+            String aiContent = followUpResponse.path("choices").path(0).path("message").path("content").asText();
+
+            // No longer stripping images because frontend handles multi-card markdown
+            if ("PRODUCT_SNIPPET".equals(messageType) && aiContent != null) {
+                aiContent = aiContent.trim();
+            }
+
+            // If addToCart was successful, tell frontend to show a redirect button or
+            // navigate
+            if (aiContent != null && (aiContent.contains("giỏ hàng") || aiContent.contains("My Cart"))) {
+                if (metadata == null)
+                    metadata = new java.util.HashMap<>();
+                metadata.put("redirectToCart", true);
+            }
+
+            Map<String, Object> res = new java.util.HashMap<>();
+            res.put("text", aiContent);
+            res.put("metadata", metadata.isEmpty() ? null : metadata);
+            res.put("messageType", messageType);
+            return res;
         }
 
         // Direct text response
-        return message.path("content").asText("Xin lỗi, tôi gặp trục trặc khi xử lý câu hỏi.");
+        Map<String, Object> res = new java.util.HashMap<>();
+        res.put("text", message.path("content").asText("Xin lỗi, tôi gặp trục trặc khi xử lý câu hỏi."));
+        res.put("metadata", null);
+        res.put("messageType", "TEXT");
+        return res;
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -604,6 +680,7 @@ public class AiChatServiceImpl implements AiChatService {
                 .chatRoomId(roomId)
                 .content(message)
                 .messageType("TEXT")
+                // .messageType("PRODUCT_SNIPPET")
                 .build();
         ChatMessageDTO savedMsg = chatService.sendMessage(senderId, request);
 
@@ -615,10 +692,16 @@ public class AiChatServiceImpl implements AiChatService {
     }
 
     private void saveAndBroadcastAiMessage(String roomId, String aiText) {
+        saveAndBroadcastAiMessage(roomId, aiText, "TEXT", null);
+    }
+
+    private void saveAndBroadcastAiMessage(String roomId, String aiText, String messageType,
+            Map<String, Object> metadata) {
         ChatMessageRequest aiRequest = ChatMessageRequest.builder()
                 .chatRoomId(roomId)
                 .content(aiText)
-                .messageType("TEXT")
+                .messageType(messageType != null ? messageType : "TEXT")
+                .metadata(metadata)
                 .build();
         ChatMessageDTO savedMsg = chatService.sendMessage("AI_ASSISTANT", aiRequest);
 
