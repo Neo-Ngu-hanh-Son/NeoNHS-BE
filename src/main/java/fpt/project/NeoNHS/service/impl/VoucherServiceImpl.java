@@ -4,6 +4,7 @@ import fpt.project.NeoNHS.dto.request.voucher.CreateVoucherRequest;
 import fpt.project.NeoNHS.dto.request.voucher.UpdateVoucherRequest;
 import fpt.project.NeoNHS.dto.request.voucher.VoucherFilterRequest;
 import fpt.project.NeoNHS.dto.response.voucher.UserVoucherRespone;
+import fpt.project.NeoNHS.dto.response.voucher.VoucherClassificationResult;
 import fpt.project.NeoNHS.dto.response.voucher.VoucherResponse;
 import fpt.project.NeoNHS.entity.*;
 import fpt.project.NeoNHS.enums.*;
@@ -20,7 +21,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import static fpt.project.NeoNHS.helpers.AuthHelper.getCurrentUserPrincipal;
@@ -443,5 +447,104 @@ public class VoucherServiceImpl implements VoucherService {
         UserPrincipal principal = getCurrentUserPrincipal();
         return userRepository.findById(principal.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found"));
+    }
+
+    // ==================== CART / PRE-CHECKOUT ====================
+
+    @Override
+    @Transactional(readOnly = true)
+    public VoucherClassificationResult classifyVouchersForCart(
+            User user,
+            List<CartItem> cartItems,
+            BigDecimal totalPrice) {
+
+        List<UserVoucher> userVouchers = userVoucherRepository.findByUser_IdAndIsUsedFalse(user.getId());
+        List<UserVoucherRespone> valid = new ArrayList<>();
+        List<UserVoucherRespone> invalid = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+
+        boolean cartHasTicket   = cartItems.stream().anyMatch(i -> i.getTicketCatalog() != null);
+        boolean cartHasWorkshop = cartItems.stream().anyMatch(i -> i.getWorkshopSession() != null);
+
+        for (UserVoucher uv : userVouchers) {
+            Voucher v = uv.getVoucher();
+            boolean isValid = true;
+
+            // 1. Date range
+            if (v.getStartDate() != null && now.isBefore(v.getStartDate())) isValid = false;
+            if (v.getEndDate()   != null && now.isAfter(v.getEndDate()))    isValid = false;
+
+            // 2. Global usage limit
+            if (v.getUsageLimit() != null && v.getUsageCount() >= v.getUsageLimit()) isValid = false;
+
+            // 3. Min order value (based on full cart total)
+            if (v.getMinOrderValue() != null && totalPrice.compareTo(v.getMinOrderValue()) < 0) isValid = false;
+
+            // 4. applicableProduct compatibility with cart content
+            if (isValid) {
+                ApplicableProduct ap = v.getApplicableProduct();
+                if (ap == ApplicableProduct.EVENT_TICKET && !cartHasTicket)   isValid = false;
+                if (ap == ApplicableProduct.WORKSHOP      && !cartHasWorkshop) isValid = false;
+                // ALL always passes
+            }
+
+            UserVoucherRespone response = UserVoucherRespone.fromEntity(uv);
+            if (isValid) valid.add(response); else invalid.add(response);
+        }
+
+        return VoucherClassificationResult.builder()
+                .validVouchers(valid)
+                .invalidVouchers(invalid)
+                .build();
+    }
+
+    @Override
+    public BigDecimal applyVoucher(
+            UUID userVoucherId,
+            List<CartItem> cartItems,
+            BigDecimal totalPrice,
+            VoucherClassificationResult classification) {
+
+        // Must be in the valid list
+        UserVoucherRespone voucherResponse = classification.getValidVouchers().stream()
+                .filter(v -> v.getUserVoucherId().equals(userVoucherId))
+                .findFirst()
+                .orElseThrow(() -> new BadRequestException("Selected voucher is not applicable for this order"));
+
+        // Reload entity to get full fields (discountType, discountValue, etc.)
+        UserVoucher uv = userVoucherRepository.findById(userVoucherId)
+                .orElseThrow(() -> new BadRequestException("Voucher not found"));
+        Voucher v = uv.getVoucher();
+
+        // Calculate the base amount the discount applies to (respects applicableProduct)
+        BigDecimal applicableBase = switch (v.getApplicableProduct()) {
+            case EVENT_TICKET -> cartItems.stream()
+                    .filter(i -> i.getTicketCatalog() != null)
+                    .map(i -> i.getTicketCatalog().getPrice()
+                            .multiply(BigDecimal.valueOf(i.getQuantity())))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            case WORKSHOP -> cartItems.stream()
+                    .filter(i -> i.getWorkshopSession() != null
+                            && i.getWorkshopSession().getPrice() != null)
+                    .map(i -> i.getWorkshopSession().getPrice()
+                            .multiply(BigDecimal.valueOf(i.getQuantity())))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            default -> totalPrice; // ALL
+        };
+
+        // Apply discount formula
+        if (v.getDiscountType() == DiscountType.PERCENT) {
+            BigDecimal discount = applicableBase.multiply(
+                    v.getDiscountValue().divide(BigDecimal.valueOf(100)));
+            if (v.getMaxDiscountValue() != null && discount.compareTo(v.getMaxDiscountValue()) > 0) {
+                discount = v.getMaxDiscountValue();
+            }
+            return discount;
+        } else {
+            // FIXED — cap at applicableBase so final price never goes below 0
+            return v.getDiscountValue().min(applicableBase);
+        }
     }
 }
