@@ -77,31 +77,43 @@ public class AiChatServiceImpl implements AiChatService {
     // ═══════════════════════════════════════════════════════════════════
     // System Prompt
     // ═══════════════════════════════════════════════════════════════════
-    private static final String SYSTEM_PROMPT = """
+    private static final String DEFAULT_SYSTEM_PROMPT = """
             Bạn là trợ lý du lịch ảo của Khu di tích Ngũ Hành Sơn (NeoNHS), Đà Nẵng, Việt Nam.
             
             Vai trò:
             - Hỗ trợ du khách với thông tin về khu di tích, các điểm tham quan, sự kiện, workshop và các bài viết tin tức/văn hóa (blog).
-            - Trả lời bằng tiếng Việt, thân thiện, ngắn gọn và chính xác.
+            - Trả lời bằng ngôn ngữ của người dùng nhắn tin cho bạn, thân thiện, ngắn gọn và chính xác.
             - Khi được hỏi về thông tin cụ thể (giá vé, lịch workshop, sự kiện, bài viết), hãy sử dụng các công cụ (tools/functions) được cung cấp để tra cứu dữ liệu thực tế.
-            
-            Quy tắc quan trọng:
-            1. Tuyệt đối KHÔNG sử dụng các công cụ (tools) nếu người dùng chỉ đang chào hỏi hoặc hỏi những câu giao tiếp thông thường.
-            2. Khi người dùng hỏi về giá vé, hãy LIỆT KÊ TẤT CẢ các loại vé bạn tìm thấy được từ công cụ, không được bỏ sót loại nào (ví dụ: vé người lớn, trẻ em, người nước ngoài, v.v.).
-            3. Trình bày danh sách vé một cách đẹp mắt bằng Markdown (ví dụ: dùng bảng hoặc danh sách có gạch đầu dòng).
-            4. **HỖ TRỢ HÌNH ẢNH**: Khi cung cấp thông tin về Workshop, Sự kiện hoặc Bài viết, hãy LUÔN LUÔN đính kèm hình ảnh (imageUrl) nếu công cụ trả về. Sử dụng cú pháp Markdown: ![Tên](url).
-            5. **HỖ TRỢ ĐẶT VÉ**: Nếu người dùng muốn đặt vé/workshop, khi hỏi lịch trình của workshop, hãy luôn đưa thêm thông tin là ngày xảy ra buổi workshop đó, khung giờ mấy và số chỗ còn trống là bao nhiêu. Nếu người dùng hỏi về giá vé, hãy hướng dẫn họ chọn buổi/loại vé và nhắc họ có thể hoàn tất thanh toán trong ứng dụng. Bạn có thể cung cấp thông tin chi tiết để họ dễ dành lựa chọn.
-            6. KHÔNG bịa đặt thông tin. Nếu không có dữ liệu, hãy báo là chưa cập nhật.
-            7. Nếu câu hỏi nằm ngoài phạm vi và bạn không thể trả lời, hãy bắt đầu bằng câu "xin lỗi, tôi không có thông tin ..... ", sau đó nhắn thêm "bạn có muốn trò chuyện với người hỗ trợ không?" và LUÔN LUÔN gửi kèm với [TRANSFER_TO_HUMAN] ở cuối tin nhắn để kích hoạt chuyển tiếp cho nhân viên hỗ trợ. Bắt buộc phải có thẻ [TRANSFER_TO_HUMAN].
-            Ví dụ: "Xin lỗi, tôi không có thông tin về lịch trình tour du lịch quanh Đà Nẵng. Bạn có muốn trò chuyện với người hỗ trợ không? [TRANSFER_TO_HUMAN]"
-            8. Giữ câu trả lời thân thiện, sử dụng emoji phù hợp 🌸.
-            9. **NGÔN NGỮ**: Trả lời bằng ngôn ngữ mà người dùng đang sử dụng. Nếu người dùng hỏi bằng tiếng Anh, hãy trả lời bằng tiếng Anh. Nếu hỏi bằng tiếng Nhật, hãy trả lời bằng tiếng Nhật. Mặc định là tiếng Việt.
             """;
 
     private String getSystemPrompt(String userMessage) {
-        StringBuilder prompt = new StringBuilder(SYSTEM_PROMPT);
+        // Fetch custom prompt from MongoDB, fallback to default
+        List<KnowledgeDocument> dbPrompts = knowledgeRepository.findByKnowledgeType("SYSTEM_PROMPT");
+        String currentPrompt = DEFAULT_SYSTEM_PROMPT;
+
+        // Only use the custom SYSTEM_PROMPT if it is active
+        if (!dbPrompts.isEmpty() && dbPrompts.getFirst().isActive() && dbPrompts.getFirst().getContent() != null && !dbPrompts.getFirst().getContent().isBlank()) {
+            currentPrompt = dbPrompts.getFirst().getContent();
+        } else if (dbPrompts.isEmpty()) {
+            // Seed the prompt in the database if it doesn't exist
+            KnowledgeDocument newPromptDoc = KnowledgeDocument.builder()
+                    .title("AI System Prompt")
+                    .content(DEFAULT_SYSTEM_PROMPT)
+                    .knowledgeType("SYSTEM_PROMPT")
+                    .isActive(true)
+                    .build();
+            try {
+                knowledgeRepository.save(newPromptDoc);
+            } catch (Exception e) {
+                log.error("Failed to seed system prompt to DB: {}", e.getMessage());
+            }
+        }
+
+        StringBuilder prompt = new StringBuilder(currentPrompt);
         // Save tokens by only loading relevant documents based on the user's message
+        // Ensure AI only uses active knowledge documents
         List<KnowledgeDocument> knowledgeBase = knowledgeRepository.searchByKeyword(userMessage).stream()
+                .filter(KnowledgeDocument::isActive)
                 .limit(3)
                 .toList();
         if (!knowledgeBase.isEmpty()) {

@@ -35,9 +35,14 @@ public class KnowledgeController {
         return ResponseEntity.ok().build();
     }
 
+    public record VisibilityRequest(
+            @com.fasterxml.jackson.annotation.JsonProperty("isActive")
+            Boolean isActive
+    ) {}
+
     @PatchMapping("/{id}/visibility")
-    public ResponseEntity<Void> toggleVisibility(@PathVariable String id, @RequestBody Map<String, Boolean> request) {
-        knowledgeService.toggleVisibility(id, request.get("isActive"));
+    public ResponseEntity<Void> toggleVisibility(@PathVariable String id, @RequestBody VisibilityRequest request) {
+        knowledgeService.toggleVisibility(id, request.isActive());
         return ResponseEntity.ok().build();
     }
 

@@ -24,8 +24,13 @@ public class KnowledgeDocument {
     // In a real production system, this would hold the embeddings float[]
     // private double[] contentVector;
 
+    @org.springframework.data.mongodb.core.mapping.Field("isActive")
+    @com.fasterxml.jackson.annotation.JsonProperty("isActive")
     @Builder.Default
     private boolean isActive = true;
+
+    @Builder.Default
+    private String knowledgeType = "INFORMATION"; // INFORMATION, SYSTEM_PROMPT
 
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
