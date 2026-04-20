@@ -17,8 +17,6 @@ import fpt.project.NeoNHS.specification.VoucherSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,7 +33,6 @@ public class VoucherServiceImpl implements VoucherService {
     private final UserVoucherRepository userVoucherRepository;
     private final UserRepository userRepository;
     private final VendorProfileRepository vendorProfileRepository;
-    private final TicketCatalogRepository ticketCatalogRepository;
 
     // ==================== ADMIN ====================
 
@@ -51,11 +48,9 @@ public class VoucherServiceImpl implements VoucherService {
         voucher.setScope(VoucherScope.PLATFORM);
         voucher.setCreatedByUser(currentUser);
 
-        // For FREE_SERVICE type, resolve the ticket catalog
-        if (request.getVoucherType() == VoucherType.FREE_SERVICE && request.getFreeTicketCatalogId() != null) {
-            TicketCatalog ticketCatalog = ticketCatalogRepository.findById(request.getFreeTicketCatalogId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Ticket catalog not found"));
-            voucher.setFreeTicketCatalog(ticketCatalog);
+        // GIFT_PRODUCT for Admin defaults to ALL
+        if (voucher.getVoucherType() == VoucherType.GIFT_PRODUCT) {
+            voucher.setApplicableProduct(ApplicableProduct.ALL);
         }
 
         return VoucherResponse.fromEntity(voucherRepository.save(voucher));
@@ -64,6 +59,8 @@ public class VoucherServiceImpl implements VoucherService {
     @Override
     @Transactional(readOnly = true)
     public Page<VoucherResponse> getAllVouchers(VoucherFilterRequest filter, Pageable pageable) {
+        // Admin should only see Platform vouchers
+        filter.setScope(VoucherScope.PLATFORM);
         var spec = VoucherSpecification.withFilters(filter);
         return voucherRepository.findAll(spec, pageable).map(VoucherResponse::fromEntity);
     }
@@ -72,6 +69,7 @@ public class VoucherServiceImpl implements VoucherService {
     @Transactional(readOnly = true)
     public VoucherResponse getVoucherById(UUID id) {
         Voucher voucher = getActiveVoucher(id);
+        validateAdminPlatformAccess(voucher);
         return VoucherResponse.fromEntity(voucher);
     }
 
@@ -79,6 +77,7 @@ public class VoucherServiceImpl implements VoucherService {
     @Transactional
     public VoucherResponse updateVoucher(UUID id, UpdateVoucherRequest request) {
         Voucher voucher = getActiveVoucher(id);
+        validateAdminPlatformAccess(voucher);
         applyUpdates(voucher, request);
         return VoucherResponse.fromEntity(voucherRepository.save(voucher));
     }
@@ -87,6 +86,7 @@ public class VoucherServiceImpl implements VoucherService {
     @Transactional
     public void deleteVoucher(UUID id) {
         Voucher voucher = getActiveVoucher(id);
+        validateAdminPlatformAccess(voucher);
         UserPrincipal principal = getCurrentUserPrincipal();
         voucher.setDeletedAt(LocalDateTime.now());
         voucher.setDeletedBy(principal.getId());
@@ -99,6 +99,7 @@ public class VoucherServiceImpl implements VoucherService {
     public void hardDeleteVoucher(UUID id) {
         Voucher voucher = voucherRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Voucher not found"));
+        validateAdminPlatformAccess(voucher);
 
         if (userVoucherRepository.existsByVoucher_IdAndIsUsedTrue(id)) {
             throw new BadRequestException(
@@ -114,6 +115,7 @@ public class VoucherServiceImpl implements VoucherService {
     public VoucherResponse restoreVoucher(UUID id) {
         Voucher voucher = voucherRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Voucher not found"));
+        validateAdminPlatformAccess(voucher);
 
         if (voucher.getDeletedAt() == null) {
             throw new BadRequestException("Voucher is not deleted");
@@ -133,12 +135,6 @@ public class VoucherServiceImpl implements VoucherService {
         validateUniqueCode(request.getCode());
         validateVoucherTypeFields(request);
         validateDateRange(request.getStartDate(), request.getEndDate());
-
-        // Vendor cannot create BONUS_POINTS or FREE_SERVICE (platform-only types)
-        if (request.getVoucherType() == VoucherType.BONUS_POINTS
-                || request.getVoucherType() == VoucherType.FREE_SERVICE) {
-            throw new BadRequestException("Vendors can only create DISCOUNT or GIFT_PRODUCT vouchers");
-        }
 
         User currentUser = getCurrentUser();
         VendorProfile vendorProfile = vendorProfileRepository.findByUserEmail(currentUser.getEmail())
@@ -260,6 +256,11 @@ public class VoucherServiceImpl implements VoucherService {
             throw new BadRequestException("You have already collected this voucher");
         }
 
+        // Increase usage count upon collection (reserve the spot)
+        if (voucher.getUsageCount() == null) voucher.setUsageCount(0);
+        voucher.setUsageCount(voucher.getUsageCount() + 1);
+        voucherRepository.save(voucher);
+
         UserVoucher userVoucher = UserVoucher.builder()
                 .user(currentUser)
                 .voucher(voucher)
@@ -283,6 +284,57 @@ public class VoucherServiceImpl implements VoucherService {
         return page.map(UserVoucherRespone::fromEntity);
     }
 
+    @Override
+    @Transactional
+    public UserVoucherRespone redeemVoucher(UUID userVoucherId) {
+        UserVoucher userVoucher = userVoucherRepository.findById(userVoucherId)
+                .orElseThrow(() -> new ResourceNotFoundException("Collected voucher not found"));
+
+        if (Boolean.TRUE.equals(userVoucher.getIsUsed())) {
+            throw new BadRequestException("Voucher has already been used");
+        }
+
+        Voucher voucher = userVoucher.getVoucher();
+
+        // [Authorization Check]
+        User currentUser = getCurrentUser();
+        UserPrincipal principal = getCurrentUserPrincipal();
+        boolean isAdmin = principal.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (isAdmin) {
+            if (voucher.getScope() != VoucherScope.PLATFORM) {
+                throw new UnauthorizedException("Admin can only redeem platform-scoped vouchers");
+            }
+        } else {
+            // Check Vendor Ownership
+            VendorProfile vendorProfile = vendorProfileRepository.findByUserEmail(currentUser.getEmail())
+                    .orElseThrow(() -> new ResourceNotFoundException("Vendor profile not found"));
+            
+            if (voucher.getVendor() == null || !voucher.getVendor().getId().equals(vendorProfile.getId())) {
+                throw new UnauthorizedException("You can only redeem vouchers issued by your own store");
+            }
+        }
+
+        // Ensure it's a GIFT_PRODUCT voucher for counter redemption
+        if (voucher.getVoucherType() != VoucherType.GIFT_PRODUCT) {
+            throw new BadRequestException("Only GIFT_PRODUCT vouchers can be redeemed at the counter.");
+        }
+
+        if (voucher.getStatus() != VoucherStatus.ACTIVE) {
+            throw new BadRequestException("Voucher is no longer active");
+        }
+
+        if (voucher.getEndDate() != null && voucher.getEndDate().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("Voucher has expired");
+        }
+
+        userVoucher.setIsUsed(true);
+        userVoucher.setUsedDate(LocalDateTime.now());
+
+        return UserVoucherRespone.fromEntity(userVoucherRepository.save(userVoucher));
+    }
+
     // ==================== PRIVATE HELPERS ====================
 
     private Voucher buildVoucherFromRequest(CreateVoucherRequest request) {
@@ -297,11 +349,9 @@ public class VoucherServiceImpl implements VoucherService {
                 .minOrderValue(request.getMinOrderValue())
                 .giftDescription(request.getGiftDescription())
                 .giftImageUrl(request.getGiftImageUrl())
-                .bonusPointsValue(request.getBonusPointsValue())
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
                 .usageLimit(request.getUsageLimit())
-                .maxUsagePerUser(request.getMaxUsagePerUser())
                 .status(VoucherStatus.ACTIVE)
                 .build();
     }
@@ -315,18 +365,10 @@ public class VoucherServiceImpl implements VoucherService {
         if (request.getMinOrderValue() != null) voucher.setMinOrderValue(request.getMinOrderValue());
         if (request.getGiftDescription() != null) voucher.setGiftDescription(request.getGiftDescription());
         if (request.getGiftImageUrl() != null) voucher.setGiftImageUrl(request.getGiftImageUrl());
-        if (request.getBonusPointsValue() != null) voucher.setBonusPointsValue(request.getBonusPointsValue());
         if (request.getStartDate() != null) voucher.setStartDate(request.getStartDate());
         if (request.getEndDate() != null) voucher.setEndDate(request.getEndDate());
         if (request.getUsageLimit() != null) voucher.setUsageLimit(request.getUsageLimit());
-        if (request.getMaxUsagePerUser() != null) voucher.setMaxUsagePerUser(request.getMaxUsagePerUser());
         if (request.getStatus() != null) voucher.setStatus(request.getStatus());
-
-        if (request.getFreeTicketCatalogId() != null) {
-            TicketCatalog tc = ticketCatalogRepository.findById(request.getFreeTicketCatalogId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Ticket catalog not found"));
-            voucher.setFreeTicketCatalog(tc);
-        }
 
         validateDateRange(voucher.getStartDate(), voucher.getEndDate());
         validateDiscountPercent(voucher);
@@ -355,16 +397,6 @@ public class VoucherServiceImpl implements VoucherService {
             case GIFT_PRODUCT -> {
                 if (request.getGiftDescription() == null || request.getGiftDescription().isBlank()) {
                     throw new BadRequestException("Gift description is required for GIFT_PRODUCT voucher");
-                }
-            }
-            case BONUS_POINTS -> {
-                if (request.getBonusPointsValue() == null) {
-                    throw new BadRequestException("Bonus points value is required for BONUS_POINTS voucher");
-                }
-            }
-            case FREE_SERVICE -> {
-                if (request.getFreeTicketCatalogId() == null) {
-                    throw new BadRequestException("Free ticket catalog ID is required for FREE_SERVICE voucher");
                 }
             }
         }
@@ -397,6 +429,12 @@ public class VoucherServiceImpl implements VoucherService {
 
         if (voucher.getVendor() == null || !voucher.getVendor().getId().equals(vendorProfile.getId())) {
             throw new UnauthorizedException("You are not allowed to modify this voucher");
+        }
+    }
+
+    private void validateAdminPlatformAccess(Voucher voucher) {
+        if (voucher.getScope() != VoucherScope.PLATFORM) {
+            throw new UnauthorizedException("Admin can only manage platform-scoped vouchers");
         }
     }
 

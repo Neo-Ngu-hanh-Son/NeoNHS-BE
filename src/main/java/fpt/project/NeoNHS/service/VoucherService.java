@@ -48,4 +48,6 @@ public interface VoucherService {
     UserVoucherRespone collectVoucher(UUID voucherId);
 
     Page<UserVoucherRespone> getMyVouchers(Boolean isUsed, Pageable pageable);
+
+    UserVoucherRespone redeemVoucher(UUID userVoucherId);
 }

@@ -32,4 +32,6 @@ public interface EventRepository extends JpaRepository<Event, UUID>, JpaSpecific
         ORDER BY e.createdAt DESC
     """)
   List<Event> findRecentCreated(Pageable pageable);
+
+  List<Event> findAllByStatusInAndDeletedAtIsNull(java.util.Collection<fpt.project.NeoNHS.enums.EventStatus> statuses);
 }
