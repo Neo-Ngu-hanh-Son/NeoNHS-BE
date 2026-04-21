@@ -90,7 +90,8 @@ public class AiChatServiceImpl implements AiChatService {
         String currentPrompt = DEFAULT_SYSTEM_PROMPT;
 
         // Only use the custom SYSTEM_PROMPT if it is active
-        if (!dbPrompts.isEmpty() && dbPrompts.getFirst().isActive() && dbPrompts.getFirst().getContent() != null && !dbPrompts.getFirst().getContent().isBlank()) {
+        if (!dbPrompts.isEmpty() && dbPrompts.getFirst().isActive() && dbPrompts.getFirst().getContent() != null
+                && !dbPrompts.getFirst().getContent().isBlank()) {
             currentPrompt = dbPrompts.getFirst().getContent();
         } else if (dbPrompts.isEmpty()) {
             // Seed the prompt in the database if it doesn't exist
@@ -223,7 +224,7 @@ public class AiChatServiceImpl implements AiChatService {
                             "properties": {
                               "workshopSessionId": {
                                 "type": "string",
-                                "description": "ID của buổi workshop (Session ID - chuỗi UUID) được lấy từ getWorkshopSessions. KHÔNG dùng số thứ tự."
+                                "description": "ID của buổi workshop (Session ID - chuỗi UUID) được lấy từ getWorkshopSessions. TUYỆT ĐỐI KHÔNG dùng ID của workshop lấy từ searchWorkshops."
                               },
                               "ticketCatalogId": {
                                 "type": "string",
@@ -283,10 +284,10 @@ public class AiChatServiceImpl implements AiChatService {
                         "rating", w.getAverageRating() != null ? w.getAverageRating().toString() : "0.0",
                         "imageUrl", (w.getWorkshopImages() != null && !w.getWorkshopImages().isEmpty())
                                 ? w.getWorkshopImages().stream()
-                                .filter(img -> Boolean.TRUE.equals(img.getIsThumbnail()))
-                                .findFirst()
-                                .map(fpt.project.NeoNHS.entity.WorkshopImage::getImageUrl)
-                                .orElse(w.getWorkshopImages().getFirst().getImageUrl())
+                                        .filter(img -> Boolean.TRUE.equals(img.getIsThumbnail()))
+                                        .findFirst()
+                                        .map(fpt.project.NeoNHS.entity.WorkshopImage::getImageUrl)
+                                        .orElse(w.getWorkshopImages().getFirst().getImageUrl())
                                 : ""))
                 .toList();
         if (workshops.isEmpty())
@@ -314,7 +315,7 @@ public class AiChatServiceImpl implements AiChatService {
                 .limit(5)
                 .map(s -> {
                     Map<String, Object> sessionMap = new java.util.HashMap<>();
-                    sessionMap.put("sessionId", s.getId().toString());
+                    sessionMap.put("workshopSessionId", s.getId().toString());
                     sessionMap.put("startTime", s.getStartTime().toString());
                     sessionMap.put("endTime", s.getEndTime().toString());
                     sessionMap.put("price", s.getPrice() != null ? s.getPrice().toString() + " VND"
@@ -372,11 +373,15 @@ public class AiChatServiceImpl implements AiChatService {
             var catalogs = ticketCatalogRepository.findAll().stream()
                     .filter(tc -> tc.getAttraction() != null)
                     .limit(20)
-                    .map(tc -> Map.of(
-                            "name", tc.getName(),
-                            "customerType", tc.getCustomerType() != null ? tc.getCustomerType() : "Chung",
-                            "price", tc.getPrice().toString() + " VND",
-                            "description", tc.getDescription() != null ? tc.getDescription() : ""))
+                    .map(tc -> {
+                        Map<String, Object> map = new java.util.HashMap<>();
+                        map.put("ticketCatalogId", tc.getId().toString());
+                        map.put("name", tc.getName());
+                        map.put("customerType", tc.getCustomerType() != null ? tc.getCustomerType() : "Chung");
+                        map.put("price", tc.getPrice().toString() + " VND");
+                        map.put("description", tc.getDescription() != null ? tc.getDescription() : "");
+                        return map;
+                    })
                     .toList();
             if (catalogs.isEmpty())
                 return "Chưa có thông tin giá vé tham quan.";
@@ -417,26 +422,37 @@ public class AiChatServiceImpl implements AiChatService {
     }
 
     private String executeAddToCart(JsonNode args, String senderId) {
-        log.info("[AI] Executing addToCart for user: {} with args: {}", senderId, args);
+        log.info("[AI] Processing addToCart logic for user: {}", senderId);
         try {
             UUID userId = UUID.fromString(senderId);
             var user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin khách hàng."));
 
             AddToCartRequest request = new AddToCartRequest();
+
+            // Xử lý Ticket
             if (args.has("ticketCatalogId") && !args.get("ticketCatalogId").asText().isEmpty()) {
-                request.setTicketCatalogId(UUID.fromString(args.get("ticketCatalogId").asText()));
+                String tcId = args.get("ticketCatalogId").asText();
+                request.setTicketCatalogId(UUID.fromString(tcId));
             }
+
+            // Xử lý Workshop
             if (args.has("workshopSessionId") && !args.get("workshopSessionId").asText().isEmpty()) {
-                request.setWorkshopSessionId(UUID.fromString(args.get("workshopSessionId").asText()));
+                String wsId = args.get("workshopSessionId").asText();
+                request.setWorkshopSessionId(UUID.fromString(wsId));
             }
+
             request.setQuantity(args.has("quantity") ? args.get("quantity").asInt() : 1);
 
+            // Gọi service thêm vào giỏ hàng
             cartService.addToCart(user.getEmail(), request);
-            return "SUCCESS: Đã thêm vào giỏ hàng thành công. Hãy hỏi người dùng có muốn tới My Cart để thanh toán ngay không.";
+
+            return "SUCCESS: Đã thêm vào giỏ hàng thành công.";
+        } catch (IllegalArgumentException e) {
+            return "ERROR: Định dạng ID không hợp lệ. Vui lòng sử dụng mã UUID từ các công cụ tra cứu.";
         } catch (Exception e) {
-            log.error("[AI] Add to cart failed", e);
-            return "ERROR: Thất bại khi thêm vào giỏ hàng. Lỗi: " + e.getMessage();
+            log.error("[AI] Add to cart logic failed: {}", e.getMessage());
+            return "ERROR: " + e.getMessage();
         }
     }
 
@@ -495,8 +511,10 @@ public class AiChatServiceImpl implements AiChatService {
                 content = content.substring(0, 500);
             }
 
-            // Re-inject the [TRANSFER_TO_HUMAN] tag for context so the model remembers its behavior
-            if ("AI_ASSISTANT".equals(msg.getSenderId()) && msg.getMetadata() != null && Boolean.TRUE.equals(msg.getMetadata().get("transferToHuman"))) {
+            // Re-inject the [TRANSFER_TO_HUMAN] tag for context so the model remembers its
+            // behavior
+            if ("AI_ASSISTANT".equals(msg.getSenderId()) && msg.getMetadata() != null
+                    && Boolean.TRUE.equals(msg.getMetadata().get("transferToHuman"))) {
                 content += " [TRANSFER_TO_HUMAN]";
             }
 
@@ -568,7 +586,8 @@ public class AiChatServiceImpl implements AiChatService {
                 System.out.println("AI Reply after processing: " + aiReplyText);
 
                 // 5. Check for handover signal
-                if (aiReplyText.contains("[TRANSFER_TO_HUMAN]") || aiReplyText.toLowerCase().contains("người hỗ trợ không")) {
+                if (aiReplyText.contains("[TRANSFER_TO_HUMAN]")
+                        || aiReplyText.toLowerCase().contains("người hỗ trợ không")) {
                     String cleanText = aiReplyText.replaceAll("(?i)\\s*\\[TRANSFER_TO_HUMAN\\]\\s*", "").trim();
                     handleTransferToHuman(roomId, senderId, emitter, cleanText);
                     return;
@@ -606,75 +625,89 @@ public class AiChatServiceImpl implements AiChatService {
      */
     private Map<String, Object> processOpenAiResponse(JsonNode response, ArrayNode messages, String senderId)
             throws Exception {
-        JsonNode choice = response.path("choices").path(0);
-        JsonNode message = choice.path("message");
-
         Map<String, Object> metadata = new java.util.HashMap<>();
-        String messageType = "TEXT";
+        JsonNode currentResponse = response;
 
-        if (message.has("tool_calls")) {
-            JsonNode toolCalls = message.get("tool_calls");
+        // Tăng lên 5 lần để thoải mái cho các bước: Search -> GetDetail -> AddToCart -> Confirm
+        int maxIterations = 5;
 
-            // Add assistant's tool call message to history
-            messages.add(message.deepCopy());
+        for (int i = 0; i < maxIterations; i++) {
+            JsonNode choice = currentResponse.path("choices").path(0);
+            JsonNode message = choice.path("message");
 
-            for (JsonNode toolCall : toolCalls) {
-                String functionName = toolCall.path("function").path("name").asText();
-                String toolCallId = toolCall.path("id").asText();
-                JsonNode functionArgs = objectMapper.readTree(toolCall.path("function").path("arguments").asText("{}"));
+            if (message.has("tool_calls")) {
+                JsonNode toolCalls = message.get("tool_calls");
+                messages.add(message.deepCopy());
 
-                // Execute the function inside a transaction to prevent
-                // LazyInitializationException
-                String functionResult = transactionTemplate
-                        .execute(status -> executeFunctionCall(functionName, functionArgs, senderId));
+                for (JsonNode toolCall : toolCalls) {
+                    String functionName = toolCall.path("function").path("name").asText();
+                    String toolCallId = toolCall.path("id").asText();
+                    JsonNode functionArgs = objectMapper.readTree(toolCall.path("function").path("arguments").asText("{}"));
 
-                // Add tool result to messages
-                ObjectNode toolResultNode = objectMapper.createObjectNode();
-                toolResultNode.put("role", "tool");
-                toolResultNode.put("tool_call_id", toolCallId);
-                toolResultNode.put("content", functionResult);
-                System.out.println("toolResultNode: " + toolResultNode.toString());
-                messages.add(toolResultNode);
+                    String functionResult = "";
+                    try {
+                        functionResult = transactionTemplate.execute(status -> {
+                            try {
+                                return executeFunctionCall(functionName, functionArgs, senderId);
+                            } catch (Exception e) {
+                                status.setRollbackOnly();
+                                return "ERROR: " + e.getMessage();
+                            }
+                        });
+                    } catch (Exception e) {
+                        functionResult = "ERROR: Lỗi hệ thống.";
+                    }
+
+                    // Lưu kết quả tool
+                    ObjectNode toolResultNode = objectMapper.createObjectNode();
+                    toolResultNode.put("role", "tool");
+                    toolResultNode.put("tool_call_id", toolCallId);
+                    toolResultNode.put("content", functionResult);
+                    messages.add(toolResultNode);
+
+                    // Đánh dấu metadata nếu thành công
+                    if ("addToCart".equals(functionName) && functionResult.contains("SUCCESS")) {
+                        metadata.put("redirectToCart", true);
+                    }
+                }
+
+                // Gọi lại OpenAI
+                ObjectNode followUpRequest = buildOpenAiRequest(messages);
+                String followUpJson = openAiRestClient.post()
+                        .uri(openAiConfig.getChatCompletionUrl())
+                        .body(followUpRequest.toString())
+                        .retrieve()
+                        .body(String.class);
+
+                currentResponse = objectMapper.readTree(followUpJson);
+
+                // Nếu đây là vòng lặp cuối cùng mà vẫn còn tool_calls, thì mới báo lỗi quá tải
+                if (i == maxIterations - 1 && currentResponse.path("choices").path(0).path("message").has("tool_calls")) {
+                    return createErrorResponse("Hệ thống đang bận xử lý quá nhiều tác vụ, vui lòng thử lại.");
+                }
+
+            } else {
+                // AI TRẢ VỀ TEXT CUỐI CÙNG (Đây là nơi log của bạn bị ngắt)
+                String aiContent = message.path("content").asText();
+
+                // Kiểm tra lại metadata lần cuối trong text
+                if (aiContent.toLowerCase().contains("giỏ hàng") || aiContent.toLowerCase().contains("thanh toán")) {
+                    metadata.put("redirectToCart", true);
+                }
+
+                Map<String, Object> res = new java.util.HashMap<>();
+                res.put("text", aiContent);
+                res.put("metadata", metadata.isEmpty() ? null : metadata);
+                res.put("messageType", "TEXT");
+                return res;
             }
-
-            // Call OpenAI again with tool results
-            ObjectNode followUpRequest = buildOpenAiRequest(messages);
-            followUpRequest.remove("tools"); // prevent recursive tool calls
-            followUpRequest.remove("tool_choice"); // fix 400 bad request
-
-            String followUpJson = openAiRestClient.post()
-                    .uri(openAiConfig.getChatCompletionUrl())
-                    .body(followUpRequest.toString())
-                    .retrieve()
-                    .body(String.class);
-
-            JsonNode followUpResponse = objectMapper.readTree(followUpJson);
-            String aiContent = followUpResponse.path("choices").path(0).path("message").path("content").asText();
-
-            // No longer stripping images because frontend handles multi-card markdown
-            if ("PRODUCT_SNIPPET".equals(messageType) && aiContent != null) {
-                aiContent = aiContent.trim();
-            }
-
-            // If addToCart was successful, tell frontend to show a redirect button or
-            // navigate
-            if (aiContent != null && (aiContent.contains("giỏ hàng") || aiContent.contains("My Cart"))) {
-                if (metadata == null)
-                    metadata = new java.util.HashMap<>();
-                metadata.put("redirectToCart", true);
-            }
-
-            Map<String, Object> res = new java.util.HashMap<>();
-            res.put("text", aiContent);
-            res.put("metadata", metadata.isEmpty() ? null : metadata);
-            res.put("messageType", messageType);
-            return res;
         }
+        return createErrorResponse("Xin lỗi, tôi không thể hoàn tất yêu cầu này ngay bây giờ.");
+    }
 
-        // Direct text response
+    private Map<String, Object> createErrorResponse(String errorMsg) {
         Map<String, Object> res = new java.util.HashMap<>();
-        res.put("text", message.path("content").asText("Xin lỗi, tôi gặp trục trặc khi xử lý câu hỏi."));
-        res.put("metadata", null);
+        res.put("text", errorMsg);
         res.put("messageType", "TEXT");
         return res;
     }
@@ -699,9 +732,9 @@ public class AiChatServiceImpl implements AiChatService {
         }
     }
 
-//    private void saveAndBroadcastAiMessage(String roomId, String aiText) {
-//        saveAndBroadcastAiMessage(roomId, aiText, "TEXT", null);
-//    }
+    // private void saveAndBroadcastAiMessage(String roomId, String aiText) {
+    // saveAndBroadcastAiMessage(roomId, aiText, "TEXT", null);
+    // }
 
     private void saveAndBroadcastAiMessageWithMetadata(String roomId, String aiText, Map<String, Object> metadata) {
         saveAndBroadcastAiMessage(roomId, aiText, "TEXT", null);
@@ -763,7 +796,8 @@ public class AiChatServiceImpl implements AiChatService {
                 .data("{\"fullText\": " + objectMapper.writeValueAsString(text) + "}"));
     }
 
-    private void handleTransferToHuman(String roomId, String senderId, SseEmitter emitter, String cleanText) throws IOException {
+    private void handleTransferToHuman(String roomId, String senderId, SseEmitter emitter, String cleanText)
+            throws IOException {
         // Save transfer system message with metadata
         saveAndBroadcastAiMessageWithMetadata(roomId, cleanText, Map.of("transferToHuman", true));
 
