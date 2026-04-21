@@ -1,9 +1,10 @@
 package fpt.project.NeoNHS.controller.admin;
 
-import fpt.project.NeoNHS.dto.request.point.CreateMultiplePointHistoryAudioRequest;
 import fpt.project.NeoNHS.dto.request.point.CreatePointHistoryAudio;
+import fpt.project.NeoNHS.dto.request.point.historyAudio.HistoryAudioTranslateRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
-import fpt.project.NeoNHS.dto.response.point.PointHistoryAudioResponse;
+import fpt.project.NeoNHS.dto.response.point.historyAudio.GeminiTranslationObject;
+import fpt.project.NeoNHS.dto.response.point.historyAudio.PointHistoryAudioResponse;
 import fpt.project.NeoNHS.service.PointHistoryAudioService;
 import jakarta.validation.Valid; // Ensure you have this import
 import lombok.RequiredArgsConstructor;
@@ -34,13 +35,13 @@ public class AdminHistoryAudioController {
                 .body(ApiResponse.success(HttpStatus.CREATED, "History audio created successfully", response));
     }
 
-    @PostMapping
-    public ResponseEntity<ApiResponse<Void>> createMultipleAudio(
-            @PathVariable UUID pointId,
-            @Valid @RequestBody CreateMultiplePointHistoryAudioRequest request) {
-        pointHistoryAudioService.createMultipleHistoryAudio(request);
-        return ResponseEntity.ok(ApiResponse.success("History audios created", null));
-    }
+//    @PostMapping('/multiple')
+//    public ResponseEntity<ApiResponse<Void>> createMultipleAudio(
+//            @PathVariable UUID pointId,
+//            @Valid @RequestBody CreateMultiplePointHistoryAudioRequest request) {
+//        pointHistoryAudioService.createMultipleHistoryAudio(request);
+//        return ResponseEntity.ok(ApiResponse.success("History audios created", null));
+//    }
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<PointHistoryAudioResponse>> updateHistoryAudio(
@@ -73,5 +74,10 @@ public class AdminHistoryAudioController {
             @PathVariable UUID id) {
         pointHistoryAudioService.delete(pointId, id);
         return ResponseEntity.ok(ApiResponse.success("History audio deleted successfully", null));
+    }
+
+    public ResponseEntity<ApiResponse<List<GeminiTranslationObject>>> historyAudioAITranslate(HistoryAudioTranslateRequest request) {
+        List<GeminiTranslationObject> res = pointHistoryAudioService.getTranslateFromGemini(request);
+        return ResponseEntity.ok(ApiResponse.success("History audio translated successfully", res));
     }
 }

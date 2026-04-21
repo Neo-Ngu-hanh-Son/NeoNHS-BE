@@ -4,11 +4,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fpt.project.NeoNHS.constants.PointHistoryAudioConstants;
-import fpt.project.NeoNHS.dto.request.point.AudioMetadataRequest;
+import fpt.project.NeoNHS.dto.request.point.historyAudio.AudioMetadataRequest;
 import fpt.project.NeoNHS.dto.request.point.CreateMultiplePointHistoryAudioRequest;
 import fpt.project.NeoNHS.dto.request.point.CreatePointHistoryAudio;
-import fpt.project.NeoNHS.dto.request.point.WordTimingRequest;
-import fpt.project.NeoNHS.dto.response.point.PointHistoryAudioResponse;
+import fpt.project.NeoNHS.dto.request.point.historyAudio.HistoryAudioTranslateRequest;
+import fpt.project.NeoNHS.dto.request.point.historyAudio.WordTimingRequest;
+import fpt.project.NeoNHS.dto.response.point.historyAudio.GeminiTranslationObject;
+import fpt.project.NeoNHS.dto.response.point.historyAudio.PointHistoryAudioResponse;
 import fpt.project.NeoNHS.entity.Point;
 import fpt.project.NeoNHS.entity.PointHistoryAudio;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
@@ -17,6 +19,7 @@ import fpt.project.NeoNHS.repository.PointRepository;
 import fpt.project.NeoNHS.service.PointHistoryAudioService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +36,12 @@ public class PointHistoryAudioServiceImpl implements PointHistoryAudioService {
     private final PointHistoryAudioRepository pointHistoryAudioRepository;
     private final PointRepository pointRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Value("${elevenlabs.api-key}")
+    private final String ELEVENLABS_API_KEY;
+
+    @Value("")
+    private final String GPT_KEY;
 
     @Override
     @Transactional
@@ -135,6 +144,11 @@ public class PointHistoryAudioServiceImpl implements PointHistoryAudioService {
                 .orElseThrow(() -> new ResourceNotFoundException("PointHistoryAudio", "id", id));
         entity.setDeletedAt(LocalDateTime.now());
         pointHistoryAudioRepository.save(entity);
+    }
+
+    @Override
+    public List<GeminiTranslationObject> getTranslateFromGemini(HistoryAudioTranslateRequest request) {
+
     }
 
     // ─── PRIVATE HELPERS ──────────────────────────────────────────────────
