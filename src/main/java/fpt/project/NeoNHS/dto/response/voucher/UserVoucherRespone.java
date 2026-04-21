@@ -35,7 +35,6 @@ public class UserVoucherRespone {
     private BigDecimal minOrderValue;
     private String giftDescription;
     private String giftImageUrl;
-    private Integer bonusPointsValue;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private VoucherStatus status;
@@ -65,7 +64,6 @@ public class UserVoucherRespone {
                 .minOrderValue(voucher.getMinOrderValue())
                 .giftDescription(voucher.getGiftDescription())
                 .giftImageUrl(voucher.getGiftImageUrl())
-                .bonusPointsValue(voucher.getBonusPointsValue())
                 .startDate(voucher.getStartDate())
                 .endDate(voucher.getEndDate())
                 .status(voucher.getStatus())

@@ -319,7 +319,7 @@ public class VendorDashboardDataSeeder implements CommandLineRunner {
                     .startDate(now.minusDays(30))
                     .endDate(now.plusDays(60))
                     .usageLimit(100)
-                    .maxUsagePerUser(2)
+                    // .maxUsagePerUser(2)
                     .createdByUser(vendorUser)
                     .vendor(vendor)
                     .build();
