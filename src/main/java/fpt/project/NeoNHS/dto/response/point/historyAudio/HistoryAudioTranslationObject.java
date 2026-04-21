@@ -1,6 +1,9 @@
 package fpt.project.NeoNHS.dto.response.point.historyAudio;
 
-public class GeminiTranslationObject {
+import lombok.Data;
+
+@Data
+public class HistoryAudioTranslationObject {
     private String title;
     private String author;
     private String script;
