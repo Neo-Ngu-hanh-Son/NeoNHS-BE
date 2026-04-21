@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.controller.admin;
 
+import fpt.project.NeoNHS.dto.request.point.CreateMultiplePointHistoryAudioRequest;
 import fpt.project.NeoNHS.dto.request.point.CreatePointHistoryAudio;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.point.PointHistoryAudioResponse;
@@ -31,6 +32,14 @@ public class AdminHistoryAudioController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(HttpStatus.CREATED, "History audio created successfully", response));
+    }
+
+    @PostMapping
+    public ResponseEntity<ApiResponse<Void>> createMultipleAudio(
+            @PathVariable UUID pointId,
+            @Valid @RequestBody CreateMultiplePointHistoryAudioRequest request) {
+        pointHistoryAudioService.createMultipleHistoryAudio(request);
+        return ResponseEntity.ok(ApiResponse.success("History audios created", null));
     }
 
     @PutMapping("/{id}")

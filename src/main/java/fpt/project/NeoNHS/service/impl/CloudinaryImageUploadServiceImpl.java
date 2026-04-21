@@ -44,6 +44,30 @@ public class CloudinaryImageUploadServiceImpl implements ImageUploadService {
     }
 
     @Override
+    public ImageUploadResponse uploadImageFromUrl(String url) {
+        log.info("Fetching and shortening external image URL: {}", url);
+        try {
+            // Cloudinary uploader can take a URL string directly
+            @SuppressWarnings("unchecked")
+            Map uploadResult = cloudinary.uploader().upload(url, ObjectUtils.asMap(
+                    "folder", "NeoNHS/Shortened",
+                    "resource_type", "image"
+            ));
+
+            String secureUrl = (String) uploadResult.get("secure_url");
+            String publicId = (String) uploadResult.get("public_id");
+
+            return ImageUploadResponse.builder()
+                    .mediaUrl(secureUrl)
+                    .publicId(publicId)
+                    .build();
+        } catch (IOException e) {
+            log.error("Failed to shorten image URL via Cloudinary", e);
+            throw new AppIOException("Failed to shorten image URL: " + e.getMessage());
+        }
+    }
+
+    @Override
     public List<ImageUploadResponse> uploadImages(MultipartFile[] files) {
         return Arrays.stream(files)
                 .map(this::uploadImage)

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fpt.project.NeoNHS.constants.PointHistoryAudioConstants;
 import fpt.project.NeoNHS.dto.request.point.AudioMetadataRequest;
+import fpt.project.NeoNHS.dto.request.point.CreateMultiplePointHistoryAudioRequest;
 import fpt.project.NeoNHS.dto.request.point.CreatePointHistoryAudio;
 import fpt.project.NeoNHS.dto.request.point.WordTimingRequest;
 import fpt.project.NeoNHS.dto.response.point.PointHistoryAudioResponse;
@@ -64,6 +65,14 @@ public class PointHistoryAudioServiceImpl implements PointHistoryAudioService {
 
         PointHistoryAudio saved = pointHistoryAudioRepository.save(entity);
         return toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public void createMultipleHistoryAudio(CreateMultiplePointHistoryAudioRequest request) {
+        for (CreatePointHistoryAudio req : request.getPointHistoryAudios()) {
+            create(req);
+        }
     }
 
     @Override
