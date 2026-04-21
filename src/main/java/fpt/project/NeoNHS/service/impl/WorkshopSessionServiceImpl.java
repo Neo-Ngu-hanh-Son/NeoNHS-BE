@@ -296,7 +296,12 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
             throw new BadRequestException("Can only update SCHEDULED sessions. Current status: " + session.getStatus());
         }
 
-        // 4. Update fields if provided
+        // 4. KIỂM TRA ĐĂNG KÝ: Chặn mọi update nếu đã có người đăng ký
+        if (session.getCurrentEnrolled() > 0) {
+            throw new BadRequestException("Cannot update this session because tourists have already registered");
+        }
+
+        // 5. Update fields if provided
         if (request.getStartTime() != null) {
             if (request.getStartTime().isBefore(LocalDateTime.now())) {
                 throw new BadRequestException("Start time must be in the future");
@@ -308,26 +313,21 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
             session.setEndTime(request.getEndTime());
         }
 
-        // 5. Validate time constraints
-        if (session.getEndTime().isBefore(session.getStartTime())
-                || session.getEndTime().equals(session.getStartTime())) {
-            throw new BadRequestException("End time must be after start time");
+        // 6. Validate time constraints
+        if (session.getEndTime() != null && session.getStartTime() != null) {
+            if (session.getEndTime().isBefore(session.getStartTime())
+                    || session.getEndTime().equals(session.getStartTime())) {
+                throw new BadRequestException("End time must be after start time");
+            }
         }
 
-        // 6. Update price if provided
+        // 7. Update price if provided (Đã xóa logic check enrolled)
         if (request.getPrice() != null) {
-            if (session.getCurrentEnrolled() > 0 && session.getPrice().compareTo(request.getPrice()) != 0) {
-                throw new BadRequestException("Cannot update price because tourists have already registered for this session");
-            }
             session.setPrice(request.getPrice());
         }
 
-        // 7. Update maxParticipants with validation
+        // 8. Update maxParticipants with validation (Đã xóa logic check enrolled)
         if (request.getMaxParticipants() != null) {
-            if (request.getMaxParticipants() < session.getCurrentEnrolled()) {
-                throw new BadRequestException("Cannot reduce max participants (" + request.getMaxParticipants() +
-                        ") below current enrollments (" + session.getCurrentEnrolled() + ")");
-            }
             if (request.getMaxParticipants() < session.getWorkshopTemplate().getMinParticipants()) {
                 throw new BadRequestException("Max participants (" + request.getMaxParticipants() +
                         ") cannot be less than template's minimum participants (" +
@@ -336,7 +336,7 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
             session.setMaxParticipants(request.getMaxParticipants());
         }
 
-        // 8. Save and return
+        // 9. Save and return
         WorkshopSession updatedSession = workshopSessionRepository.save(session);
         return mapToResponse(updatedSession);
     }
@@ -350,38 +350,36 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
         if (!session.getWorkshopTemplate().getVendor().getUser().getEmail().equals(email)) {
             throw new BadRequestException("You do not have permission to update this workshop session");
         }
-        // Check if the workshop has enrolled
-        if(session.getCurrentEnrolled() > 0) {
-            throw new BadRequestException("Cannot Change the date of the session because there are already tourists registered for this session.");
-        }
-
-        //Check if no tourists are registered in the session.
-        if (session.getCurrentEnrolled() == 0) {
-            throw new BadRequestException("Cannot start the session because no tourists are registered.");
-        }
-
-        //Check if the update status doesn't match the start date.
-        if (status == SessionStatus.ONGOING && session.getStartTime().isAfter(LocalDateTime.now())) {
-            throw new BadRequestException("Cannot update status to ONGOING or COMPLETED because the session has not started yet.");
-        }
-
-        //Check if the update status doesn't match the end date.
-        if (status == SessionStatus.COMPLETED && session.getEndTime().isAfter(LocalDateTime.now())) {
-            throw new BadRequestException("Cannot update status to COMPLETED because the session has not ended yet.");
-        }
-
         // 1. Validate status update
-        // 1.1. Update status to ONGOING
         if (status == SessionStatus.ONGOING) {
             if (session.getStatus() != SessionStatus.SCHEDULED) {
                 throw new BadRequestException("Can only update status to ONGOING if current status is SCHEDULED. Current status: " + session.getStatus());
             }
-        // 1.2. Update status to COMPLETED
+            if (session.getCurrentEnrolled() == 0) {
+                throw new BadRequestException("Cannot start the session because no tourists are registered.");
+            }
+
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime minAllowableStart = session.getStartTime().minusMinutes(30);
+            LocalDateTime maxAllowableStart = session.getStartTime().plusMinutes(30);
+
+            if (now.isBefore(minAllowableStart) || now.isAfter(maxAllowableStart)) {
+                throw new BadRequestException("You can only change status to ONGOING within 30 minutes of the start time.");
+            }
+
         } else if (status == SessionStatus.COMPLETED) {
             if (session.getStatus() != SessionStatus.ONGOING) {
                 throw new BadRequestException("Can only update status to COMPLETED if current status is ONGOING. Current status: " + session.getStatus());
             }
-        // 1.3. Invalid status update
+
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime minAllowableEnd = session.getEndTime().minusMinutes(30);
+            LocalDateTime maxAllowableEnd = session.getEndTime().plusMinutes(30);
+
+            if (now.isBefore(minAllowableEnd) || now.isAfter(maxAllowableEnd)) {
+                throw new BadRequestException("You can only change status to COMPLETED within 30 minutes of the end time.");
+            }
+
         } else {
             throw new BadRequestException("Invalid status update. Allowed updates are ONGOING or COMPLETED.");
         }
