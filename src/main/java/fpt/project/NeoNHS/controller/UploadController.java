@@ -14,7 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/upload")
+@RequestMapping("/api/public/upload")
 @RequiredArgsConstructor
 @Tag(name = "Upload resource", description = "Upload images and videos to a service (Cloudinary)")
 public class UploadController {
@@ -23,6 +23,18 @@ public class UploadController {
     @PostMapping(value = "/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ImageUploadResponse>> uploadImage(@RequestParam MultipartFile imageFile) {
         var res = uploadService.uploadImage(imageFile);
+        return new ResponseEntity<>(
+                ApiResponse.<ImageUploadResponse>builder()
+                        .data(res)
+                        .message("Upload successful")
+                        .success(true)
+                        .build(),
+                HttpStatus.CREATED);
+    }
+
+    @PostMapping(value = "/image-url")
+    public ResponseEntity<ApiResponse<ImageUploadResponse>> uploadImage(@RequestBody String url) {
+        var res = uploadService.uploadImageFromUrl(url);
         return new ResponseEntity<>(
                 ApiResponse.<ImageUploadResponse>builder()
                         .data(res)
@@ -57,7 +69,7 @@ public class UploadController {
     }
 
     @DeleteMapping(value = "/image/{publicId}")
-    public ResponseEntity<ApiResponse<String>> deleteResource( @PathVariable String publicId) {
+    public ResponseEntity<ApiResponse<String>> deleteResource(@PathVariable String publicId) {
         var res = uploadService.deleteResource(publicId);
         return new ResponseEntity<>(
                 ApiResponse.<String>builder()

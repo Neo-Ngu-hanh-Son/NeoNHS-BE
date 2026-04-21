@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Data
 @Builder
@@ -41,13 +40,6 @@ public class UpdateVoucherRequest {
     @Size(max = 255, message = "Gift image URL must not exceed 255 characters")
     private String giftImageUrl;
 
-    // ===== Bonus points =====
-    @Positive(message = "Bonus points value must be positive")
-    private Integer bonusPointsValue;
-
-    // ===== Free service =====
-    private UUID freeTicketCatalogId;
-
     // ===== Time & Usage =====
     @FutureOrPresent(message = "Start date must be in the present or future")
     private LocalDateTime startDate;
@@ -57,9 +49,6 @@ public class UpdateVoucherRequest {
 
     @Positive(message = "Usage limit must be positive")
     private Integer usageLimit;
-
-    @Positive(message = "Max usage per user must be positive")
-    private Integer maxUsagePerUser;
 
     private VoucherStatus status;
 }

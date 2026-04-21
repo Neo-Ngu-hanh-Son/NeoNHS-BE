@@ -350,38 +350,36 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
         if (!session.getWorkshopTemplate().getVendor().getUser().getEmail().equals(email)) {
             throw new BadRequestException("You do not have permission to update this workshop session");
         }
-        // Check if the workshop has enrolled
-        if(session.getCurrentEnrolled() > 0) {
-            throw new BadRequestException("Cannot Change the date of the session because there are already tourists registered for this session.");
-        }
-
-        //Check if no tourists are registered in the session.
-        if (session.getCurrentEnrolled() == 0) {
-            throw new BadRequestException("Cannot start the session because no tourists are registered.");
-        }
-
-        //Check if the update status doesn't match the start date.
-        if (status == SessionStatus.ONGOING && session.getStartTime().isAfter(LocalDateTime.now())) {
-            throw new BadRequestException("Cannot update status to ONGOING or COMPLETED because the session has not started yet.");
-        }
-
-        //Check if the update status doesn't match the end date.
-        if (status == SessionStatus.COMPLETED && session.getEndTime().isAfter(LocalDateTime.now())) {
-            throw new BadRequestException("Cannot update status to COMPLETED because the session has not ended yet.");
-        }
-
         // 1. Validate status update
-        // 1.1. Update status to ONGOING
         if (status == SessionStatus.ONGOING) {
             if (session.getStatus() != SessionStatus.SCHEDULED) {
                 throw new BadRequestException("Can only update status to ONGOING if current status is SCHEDULED. Current status: " + session.getStatus());
             }
-        // 1.2. Update status to COMPLETED
+            if (session.getCurrentEnrolled() == 0) {
+                throw new BadRequestException("Cannot start the session because no tourists are registered.");
+            }
+
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime minAllowableStart = session.getStartTime().minusMinutes(30);
+            LocalDateTime maxAllowableStart = session.getStartTime().plusMinutes(30);
+
+            if (now.isBefore(minAllowableStart) || now.isAfter(maxAllowableStart)) {
+                throw new BadRequestException("You can only change status to ONGOING within 30 minutes of the start time.");
+            }
+
         } else if (status == SessionStatus.COMPLETED) {
             if (session.getStatus() != SessionStatus.ONGOING) {
                 throw new BadRequestException("Can only update status to COMPLETED if current status is ONGOING. Current status: " + session.getStatus());
             }
-        // 1.3. Invalid status update
+
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime minAllowableEnd = session.getEndTime().minusMinutes(30);
+            LocalDateTime maxAllowableEnd = session.getEndTime().plusMinutes(30);
+
+            if (now.isBefore(minAllowableEnd) || now.isAfter(maxAllowableEnd)) {
+                throw new BadRequestException("You can only change status to COMPLETED within 30 minutes of the end time.");
+            }
+
         } else {
             throw new BadRequestException("Invalid status update. Allowed updates are ONGOING or COMPLETED.");
         }

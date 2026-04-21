@@ -53,4 +53,6 @@ public interface VoucherRepository extends JpaRepository<Voucher, UUID>, JpaSpec
     long countByVendorIdAndDeletedAtIsNull(UUID vendorId);
 
     long countByVendorIdAndDeletedAtIsNullAndCreatedAtAfter(UUID vendorId, LocalDateTime since);
+
+    java.util.List<Voucher> findAllByStatusAndDeletedAtIsNull(VoucherStatus status);
 }

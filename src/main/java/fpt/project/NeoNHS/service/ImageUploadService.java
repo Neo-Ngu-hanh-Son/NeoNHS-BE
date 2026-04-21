@@ -6,6 +6,7 @@ import java.util.List;
 
 public interface ImageUploadService {
     ImageUploadResponse uploadImage(MultipartFile file);
+    ImageUploadResponse uploadImageFromUrl(String url);
     List<ImageUploadResponse> uploadImages(MultipartFile[] files);
     String uploadVideo(MultipartFile file);
 
