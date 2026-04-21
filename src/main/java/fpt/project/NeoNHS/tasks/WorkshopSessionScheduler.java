@@ -1,4 +1,4 @@
-package fpt.project.NeoNHS.scheduler;
+package fpt.project.NeoNHS.tasks;
 
 import fpt.project.NeoNHS.entity.WorkshopSession;
 import fpt.project.NeoNHS.enums.SessionStatus;
