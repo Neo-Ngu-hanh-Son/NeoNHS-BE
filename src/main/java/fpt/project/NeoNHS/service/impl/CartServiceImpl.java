@@ -7,6 +7,7 @@ import fpt.project.NeoNHS.dto.response.cart.CartItemResponse;
 import fpt.project.NeoNHS.dto.response.cart.CartResponse;
 import fpt.project.NeoNHS.dto.response.cart.CheckoutResponse;
 import fpt.project.NeoNHS.dto.response.voucher.UserVoucherRespone;
+import fpt.project.NeoNHS.dto.response.voucher.VoucherClassificationResult;
 import fpt.project.NeoNHS.entity.Cart;
 import fpt.project.NeoNHS.entity.CartItem;
 import fpt.project.NeoNHS.entity.TicketCatalog;
@@ -14,7 +15,6 @@ import fpt.project.NeoNHS.entity.User;
 import fpt.project.NeoNHS.entity.UserVoucher;
 import fpt.project.NeoNHS.entity.Voucher;
 import fpt.project.NeoNHS.entity.WorkshopSession;
-import fpt.project.NeoNHS.enums.SessionStatus;
 import fpt.project.NeoNHS.exception.BadRequestException;
 import fpt.project.NeoNHS.repository.CartItemRepository;
 import fpt.project.NeoNHS.repository.CartRepository;
@@ -23,9 +23,8 @@ import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.repository.UserVoucherRepository;
 import fpt.project.NeoNHS.repository.WorkshopSessionRepository;
 import fpt.project.NeoNHS.service.CartService;
+import fpt.project.NeoNHS.service.VoucherService;
 import java.time.LocalDateTime;
-import fpt.project.NeoNHS.enums.EventStatus;
-import fpt.project.NeoNHS.enums.TicketCatalogStatus;
 import fpt.project.NeoNHS.entity.Event;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -48,6 +47,7 @@ public class CartServiceImpl implements CartService {
     private final UserVoucherRepository userVoucherRepository;
     private final WorkshopSessionRepository workshopSessionRepository;
     private final AvailabilityValidator avai;
+    private final VoucherService voucherService;
 
     @Override
     @Transactional(readOnly = true)
@@ -341,83 +341,18 @@ public class CartServiceImpl implements CartService {
                     .build());
         }
 
-        // Voucher Logic
-        List<UserVoucher> userVouchers = userVoucherRepository.findByUser_IdAndIsUsedFalse(user.getId());
-        List<UserVoucherRespone> validVouchers = new ArrayList<>();
-        List<UserVoucherRespone> invalidVouchers = new ArrayList<>();
+        // ── Voucher Logic (delegated to VoucherService) ──
+        VoucherClassificationResult classification =
+                voucherService.classifyVouchersForCart(user, selectedItems, totalPrice);
 
-        // Final values to return
         BigDecimal discountValue = BigDecimal.ZERO;
         UserVoucherRespone appliedVoucherResponse = null;
 
-        LocalDateTime now = LocalDateTime.now();
-
-        // 1. First Pass: Identify all valid/invalid vouchers based on BASE total price
-        for (UserVoucher uv : userVouchers) {
-            Voucher v = uv.getVoucher();
-            boolean isValid = true;
-
-            // Check Date
-            if ((v.getStartDate() != null && now.isBefore(v.getStartDate())) ||
-                    (v.getEndDate() != null && now.isAfter(v.getEndDate()))) {
-                isValid = false;
-            }
-
-            // Check Usage Limit
-            if (v.getUsageLimit() != null && v.getUsageCount() >= v.getUsageLimit()) {
-                isValid = false;
-            }
-
-            // Check Min Order Value
-            if (v.getMinOrderValue() != null && totalPrice.compareTo(v.getMinOrderValue()) < 0) {
-                isValid = false;
-            }
-
-            UserVoucherRespone response = UserVoucherRespone.builder()
-                    .userVoucherId(uv.getId())
-                    .code(v.getCode())
-                    .description(v.getDescription())
-                    .discountValue(v.getDiscountValue())
-                    .discountType(v.getDiscountType())
-                    .minOrderValue(v.getMinOrderValue())
-                    .build();
-
-            if (isValid) {
-                validVouchers.add(response);
-            } else {
-                invalidVouchers.add(response);
-            }
-        }
-
-        // 2. Second Pass: If a voucher is requested, try to apply it
         if (request.getVoucherIds() != null && !request.getVoucherIds().isEmpty()) {
             UUID reqId = request.getVoucherIds().get(0);
-
-            // Check if the requested voucher exists in the USER's vouchers
-            UserVoucher appliedVoucherEntity = userVouchers.stream()
-                    .filter(uv -> uv.getId().equals(reqId))
-                    .findFirst()
-                    .orElseThrow(() -> new BadRequestException("Voucher not found"));
-
-            // Check if it was deemed valid in step 1
-            boolean isValid = validVouchers.stream().anyMatch(v -> v.getUserVoucherId().equals(reqId));
-
-            if (!isValid) {
-                throw new BadRequestException("Selected voucher is not applicable for this order");
-            }
-
-            Voucher v = appliedVoucherEntity.getVoucher();
-            if (v.getDiscountType() == fpt.project.NeoNHS.enums.DiscountType.PERCENT) {
-                discountValue = totalPrice.multiply(v.getDiscountValue().divide(BigDecimal.valueOf(100)));
-                if (v.getMaxDiscountValue() != null && discountValue.compareTo(v.getMaxDiscountValue()) > 0) {
-                    discountValue = v.getMaxDiscountValue();
-                }
-            } else {
-                discountValue = v.getDiscountValue();
-            }
-
-            appliedVoucherResponse = validVouchers.stream()
-                    .filter(r -> r.getUserVoucherId().equals(reqId))
+            discountValue = voucherService.applyVoucher(reqId, selectedItems, totalPrice, classification);
+            appliedVoucherResponse = classification.getValidVouchers().stream()
+                    .filter(v -> v.getUserVoucherId().equals(reqId))
                     .findFirst().orElse(null);
         }
 
@@ -426,8 +361,8 @@ public class CartServiceImpl implements CartService {
         return CheckoutResponse.builder()
                 .cartItems(itemResponses)
                 .totalPrice(totalPrice)
-                .validVouchers(validVouchers)
-                .invalidVouchers(invalidVouchers)
+                .validVouchers(classification.getValidVouchers())
+                .invalidVouchers(classification.getInvalidVouchers())
                 .discountValue(discountValue)
                 .finalTotalPrice(finalTotalPrice)
                 .transactionDate(LocalDateTime.now())
@@ -454,14 +389,7 @@ public class CartServiceImpl implements CartService {
                 continue;
             }
 
-            voucherResponses.add(UserVoucherRespone.builder()
-                    .userVoucherId(uv.getId())
-                    .code(v.getCode())
-                    .description(v.getDescription())
-                    .discountValue(v.getDiscountValue())
-                    .discountType(v.getDiscountType())
-                    .minOrderValue(v.getMinOrderValue())
-                    .build());
+            voucherResponses.add(UserVoucherRespone.fromEntity(uv));
         }
         return voucherResponses;
     }
