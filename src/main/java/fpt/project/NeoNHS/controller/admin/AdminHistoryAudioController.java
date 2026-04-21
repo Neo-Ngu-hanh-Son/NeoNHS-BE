@@ -34,13 +34,13 @@ public class AdminHistoryAudioController {
                 .body(ApiResponse.success(HttpStatus.CREATED, "History audio created successfully", response));
     }
 
-    @PostMapping
-    public ResponseEntity<ApiResponse<Void>> createMultipleAudio(
-            @PathVariable UUID pointId,
-            @Valid @RequestBody CreateMultiplePointHistoryAudioRequest request) {
-        pointHistoryAudioService.createMultipleHistoryAudio(request);
-        return ResponseEntity.ok(ApiResponse.success("History audios created", null));
-    }
+//    @PostMapping
+//    public ResponseEntity<ApiResponse<Void>> createMultipleAudio(
+//            @PathVariable UUID pointId,
+//            @Valid @RequestBody CreateMultiplePointHistoryAudioRequest request) {
+//        pointHistoryAudioService.createMultipleHistoryAudio(request);
+//        return ResponseEntity.ok(ApiResponse.success("History audios created", null));
+//    }
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<PointHistoryAudioResponse>> updateHistoryAudio(
