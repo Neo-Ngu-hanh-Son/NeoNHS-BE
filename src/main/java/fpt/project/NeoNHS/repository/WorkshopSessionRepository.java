@@ -72,12 +72,9 @@ public interface WorkshopSessionRepository extends JpaRepository<WorkshopSession
     """)
     long countBookingsByVendorIdSince(@Param("vendorId") UUID vendorId, @Param("since") LocalDateTime since);
 
-    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     List<WorkshopSession> findByStatusAndCurrentEnrolledAndStartTimeBefore(SessionStatus status, Integer currentEnrolled, LocalDateTime startTime);
 
-    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     List<WorkshopSession> findByStatusAndCurrentEnrolledGreaterThanAndStartTimeBefore(SessionStatus status, Integer currentEnrolled, LocalDateTime startTime);
 
-    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     List<WorkshopSession> findByStatusAndEndTimeBefore(SessionStatus status, LocalDateTime endTime);
 }

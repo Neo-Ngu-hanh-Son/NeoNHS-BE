@@ -26,7 +26,8 @@ public class WorkshopSessionScheduler {
      * If you add indexes on `status`, `start_time`, and `end_time`, this query takes less than 1 millisecond.
      * This is much safer than scheduling in-memory tasks (which get lost if the server restarts).
      */
-    @Scheduled(cron = "0 */15 * * * *") // Changed to every 15 minutes to save resources
+    //Change to every 15 minutes to reduce load, since this is not time-sensitive and can run less frequently
+    @Scheduled(cron = "0 */15 * * * *") // Every 15 minutes at 0 seconds
     @Transactional
     public void handleExpiredAndUnattendedSessions() {
         LocalDateTime now = LocalDateTime.now();
