@@ -110,4 +110,16 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, UUID> 
                         "GROUP BY day " +
                         "ORDER BY day", nativeQuery = true)
         List<Object[]> getGlobalDailyRevenue(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+        /**
+         * Lấy tất cả OrderDetail của một WorkshopSession
+         * mà order đó đã có Transaction SUCCESS (tiền đã về Admin).
+         * Dùng cho giai đoạn 3: session COMPLETED → cộng netAmount vào vendor.balance
+         */
+        @Query("SELECT od FROM OrderDetail od " +
+                        "JOIN FETCH od.order o " +
+                        "JOIN o.transactions t " +
+                        "WHERE od.workshopSession.id = :sessionId " +
+                        "AND t.status = fpt.project.NeoNHS.enums.TransactionStatus.SUCCESS")
+        List<OrderDetail> findPaidDetailsByWorkshopSessionId(@Param("sessionId") UUID sessionId);
 }
