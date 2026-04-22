@@ -54,6 +54,8 @@ public class VoucherResponse {
     private LocalDateTime updatedAt;
     private LocalDateTime deletedAt;
 
+    private Boolean isCollected; //Đánh dấu user đã thu thập voucher này chưa
+
     public static VoucherResponse fromEntity(Voucher voucher) {
         VoucherResponseBuilder builder = VoucherResponse.builder()
                 .id(voucher.getId())
