@@ -1,11 +1,13 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.NotificationMessages;
 import fpt.project.NeoNHS.dto.request.workshop.CreateWorkshopSessionRequest;
 import fpt.project.NeoNHS.dto.request.workshop.UpdateWorkshopSessionRequest;
 import fpt.project.NeoNHS.dto.response.workshop.WTagResponse;
 import fpt.project.NeoNHS.dto.response.workshop.WorkshopImageResponse;
 import fpt.project.NeoNHS.dto.response.workshop.WorkshopSessionResponse;
 import fpt.project.NeoNHS.entity.Order;
+import fpt.project.NeoNHS.entity.OrderDetail;
 import fpt.project.NeoNHS.entity.User;
 import fpt.project.NeoNHS.entity.WorkshopSession;
 import fpt.project.NeoNHS.entity.WorkshopTag;
@@ -15,11 +17,13 @@ import fpt.project.NeoNHS.enums.TransactionStatus;
 import fpt.project.NeoNHS.enums.WorkshopStatus;
 import fpt.project.NeoNHS.exception.BadRequestException;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
+import fpt.project.NeoNHS.repository.OrderDetailRepository;
 import fpt.project.NeoNHS.repository.OrderRepository;
 import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.repository.VendorProfileRepository;
 import fpt.project.NeoNHS.repository.WorkshopSessionRepository;
 import fpt.project.NeoNHS.repository.WorkshopTemplateRepository;
+import fpt.project.NeoNHS.service.NotificationService;
 import fpt.project.NeoNHS.service.WorkshopSessionService;
 import fpt.project.NeoNHS.specification.WorkshopSessionSpecification;
 import jakarta.transaction.Transactional;
@@ -46,7 +50,9 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
     private final WorkshopTemplateRepository workshopTemplateRepository;
     private final VendorProfileRepository vendorProfileRepository;
     private final OrderRepository orderRepository;
+    private final OrderDetailRepository orderDetailRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     // ==================== CREATE ====================
 
@@ -388,6 +394,12 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
         // 2. Update status
         session.setStatus(status);
         WorkshopSession updatedSession = workshopSessionRepository.save(session);
+
+        // 3. Nếu status = COMPLETED → cộng netAmount vào wallet của vendor
+        if (status == SessionStatus.COMPLETED) {
+            creditVendorWallet(updatedSession);
+        }
+
         return mapToResponse(updatedSession);
     }
 
@@ -411,7 +423,8 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
         }
 
         if (session.getCurrentEnrolled() > 0) {
-            throw new BadRequestException("Cannot delete a session with enrollments. Please cancel the session instead.");
+            throw new BadRequestException(
+                    "Cannot delete a session with enrollments. Please cancel the session instead.");
         }
 
         // 4. Delete the session
@@ -455,6 +468,58 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
 
         // 6. Return
         return mapToResponse(cancelledSession);
+    }
+
+    // ==================== HELPERS ====================
+
+    /**
+     * Cộng tổng netAmount của tất cả OrderDetail đã thanh toán (Transaction SUCCESS)
+     * vào wallet (balance) của vendor sở hữu session.
+     *
+     * Tái sử dụng được bởi:
+     *   - updateWorkshopSessionStatus() khi vendor/admin bấm COMPLETED thủ công
+     *   - Scheduler auto-complete khi endTime đã qua
+     */
+    public void creditVendorWallet(WorkshopSession session) {
+        List<OrderDetail> paidDetails =
+                orderDetailRepository.findPaidDetailsByWorkshopSessionId(session.getId());
+
+        BigDecimal totalNet = paidDetails.stream()
+                .filter(od -> od.getNetAmount() != null)
+                .map(OrderDetail::getNetAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (totalNet.compareTo(BigDecimal.ZERO) > 0) {
+            // Chain: session → template → VendorProfile → User.balance
+            User vendorUser = session.getWorkshopTemplate().getVendor().getUser();
+            double currentBalance = vendorUser.getBalance() != null ? vendorUser.getBalance() : 0.0;
+            vendorUser.setBalance(currentBalance + totalNet.doubleValue());
+            userRepository.save(vendorUser);
+            log.info("[Session COMPLETED] Credited {} VND to vendor {} (sessionId={})",
+                    totalNet, vendorUser.getEmail(), session.getId());
+
+            // --- NOTIFICATION TRIGGER ---
+            try {
+                notificationService.createAndSendNotification(
+                        vendorUser,
+                        NotificationMessages.walletPayoutTitle(),
+                        NotificationMessages.walletPayoutMessage(totalNet, session.getWorkshopTemplate().getName()),
+                        NotificationMessages.TYPE_WALLET_PAYOUT,
+                        session.getId());
+            } catch (Exception e) {
+                log.error("[Session COMPLETED] Failed to send notification to vendor {}: {}",
+                        vendorUser.getEmail(), e.getMessage());
+            }
+        } else {
+            if (paidDetails.isEmpty()) {
+                log.info("[Session COMPLETED] No paid orders found for session {}, nothing credited.",
+                        session.getId());
+            } else {
+                log.warn(
+                        "[Session COMPLETED] Found {} paid orders for session {}, but total netAmount is zero/null. Check commission settings.",
+                        paidDetails.size(), session.getId());
+            }
+        }
     }
 
     // ==================== MAPPERS ====================
