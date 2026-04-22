@@ -146,7 +146,7 @@ public class ChatServiceImpl implements ChatService {
         ChatRoom room = chatRoomRepository.findById(request.getChatRoomId())
                 .orElseThrow(() -> new RuntimeException("Chat room not found: " + request.getChatRoomId()));
 
-        if (!room.getParticipants().contains(senderId)) {
+        if (!room.getParticipants().contains(senderId) && !"AI_ASSISTANT".equals(senderId)) {
             throw new RuntimeException("User " + senderId + " is not a participant in room " + request.getChatRoomId());
         }
 

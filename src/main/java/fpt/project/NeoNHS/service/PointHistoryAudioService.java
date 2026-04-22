@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service;
 
+import fpt.project.NeoNHS.dto.request.point.CreateMultiplePointHistoryAudioRequest;
 import fpt.project.NeoNHS.dto.request.point.CreatePointHistoryAudio;
 import fpt.project.NeoNHS.dto.response.point.PointHistoryAudioResponse;
 
@@ -9,6 +10,8 @@ import java.util.UUID;
 public interface PointHistoryAudioService {
 
   PointHistoryAudioResponse create(CreatePointHistoryAudio request);
+
+  void createMultipleHistoryAudio(CreateMultiplePointHistoryAudioRequest request);
 
   PointHistoryAudioResponse update(UUID id, CreatePointHistoryAudio request);
 

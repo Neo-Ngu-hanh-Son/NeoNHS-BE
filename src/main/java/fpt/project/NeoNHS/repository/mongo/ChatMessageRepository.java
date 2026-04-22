@@ -14,4 +14,10 @@ public interface ChatMessageRepository extends MongoRepository<ChatMessage, Stri
      * Sorting should be specified in the Pageable (typically timestamp desc).
      */
     Page<ChatMessage> findByChatRoomId(String chatRoomId, Pageable pageable);
+
+    /**
+     * Find messages in a chat room ordered by timestamp descending (for AI
+     * conversation history).
+     */
+    Page<ChatMessage> findByChatRoomIdOrderByTimestampDesc(String chatRoomId, Pageable pageable);
 }
