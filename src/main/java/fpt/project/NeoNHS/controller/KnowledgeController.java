@@ -36,9 +36,8 @@ public class KnowledgeController {
     }
 
     public record VisibilityRequest(
-            @com.fasterxml.jackson.annotation.JsonProperty("isActive")
-            Boolean isActive
-    ) {}
+            @com.fasterxml.jackson.annotation.JsonProperty("isActive") Boolean isActive) {
+    }
 
     @PatchMapping("/{id}/visibility")
     public ResponseEntity<Void> toggleVisibility(@PathVariable String id, @RequestBody VisibilityRequest request) {
@@ -48,10 +47,12 @@ public class KnowledgeController {
 
     @GetMapping
     public ResponseEntity<Page<KnowledgeDocument>> getDocuments(
+            @RequestParam(required = false) String knowledgeType,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(
-                knowledgeService.getDocuments(PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))));
+                knowledgeService.getDocuments(knowledgeType,
+                        PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))));
     }
 
     @GetMapping("/{id}")

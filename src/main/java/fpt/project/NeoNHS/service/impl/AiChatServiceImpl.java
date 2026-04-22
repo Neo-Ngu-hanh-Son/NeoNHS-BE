@@ -21,6 +21,7 @@ import fpt.project.NeoNHS.repository.BlogRepository;
 import fpt.project.NeoNHS.repository.mongo.KnowledgeRepository;
 import fpt.project.NeoNHS.enums.BlogStatus;
 import fpt.project.NeoNHS.repository.UserRepository;
+import fpt.project.NeoNHS.repository.PointRepository;
 import fpt.project.NeoNHS.service.AiChatService;
 import fpt.project.NeoNHS.service.CartService;
 import fpt.project.NeoNHS.service.ChatService;
@@ -68,6 +69,7 @@ public class AiChatServiceImpl implements AiChatService {
     private final TicketCatalogRepository ticketCatalogRepository;
     private final KnowledgeRepository knowledgeRepository;
     private final BlogRepository blogRepository;
+    private final PointRepository pointRepository;
     private final TransactionTemplate transactionTemplate;
 
     private final ExecutorService executor = Executors.newCachedThreadPool();
@@ -153,16 +155,16 @@ public class AiChatServiceImpl implements AiChatService {
                         "type": "function",
                         "function": {
                           "name": "getWorkshopSessions",
-                          "description": "Lấy danh sách các buổi (session) sắp diễn ra của một workshop cụ thể, bao gồm thời gian, giá và số chỗ còn trống.",
+                          "description": "Lấy danh sách các buổi (session) sắp diễn ra của một workshop cụ thể. Hãy dùng workshopTemplateId có được từ searchWorkshops.",
                           "parameters": {
                             "type": "object",
                             "properties": {
-                              "workshopName": {
+                              "workshopId": {
                                 "type": "string",
-                                "description": "Tên của workshop cần tra cứu"
+                                "description": "ID của workshop (workshopTemplateId - chuỗi UUID) lấy từ searchWorkshops."
                               }
                             },
-                            "required": ["workshopName"]
+                            "required": ["workshopId"]
                           }
                         }
                       },
@@ -222,9 +224,9 @@ public class AiChatServiceImpl implements AiChatService {
                           "parameters": {
                             "type": "object",
                             "properties": {
-                              "workshopSessionId": {
+                              "sessionId": {
                                 "type": "string",
-                                "description": "ID của buổi workshop (Session ID - chuỗi UUID) được lấy từ getWorkshopSessions. TUYỆT ĐỐI KHÔNG dùng ID của workshop lấy từ searchWorkshops."
+                                "description": "ID của buổi workshop (Session ID - chuỗi UUID) được lấy từ getWorkshopSessions. KHÔNG dùng workshopTemplateId từ searchWorkshops."
                               },
                               "ticketCatalogId": {
                                 "type": "string",
@@ -236,6 +238,43 @@ public class AiChatServiceImpl implements AiChatService {
                                 "default": 1
                               }
                             }
+                          }
+                        }
+                      },
+                      {
+                        "type": "function",
+                        "function": {
+                          "name": "searchMapPoints",
+                          "description": "Tìm kiếm các địa điểm tham quan, danh lam thắng cảnh (Point of Interest) trên bản đồ Ngũ Hành Sơn.",
+                          "parameters": {
+                            "type": "object",
+                            "properties": {
+                              "keyword": {
+                                "type": "string",
+                                "description": "Tên địa điểm cần tìm (ví dụ: Động Huyền Không, Vọng Giang Đài)."
+                              }
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "type": "function",
+                        "function": {
+                          "name": "navigateToLocation",
+                          "description": "Kích hoạt chức năng chỉ đường tới một địa điểm cụ thể trên ứng dụng di động.",
+                          "parameters": {
+                            "type": "object",
+                            "properties": {
+                              "pointId": {
+                                "type": "string",
+                                "description": "ID của địa điểm (chuỗi UUID) lấy từ searchMapPoints."
+                              },
+                              "pointName": {
+                                "type": "string",
+                                "description": "Tên thân thiện của địa điểm để hiển thị trên nút bấm."
+                              }
+                            },
+                            "required": ["pointId", "pointName"]
                           }
                         }
                       }
@@ -261,6 +300,8 @@ public class AiChatServiceImpl implements AiChatService {
                 case "getTicketPrices" -> executeGetTicketPrices(args);
                 case "searchBlogs" -> executeSearchBlogs(args);
                 case "addToCart" -> executeAddToCart(args, senderId);
+                case "searchMapPoints" -> executeSearchMapPoints(args);
+                case "navigateToLocation" -> executeNavigateToLocation(args);
                 default -> "Không tìm thấy công cụ: " + functionName;
             };
         } catch (Exception e) {
@@ -276,7 +317,7 @@ public class AiChatServiceImpl implements AiChatService {
                         (keyword.isEmpty() || w.getName().toLowerCase().contains(keyword.toLowerCase())))
                 .limit(3)
                 .map(w -> Map.of(
-                        "id", w.getId().toString(),
+                        "workshopTemplateId", w.getId().toString(),
                         "name", w.getName(),
                         "description", w.getShortDescription() != null ? w.getShortDescription() : "",
                         "price", w.getDefaultPrice() != null ? w.getDefaultPrice().toString() + " VND" : "Liên hệ",
@@ -300,22 +341,28 @@ public class AiChatServiceImpl implements AiChatService {
     }
 
     private String executeGetWorkshopSessions(JsonNode args) {
-        String workshopName = args.get("workshopName").asText();
-        var templates = workshopTemplateRepository.findAll().stream()
-                .filter(w -> w.getName().toLowerCase().contains(workshopName.toLowerCase()))
-                .toList();
-        if (templates.isEmpty())
-            return "Không tìm thấy workshop có tên '" + workshopName + "'.";
+        String workshopIdStr = args.get("workshopId").asText();
+        UUID workshopId;
+        try {
+            workshopId = UUID.fromString(workshopIdStr);
+        } catch (IllegalArgumentException e) {
+            return "ERROR: Định dạng workshopId không hợp lệ.";
+        }
 
-        var template = templates.getFirst();
+        var templateOpt = workshopTemplateRepository.findById(workshopId);
+        if (templateOpt.isEmpty())
+            return "Không tìm thấy workshop có ID '" + workshopIdStr + "'.";
+
+        var template = templateOpt.get();
         var sessions = workshopSessionRepository.findAll().stream()
                 .filter(s -> s.getWorkshopTemplate().getId().equals(template.getId())
                         && s.getStartTime().isAfter(LocalDateTime.now())
-                        && s.getStatus() == SessionStatus.SCHEDULED)
+                        && s.getStatus() == SessionStatus.SCHEDULED
+                        && s.getDeletedAt() == null)
                 .limit(5)
                 .map(s -> {
                     Map<String, Object> sessionMap = new java.util.HashMap<>();
-                    sessionMap.put("workshopSessionId", s.getId().toString());
+                    sessionMap.put("sessionId", s.getId().toString()); // Use simple 'sessionId' name
                     sessionMap.put("startTime", s.getStartTime().toString());
                     sessionMap.put("endTime", s.getEndTime().toString());
                     sessionMap.put("price", s.getPrice() != null ? s.getPrice().toString() + " VND"
@@ -325,11 +372,13 @@ public class AiChatServiceImpl implements AiChatService {
                     return sessionMap;
                 })
                 .toList();
+
         if (sessions.isEmpty())
             return "Workshop '" + template.getName() + "' hiện không có buổi nào sắp diễn ra.";
+
         try {
-            return objectMapper
-                    .writeValueAsString(Map.of("workshopName", template.getName(), "upcomingSessions", sessions));
+            // Return only the list of sessions for easier AI parsing
+            return objectMapper.writeValueAsString(sessions);
         } catch (JsonProcessingException e) {
             return sessions.toString();
         }
@@ -437,9 +486,27 @@ public class AiChatServiceImpl implements AiChatService {
             }
 
             // Xử lý Workshop
-            if (args.has("workshopSessionId") && !args.get("workshopSessionId").asText().isEmpty()) {
-                String wsId = args.get("workshopSessionId").asText();
-                request.setWorkshopSessionId(UUID.fromString(wsId));
+            if (args.has("sessionId") && !args.get("sessionId").asText().isEmpty()) {
+                String wsIdStr = args.get("sessionId").asText();
+                UUID wsId = UUID.fromString(wsIdStr);
+
+                // KIỂM TRA: Nếu ID này là WorkshopTemplateId thay vì SessionId
+                if (workshopTemplateRepository.existsById(wsId)) {
+                    return "ERROR: '" + wsIdStr
+                            + "' là ID của Workshop (TemplateId). Bạn PHẢI gọi 'getWorkshopSessions' với ID này để lấy danh sách các buổi học cụ thể (sessionId) trước khi đặt chỗ.";
+                }
+
+                request.setWorkshopSessionId(wsId);
+            } else if (args.has("workshopSessionId") && !args.get("workshopSessionId").asText().isEmpty()) {
+                String wsIdStr = args.get("workshopSessionId").asText();
+                UUID wsId = UUID.fromString(wsIdStr);
+
+                // Fallback check
+                if (workshopTemplateRepository.existsById(wsId)) {
+                    return "ERROR: '" + wsIdStr
+                            + "' là ID của Workshop (TemplateId). Bạn PHẢI gọi 'getWorkshopSessions' với ID này để lấy danh sách các buổi học cụ thể (sessionId) trước khi đặt chỗ.";
+                }
+                request.setWorkshopSessionId(wsId);
             }
 
             request.setQuantity(args.has("quantity") ? args.get("quantity").asInt() : 1);
@@ -479,6 +546,35 @@ public class AiChatServiceImpl implements AiChatService {
         }
     }
 
+    private String executeSearchMapPoints(JsonNode args) {
+        String keyword = args.has("keyword") ? args.get("keyword").asText("") : "";
+        var points = pointRepository.findAll().stream()
+                .filter(p -> p.getDeletedAt() == null &&
+                        (keyword.isEmpty() || p.getName().toLowerCase().contains(keyword.toLowerCase())))
+                .limit(5)
+                .map(p -> Map.of(
+                        "pointId", p.getId().toString(),
+                        "name", p.getName(),
+                        "description", p.getDescription() != null ? p.getDescription() : "",
+                        "latitude", p.getLatitude().toString(),
+                        "longitude", p.getLongitude().toString(),
+                        "imageUrl", p.getThumbnailUrl() != null ? p.getThumbnailUrl() : ""))
+                .toList();
+        if (points.isEmpty())
+            return "Không tìm thấy địa điểm nào" + (keyword.isEmpty() ? "." : " với từ khóa '" + keyword + "'.");
+        try {
+            return objectMapper.writeValueAsString(points);
+        } catch (JsonProcessingException e) {
+            return points.toString();
+        }
+    }
+
+    private String executeNavigateToLocation(JsonNode args) {
+        String pointName = args.get("pointName").asText();
+        return "SUCCESS: Đã kích hoạt chỉ đường tới " + pointName
+                + ". Hệ thống sẽ hiển thị nút chỉ đường ngay bây giờ.";
+    }
+
     // ═══════════════════════════════════════════════════════════════════
     // Conversation History Builder
     // ═══════════════════════════════════════════════════════════════════
@@ -491,9 +587,9 @@ public class AiChatServiceImpl implements AiChatService {
         systemMsg.put("content", getSystemPrompt(userMessage));
         messages.add(systemMsg);
 
-        // Fetch last 5 messages from MongoDB
+        // Fetch last 10 messages from MongoDB for deeper context
         var recentMessages = chatMessageRepository.findByChatRoomIdOrderByTimestampDesc(
-                roomId, PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "timestamp"))).getContent();
+                roomId, PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "timestamp"))).getContent();
 
         // Reverse to chronological order
         List<ChatMessage> chronological = new ArrayList<>(recentMessages);
@@ -628,7 +724,8 @@ public class AiChatServiceImpl implements AiChatService {
         Map<String, Object> metadata = new java.util.HashMap<>();
         JsonNode currentResponse = response;
 
-        // Tăng lên 5 lần để thoải mái cho các bước: Search -> GetDetail -> AddToCart -> Confirm
+        // Tăng lên 5 lần để thoải mái cho các bước: Search -> GetDetail -> AddToCart ->
+        // Confirm
         int maxIterations = 5;
 
         for (int i = 0; i < maxIterations; i++) {
@@ -642,7 +739,8 @@ public class AiChatServiceImpl implements AiChatService {
                 for (JsonNode toolCall : toolCalls) {
                     String functionName = toolCall.path("function").path("name").asText();
                     String toolCallId = toolCall.path("id").asText();
-                    JsonNode functionArgs = objectMapper.readTree(toolCall.path("function").path("arguments").asText("{}"));
+                    JsonNode functionArgs = objectMapper
+                            .readTree(toolCall.path("function").path("arguments").asText("{}"));
 
                     String functionResult = "";
                     try {
@@ -669,6 +767,12 @@ public class AiChatServiceImpl implements AiChatService {
                     if ("addToCart".equals(functionName) && functionResult.contains("SUCCESS")) {
                         metadata.put("redirectToCart", true);
                     }
+
+                    if ("navigateToLocation".equals(functionName) && functionResult.contains("SUCCESS")) {
+                        metadata.put("redirectToMap", true);
+                        metadata.put("targetPointId", functionArgs.get("pointId").asText());
+                        metadata.put("targetPointName", functionArgs.get("pointName").asText());
+                    }
                 }
 
                 // Gọi lại OpenAI
@@ -682,7 +786,8 @@ public class AiChatServiceImpl implements AiChatService {
                 currentResponse = objectMapper.readTree(followUpJson);
 
                 // Nếu đây là vòng lặp cuối cùng mà vẫn còn tool_calls, thì mới báo lỗi quá tải
-                if (i == maxIterations - 1 && currentResponse.path("choices").path(0).path("message").has("tool_calls")) {
+                if (i == maxIterations - 1
+                        && currentResponse.path("choices").path(0).path("message").has("tool_calls")) {
                     return createErrorResponse("Hệ thống đang bận xử lý quá nhiều tác vụ, vui lòng thử lại.");
                 }
 
