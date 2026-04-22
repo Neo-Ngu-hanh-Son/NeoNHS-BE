@@ -41,6 +41,7 @@ public class VoucherResponse {
     private LocalDateTime endDate;
     private Integer usageLimit;
     private Integer usageCount;
+    private Integer pointCost;
     private VoucherStatus status;
 
     // Creator info
@@ -71,6 +72,7 @@ public class VoucherResponse {
                 .endDate(voucher.getEndDate())
                 .usageLimit(voucher.getUsageLimit())
                 .usageCount(voucher.getUsageCount())
+                .pointCost(voucher.getPointCost())
                 .status(voucher.getStatus())
                 .createdAt(voucher.getCreatedAt())
                 .updatedAt(voucher.getUpdatedAt())

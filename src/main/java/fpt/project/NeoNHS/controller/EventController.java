@@ -19,7 +19,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -51,8 +50,7 @@ public class EventController {
             @RequestParam(required = false) String location,
             @RequestParam(required = false) LocalDate startDate,
             @RequestParam(required = false) LocalDate endDate,
-            @RequestParam(required = false) BigDecimal minPrice,
-            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) Boolean isTicketRequired,
             @RequestParam(required = false) List<UUID> tagIds,
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_BY) String sortBy,
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_DIR) String sortDir) {
@@ -63,8 +61,7 @@ public class EventController {
                 .location(location)
                 .startDate(startDate)
                 .endDate(endDate)
-                .minPrice(minPrice)
-                .maxPrice(maxPrice)
+                .isTicketRequired(isTicketRequired)
                 .tagIds(tagIds)
                 .deleted(false)
                 .includeDeleted(false)
@@ -91,8 +88,7 @@ public class EventController {
             @RequestParam(required = false) String location,
             @RequestParam(required = false) LocalDate startDate,
             @RequestParam(required = false) LocalDate endDate,
-            @RequestParam(required = false) BigDecimal minPrice,
-            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) Boolean isTicketRequired,
             @RequestParam(required = false) List<UUID> tagIds) {
 
         EventFilterRequest filter = EventFilterRequest.builder()
@@ -101,8 +97,7 @@ public class EventController {
                 .location(location)
                 .startDate(startDate)
                 .endDate(endDate)
-                .minPrice(minPrice)
-                .maxPrice(maxPrice)
+                .isTicketRequired(isTicketRequired)
                 .tagIds(tagIds)
                 .deleted(false)
                 .includeDeleted(false)

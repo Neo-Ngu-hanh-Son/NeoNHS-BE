@@ -27,7 +27,6 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -91,8 +90,7 @@ public class AdminEventController {
             @RequestParam(required = false) String location,
             @RequestParam(required = false) LocalDate startDate,
             @RequestParam(required = false) LocalDate endDate,
-            @RequestParam(required = false) BigDecimal minPrice,
-            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) Boolean isTicketRequired,
             @RequestParam(required = false) List<UUID> tagIds,
             @RequestParam(required = false) Boolean deleted,
             @RequestParam(defaultValue = "false") Boolean includeDeleted,
@@ -105,8 +103,7 @@ public class AdminEventController {
                 .location(location)
                 .startDate(startDate)
                 .endDate(endDate)
-                .minPrice(minPrice)
-                .maxPrice(maxPrice)
+                .isTicketRequired(isTicketRequired)
                 .tagIds(tagIds)
                 .deleted(deleted)
                 .includeDeleted(includeDeleted)
