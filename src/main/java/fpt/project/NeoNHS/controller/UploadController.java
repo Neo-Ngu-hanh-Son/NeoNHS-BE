@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.controller;
 
+import fpt.project.NeoNHS.dto.request.upload.ShortenImageRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.upload.ImageUploadResponse;
 import fpt.project.NeoNHS.service.ImageUploadService;
@@ -11,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.UnsupportedEncodingException;
 import java.util.List;
 
 @RestController
@@ -33,8 +35,8 @@ public class UploadController {
     }
 
     @PostMapping(value = "/image-url")
-    public ResponseEntity<ApiResponse<ImageUploadResponse>> uploadImage(@RequestBody String url) {
-        var res = uploadService.uploadImageFromUrl(url);
+    public ResponseEntity<ApiResponse<ImageUploadResponse>> uploadImageFromURL(@RequestBody ShortenImageRequest req){
+        var res = uploadService.uploadImageFromUrl(req);
         return new ResponseEntity<>(
                 ApiResponse.<ImageUploadResponse>builder()
                         .data(res)
