@@ -1,11 +1,13 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.NotificationMessages;
 import fpt.project.NeoNHS.dto.request.workshop.CreateWorkshopSessionRequest;
 import fpt.project.NeoNHS.dto.request.workshop.UpdateWorkshopSessionRequest;
 import fpt.project.NeoNHS.dto.response.workshop.WTagResponse;
 import fpt.project.NeoNHS.dto.response.workshop.WorkshopImageResponse;
 import fpt.project.NeoNHS.dto.response.workshop.WorkshopSessionResponse;
 import fpt.project.NeoNHS.entity.Order;
+import fpt.project.NeoNHS.entity.OrderDetail;
 import fpt.project.NeoNHS.entity.User;
 import fpt.project.NeoNHS.entity.WorkshopSession;
 import fpt.project.NeoNHS.entity.WorkshopTag;
@@ -15,11 +17,13 @@ import fpt.project.NeoNHS.enums.TransactionStatus;
 import fpt.project.NeoNHS.enums.WorkshopStatus;
 import fpt.project.NeoNHS.exception.BadRequestException;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
+import fpt.project.NeoNHS.repository.OrderDetailRepository;
 import fpt.project.NeoNHS.repository.OrderRepository;
 import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.repository.VendorProfileRepository;
 import fpt.project.NeoNHS.repository.WorkshopSessionRepository;
 import fpt.project.NeoNHS.repository.WorkshopTemplateRepository;
+import fpt.project.NeoNHS.service.NotificationService;
 import fpt.project.NeoNHS.service.WorkshopSessionService;
 import fpt.project.NeoNHS.specification.WorkshopSessionSpecification;
 import jakarta.transaction.Transactional;
@@ -46,7 +50,9 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
     private final WorkshopTemplateRepository workshopTemplateRepository;
     private final VendorProfileRepository vendorProfileRepository;
     private final OrderRepository orderRepository;
+    private final OrderDetailRepository orderDetailRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     // ==================== CREATE ====================
 
@@ -296,7 +302,12 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
             throw new BadRequestException("Can only update SCHEDULED sessions. Current status: " + session.getStatus());
         }
 
-        // 4. Update fields if provided
+        // 4. KIỂM TRA ĐĂNG KÝ: Chặn mọi update nếu đã có người đăng ký
+        if (session.getCurrentEnrolled() > 0) {
+            throw new BadRequestException("Cannot update this session because tourists have already registered");
+        }
+
+        // 5. Update fields if provided
         if (request.getStartTime() != null) {
             if (request.getStartTime().isBefore(LocalDateTime.now())) {
                 throw new BadRequestException("Start time must be in the future");
@@ -308,26 +319,21 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
             session.setEndTime(request.getEndTime());
         }
 
-        // 5. Validate time constraints
-        if (session.getEndTime().isBefore(session.getStartTime())
-                || session.getEndTime().equals(session.getStartTime())) {
-            throw new BadRequestException("End time must be after start time");
+        // 6. Validate time constraints
+        if (session.getEndTime() != null && session.getStartTime() != null) {
+            if (session.getEndTime().isBefore(session.getStartTime())
+                    || session.getEndTime().equals(session.getStartTime())) {
+                throw new BadRequestException("End time must be after start time");
+            }
         }
 
-        // 6. Update price if provided
+        // 7. Update price if provided (Đã xóa logic check enrolled)
         if (request.getPrice() != null) {
-            if (session.getCurrentEnrolled() > 0 && session.getPrice().compareTo(request.getPrice()) != 0) {
-                throw new BadRequestException("Cannot update price because tourists have already registered for this session");
-            }
             session.setPrice(request.getPrice());
         }
 
-        // 7. Update maxParticipants with validation
+        // 8. Update maxParticipants with validation (Đã xóa logic check enrolled)
         if (request.getMaxParticipants() != null) {
-            if (request.getMaxParticipants() < session.getCurrentEnrolled()) {
-                throw new BadRequestException("Cannot reduce max participants (" + request.getMaxParticipants() +
-                        ") below current enrollments (" + session.getCurrentEnrolled() + ")");
-            }
             if (request.getMaxParticipants() < session.getWorkshopTemplate().getMinParticipants()) {
                 throw new BadRequestException("Max participants (" + request.getMaxParticipants() +
                         ") cannot be less than template's minimum participants (" +
@@ -336,7 +342,7 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
             session.setMaxParticipants(request.getMaxParticipants());
         }
 
-        // 8. Save and return
+        // 9. Save and return
         WorkshopSession updatedSession = workshopSessionRepository.save(session);
         return mapToResponse(updatedSession);
     }
@@ -350,38 +356,36 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
         if (!session.getWorkshopTemplate().getVendor().getUser().getEmail().equals(email)) {
             throw new BadRequestException("You do not have permission to update this workshop session");
         }
-        // Check if the workshop has enrolled
-        if(session.getCurrentEnrolled() > 0) {
-            throw new BadRequestException("Cannot Change the date of the session because there are already tourists registered for this session.");
-        }
-
-        //Check if no tourists are registered in the session.
-        if (session.getCurrentEnrolled() == 0) {
-            throw new BadRequestException("Cannot start the session because no tourists are registered.");
-        }
-
-        //Check if the update status doesn't match the start date.
-        if (status == SessionStatus.ONGOING && session.getStartTime().isAfter(LocalDateTime.now())) {
-            throw new BadRequestException("Cannot update status to ONGOING or COMPLETED because the session has not started yet.");
-        }
-
-        //Check if the update status doesn't match the end date.
-        if (status == SessionStatus.COMPLETED && session.getEndTime().isAfter(LocalDateTime.now())) {
-            throw new BadRequestException("Cannot update status to COMPLETED because the session has not ended yet.");
-        }
-
         // 1. Validate status update
-        // 1.1. Update status to ONGOING
         if (status == SessionStatus.ONGOING) {
             if (session.getStatus() != SessionStatus.SCHEDULED) {
                 throw new BadRequestException("Can only update status to ONGOING if current status is SCHEDULED. Current status: " + session.getStatus());
             }
-        // 1.2. Update status to COMPLETED
+            if (session.getCurrentEnrolled() == 0) {
+                throw new BadRequestException("Cannot start the session because no tourists are registered.");
+            }
+
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime minAllowableStart = session.getStartTime().minusMinutes(30);
+            LocalDateTime maxAllowableStart = session.getStartTime().plusMinutes(30);
+
+            if (now.isBefore(minAllowableStart) || now.isAfter(maxAllowableStart)) {
+                throw new BadRequestException("You can only change status to ONGOING within 30 minutes of the start time.");
+            }
+
         } else if (status == SessionStatus.COMPLETED) {
             if (session.getStatus() != SessionStatus.ONGOING) {
                 throw new BadRequestException("Can only update status to COMPLETED if current status is ONGOING. Current status: " + session.getStatus());
             }
-        // 1.3. Invalid status update
+
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime minAllowableEnd = session.getEndTime().minusMinutes(30);
+            LocalDateTime maxAllowableEnd = session.getEndTime().plusMinutes(30);
+
+            if (now.isBefore(minAllowableEnd) || now.isAfter(maxAllowableEnd)) {
+                throw new BadRequestException("You can only change status to COMPLETED within 30 minutes of the end time.");
+            }
+
         } else {
             throw new BadRequestException("Invalid status update. Allowed updates are ONGOING or COMPLETED.");
         }
@@ -390,6 +394,12 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
         // 2. Update status
         session.setStatus(status);
         WorkshopSession updatedSession = workshopSessionRepository.save(session);
+
+        // 3. Nếu status = COMPLETED → cộng netAmount vào wallet của vendor
+        if (status == SessionStatus.COMPLETED) {
+            creditVendorWallet(updatedSession);
+        }
+
         return mapToResponse(updatedSession);
     }
 
@@ -413,7 +423,8 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
         }
 
         if (session.getCurrentEnrolled() > 0) {
-            throw new BadRequestException("Cannot delete a session with enrollments. Please cancel the session instead.");
+            throw new BadRequestException(
+                    "Cannot delete a session with enrollments. Please cancel the session instead.");
         }
 
         // 4. Delete the session
@@ -457,6 +468,58 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
 
         // 6. Return
         return mapToResponse(cancelledSession);
+    }
+
+    // ==================== HELPERS ====================
+
+    /**
+     * Cộng tổng netAmount của tất cả OrderDetail đã thanh toán (Transaction SUCCESS)
+     * vào wallet (balance) của vendor sở hữu session.
+     *
+     * Tái sử dụng được bởi:
+     *   - updateWorkshopSessionStatus() khi vendor/admin bấm COMPLETED thủ công
+     *   - Scheduler auto-complete khi endTime đã qua
+     */
+    public void creditVendorWallet(WorkshopSession session) {
+        List<OrderDetail> paidDetails =
+                orderDetailRepository.findPaidDetailsByWorkshopSessionId(session.getId());
+
+        BigDecimal totalNet = paidDetails.stream()
+                .filter(od -> od.getNetAmount() != null)
+                .map(OrderDetail::getNetAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (totalNet.compareTo(BigDecimal.ZERO) > 0) {
+            // Chain: session → template → VendorProfile → User.balance
+            User vendorUser = session.getWorkshopTemplate().getVendor().getUser();
+            double currentBalance = vendorUser.getBalance() != null ? vendorUser.getBalance() : 0.0;
+            vendorUser.setBalance(currentBalance + totalNet.doubleValue());
+            userRepository.save(vendorUser);
+            log.info("[Session COMPLETED] Credited {} VND to vendor {} (sessionId={})",
+                    totalNet, vendorUser.getEmail(), session.getId());
+
+            // --- NOTIFICATION TRIGGER ---
+            try {
+                notificationService.createAndSendNotification(
+                        vendorUser,
+                        NotificationMessages.walletPayoutTitle(),
+                        NotificationMessages.walletPayoutMessage(totalNet, session.getWorkshopTemplate().getName()),
+                        NotificationMessages.TYPE_WALLET_PAYOUT,
+                        session.getId());
+            } catch (Exception e) {
+                log.error("[Session COMPLETED] Failed to send notification to vendor {}: {}",
+                        vendorUser.getEmail(), e.getMessage());
+            }
+        } else {
+            if (paidDetails.isEmpty()) {
+                log.info("[Session COMPLETED] No paid orders found for session {}, nothing credited.",
+                        session.getId());
+            } else {
+                log.warn(
+                        "[Session COMPLETED] Found {} paid orders for session {}, but total netAmount is zero/null. Check commission settings.",
+                        paidDetails.size(), session.getId());
+            }
+        }
     }
 
     // ==================== MAPPERS ====================

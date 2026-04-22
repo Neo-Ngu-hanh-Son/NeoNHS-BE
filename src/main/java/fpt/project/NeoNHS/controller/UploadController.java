@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.controller;
 
+import fpt.project.NeoNHS.dto.request.upload.ShortenImageRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.upload.ImageUploadResponse;
 import fpt.project.NeoNHS.service.ImageUploadService;
@@ -11,10 +12,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.UnsupportedEncodingException;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/upload")
+@RequestMapping("/api/public/upload")
 @RequiredArgsConstructor
 @Tag(name = "Upload resource", description = "Upload images and videos to a service (Cloudinary)")
 public class UploadController {
@@ -23,6 +25,18 @@ public class UploadController {
     @PostMapping(value = "/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ImageUploadResponse>> uploadImage(@RequestParam MultipartFile imageFile) {
         var res = uploadService.uploadImage(imageFile);
+        return new ResponseEntity<>(
+                ApiResponse.<ImageUploadResponse>builder()
+                        .data(res)
+                        .message("Upload successful")
+                        .success(true)
+                        .build(),
+                HttpStatus.CREATED);
+    }
+
+    @PostMapping(value = "/image-url")
+    public ResponseEntity<ApiResponse<ImageUploadResponse>> uploadImageFromURL(@RequestBody ShortenImageRequest req){
+        var res = uploadService.uploadImageFromUrl(req);
         return new ResponseEntity<>(
                 ApiResponse.<ImageUploadResponse>builder()
                         .data(res)
@@ -57,7 +71,7 @@ public class UploadController {
     }
 
     @DeleteMapping(value = "/image/{publicId}")
-    public ResponseEntity<ApiResponse<String>> deleteResource( @PathVariable String publicId) {
+    public ResponseEntity<ApiResponse<String>> deleteResource(@PathVariable String publicId) {
         var res = uploadService.deleteResource(publicId);
         return new ResponseEntity<>(
                 ApiResponse.<String>builder()

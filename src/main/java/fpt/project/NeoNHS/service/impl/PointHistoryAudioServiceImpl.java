@@ -2,23 +2,44 @@ package fpt.project.NeoNHS.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import fpt.project.NeoNHS.config.OpenAiConfig;
 import fpt.project.NeoNHS.constants.PointHistoryAudioConstants;
-import fpt.project.NeoNHS.dto.request.point.AudioMetadataRequest;
+import fpt.project.NeoNHS.dto.request.point.historyAudio.AudioMetadataRequest;
+import fpt.project.NeoNHS.dto.request.point.CreateMultiplePointHistoryAudioRequest;
 import fpt.project.NeoNHS.dto.request.point.CreatePointHistoryAudio;
-import fpt.project.NeoNHS.dto.request.point.WordTimingRequest;
-import fpt.project.NeoNHS.dto.response.point.PointHistoryAudioResponse;
+import fpt.project.NeoNHS.dto.request.point.historyAudio.CreateSpeechFromTextRequest;
+import fpt.project.NeoNHS.dto.request.point.historyAudio.HistoryAudioTranslateRequest;
+import fpt.project.NeoNHS.dto.request.point.historyAudio.WordTimingRequest;
+import fpt.project.NeoNHS.dto.response.point.historyAudio.ForcedAlignmentResponse;
+import fpt.project.NeoNHS.dto.response.point.historyAudio.HistoryAudioTranslationObject;
+import fpt.project.NeoNHS.dto.response.point.historyAudio.PointHistoryAudioResponse;
 import fpt.project.NeoNHS.entity.Point;
 import fpt.project.NeoNHS.entity.PointHistoryAudio;
+import fpt.project.NeoNHS.exception.AiResponseParseException;
+import fpt.project.NeoNHS.exception.AiServiceUnavailableException;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.repository.PointHistoryAudioRepository;
 import fpt.project.NeoNHS.repository.PointRepository;
 import fpt.project.NeoNHS.service.PointHistoryAudioService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.coyote.BadRequestException;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -32,6 +53,9 @@ public class PointHistoryAudioServiceImpl implements PointHistoryAudioService {
     private final PointHistoryAudioRepository pointHistoryAudioRepository;
     private final PointRepository pointRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final OpenAiConfig openAiConfig;
+    private final RestClient openAiRestClient;
+    private final RestClient elevenLabsRestClient;
 
     @Override
     @Transactional
@@ -64,6 +88,14 @@ public class PointHistoryAudioServiceImpl implements PointHistoryAudioService {
 
         PointHistoryAudio saved = pointHistoryAudioRepository.save(entity);
         return toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public void createMultipleHistoryAudio(CreateMultiplePointHistoryAudioRequest request) {
+        for (CreatePointHistoryAudio req : request.getPointHistoryAudios()) {
+            create(req);
+        }
     }
 
     @Override
@@ -128,11 +160,108 @@ public class PointHistoryAudioServiceImpl implements PointHistoryAudioService {
         pointHistoryAudioRepository.save(entity);
     }
 
-    // ─── PRIVATE HELPERS ──────────────────────────────────────────────────
+    @Override
+    public List<HistoryAudioTranslationObject> getTranslationFromAI(HistoryAudioTranslateRequest request) {
+        try {
+            ObjectNode gptRequest = objectMapper.createObjectNode();
+            StringBuilder message = new StringBuilder(PointHistoryAudioConstants.DEFAULT_TRANSLATION_PROMPT);
+
+            String requestJson = objectMapper.writeValueAsString(request);
+            message.append(" User prompt: ").append(requestJson);
+
+            ArrayNode messagesArray = objectMapper.createArrayNode();
+            ObjectNode userMessage = objectMapper.createObjectNode();
+
+            gptRequest.put("model", openAiConfig.getModel());
+            userMessage.put("role", "user");
+            userMessage.put("content", message.toString());
+
+            messagesArray.add(userMessage);
+            gptRequest.set("messages", messagesArray);
+
+            gptRequest.put("temperature", 0.3);
+            gptRequest.put("max_tokens", 4096);
+
+            String response = openAiRestClient.post()
+                    .uri(openAiConfig.getChatCompletionUrl())
+                    .body(gptRequest.toString())
+                    .retrieve()
+                    .body(String.class);
+
+            JsonNode rootNode = objectMapper.readTree(response);
+            String aiResultText = rootNode.path("choices")
+                    .get(0)
+                    .path("message")
+                    .path("content")
+                    .asText();
+
+            return objectMapper.readValue(
+                    aiResultText,
+                    new TypeReference<>() {
+                    }
+            );
+
+        } catch (JsonProcessingException e) {
+            log.error("Failed to parse AI response JSON", e);
+            throw new AiResponseParseException("Failed to parse AI response, please try again", e);
+        } catch (AiServiceUnavailableException e) {
+            log.error("Connect to AI Service failed", e);
+            throw new AiServiceUnavailableException("Connect to AI Service failed");
+        } catch (Exception e) {
+            throw new RuntimeException("An unexpected error occurred while processing AI translation", e);
+        }
+    }
+
+    @Override
+    public Resource createSpeechFromText(CreateSpeechFromTextRequest request) {
+        Resource audioData = elevenLabsRestClient.post()
+                .uri("/text-to-speech/" + request.getVoiceId() + "?output_format=" + request.getOutputFormat())
+                .body(request)
+                .retrieve()
+                .onStatus(status -> status.value() == 422, (req, res) -> {
+                    String errorBody = new String(res.getBody().readAllBytes());
+                    log.error("ElevenLabs Validation Error: {}", errorBody);
+                    throw new BadRequestException("Bad request: " + errorBody, null);
+                })
+                .onStatus(HttpStatusCode::isError, (req, res) -> {
+                    throw new AiServiceUnavailableException("AI voice generation service is not available");
+                })
+                .body(Resource.class);
+        return audioData;
+    }
+
+    @Override
+    public ForcedAlignmentResponse getForcedAlignment(MultipartFile audioFile, String text) throws IOException {
+        // 1. Convert MultipartFile to a custom ByteArrayResource
+        Resource audioResource = new ByteArrayResource(audioFile.getBytes()) {
+            @Override
+            public String getFilename() {
+                String originalName = audioFile.getOriginalFilename();
+                return (originalName != null && !originalName.isEmpty()) ? originalName : "audio.mp3";
+            }
+        };
+
+        // 2. Prepare the multipart body
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", audioResource);
+        body.add("text", text);
+
+        // 2. Make the call and map directly to our DTO
+        return elevenLabsRestClient.post()
+                .uri("/forced-alignment")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(body)
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, (req, res) -> {
+                    String error = new String(res.getBody().readAllBytes());
+                    log.error("Alignment failed: {}", error);
+                    throw new AiServiceUnavailableException("ElevenLabs Alignment Error: " + error);
+                })
+                .body(ForcedAlignmentResponse.class);
+    }
 
     /**
      * Flatten metadata fields from the nested DTO into entity columns.
-     * Handles null metadata gracefully (e.g. for "upload" mode).
      */
     private void mapMetadataToEntity(CreatePointHistoryAudio request, PointHistoryAudio entity) {
         if (request.getMetadata() != null) {

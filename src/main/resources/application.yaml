@@ -76,3 +76,13 @@ github:
 translation:
   endpoint: ${TRANSLATION_SERVICE_URL:https://huydoan961z-translation-service.hf.space}
   cache-ttl: 86400  # 24 giờ (giây)
+
+# OpenAI Configuration
+openai:
+  api-key: ${OPENAI_API_KEY}
+  model: gpt-4o-mini
+  base-url: https://api.openai.com/v1
+
+elevenlabs:
+  key: ${ELEVEN_LABS_API_KEY}
+  base-url: ${ELEVEN_LABS_BASE_URL}
