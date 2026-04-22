@@ -14,7 +14,7 @@ public class OpenAiConfig {
     @Value("${openai.api-key}")
     private String apiKey;
 
-    @Value("${openai.model:gpt-4o}")
+    @Value("${openai.model:gpt-4o-mini}")
     private String model;
 
     @Value("${openai.base-url:https://api.openai.com/v1}")

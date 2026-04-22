@@ -1,14 +1,10 @@
 package fpt.project.NeoNHS.controller;
 
-import fpt.project.NeoNHS.dto.request.point.CreatePointHistoryAudio;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
-import fpt.project.NeoNHS.dto.response.point.PointHistoryAudioResponse;
+import fpt.project.NeoNHS.dto.response.point.historyAudio.PointHistoryAudioResponse;
 import fpt.project.NeoNHS.service.PointHistoryAudioService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

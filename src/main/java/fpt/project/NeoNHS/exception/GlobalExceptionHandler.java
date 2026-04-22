@@ -177,6 +177,22 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle external AI (GPT) calls related exception
+     */
+    @ExceptionHandler(AiResponseParseException.class)
+    public ResponseEntity<String> handleAIReturnWrongResponse() {
+        return ResponseEntity
+                .status(HttpStatus.UNPROCESSABLE_CONTENT)
+                .body("AI service returned an unexpected response. Please try again later.");
+    }
+
+    @ExceptionHandler(AiServiceUnavailableException.class)
+    public ResponseEntity<String> handleAIServiceUnavailable() {
+        return ResponseEntity
+                .status(HttpStatus.BAD_GATEWAY)
+                .body("AI server is busy, please try again later.");
+    }
+    /**
      * Handles all other unhandled exceptions (500 Internal Server Error)
      */
     @ExceptionHandler(Exception.class)

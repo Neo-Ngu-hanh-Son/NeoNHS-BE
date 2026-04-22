@@ -48,7 +48,10 @@ public class KnowledgeServiceImpl implements KnowledgeService {
     }
 
     @Override
-    public Page<KnowledgeDocument> getDocuments(Pageable pageable) {
+    public Page<KnowledgeDocument> getDocuments(String knowledgeType, Pageable pageable) {
+        if (knowledgeType != null && !knowledgeType.isEmpty()) {
+            return knowledgeRepository.findByKnowledgeType(knowledgeType, pageable);
+        }
         return knowledgeRepository.findAll(pageable); // Admin sees all
     }
 

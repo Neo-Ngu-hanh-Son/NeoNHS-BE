@@ -13,7 +13,7 @@ public interface KnowledgeService {
 
     void toggleVisibility(String id, boolean isActive);
 
-    Page<KnowledgeDocument> getDocuments(Pageable pageable);
+    Page<KnowledgeDocument> getDocuments(String knowledgeType, Pageable pageable);
 
     KnowledgeDocument getDocument(String id);
 
