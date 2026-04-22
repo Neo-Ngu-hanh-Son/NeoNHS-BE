@@ -69,6 +69,9 @@ public class Voucher extends BaseEntity {
 
     private LocalDateTime endDate;
 
+    @Builder.Default
+    private Integer pointCost = 0;
+
     private Integer usageLimit;
 
     @Builder.Default
