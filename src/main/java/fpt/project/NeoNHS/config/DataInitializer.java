@@ -84,6 +84,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .bankName("Vietcombank")
                                         .bankAccountNumber("1234567890123")
                                         .bankAccountName("NGUYEN VAN A")
+                                        .commissionRate(BigDecimal.valueOf(0.1)) // 10% commission
                                         .isVerified(true)
                                         .build();
 

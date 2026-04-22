@@ -164,13 +164,16 @@ public class OrderServiceImpl implements OrderService {
                             .getVendor()
                             .getCommissionRate();
 
-                    if (commissionRate != null) {
-                        BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
-                        // commissionAmount = phần admin giữ lại (e.g. 10%)
-                        commissionAmount = lineTotal.multiply(commissionRate);
-                        // netAmount = phần vendor nhận sau khi trừ commission (e.g. 90%)
-                        netAmount = lineTotal.subtract(commissionAmount);
+                    // Fallback to 10% if commission rate is not set
+                    if (commissionRate == null) {
+                        commissionRate = BigDecimal.valueOf(0.1);
                     }
+
+                    BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
+                    // commissionAmount = phần admin giữ lại (e.g. 10%)
+                    commissionAmount = lineTotal.multiply(commissionRate);
+                    // netAmount = phần vendor nhận sau khi trừ commission (e.g. 90%)
+                    netAmount = lineTotal.subtract(commissionAmount);
                 } catch (Exception e) {
                     // Nếu không lấy được commissionRate thì để null, không block order
                 }

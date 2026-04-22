@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.NotificationMessages;
 import fpt.project.NeoNHS.dto.request.workshop.CreateWorkshopSessionRequest;
 import fpt.project.NeoNHS.dto.request.workshop.UpdateWorkshopSessionRequest;
 import fpt.project.NeoNHS.dto.response.workshop.WTagResponse;
@@ -22,6 +23,7 @@ import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.repository.VendorProfileRepository;
 import fpt.project.NeoNHS.repository.WorkshopSessionRepository;
 import fpt.project.NeoNHS.repository.WorkshopTemplateRepository;
+import fpt.project.NeoNHS.service.NotificationService;
 import fpt.project.NeoNHS.service.WorkshopSessionService;
 import fpt.project.NeoNHS.specification.WorkshopSessionSpecification;
 import jakarta.transaction.Transactional;
@@ -50,6 +52,7 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
     private final OrderRepository orderRepository;
     private final OrderDetailRepository orderDetailRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     // ==================== CREATE ====================
 
@@ -420,7 +423,8 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
         }
 
         if (session.getCurrentEnrolled() > 0) {
-            throw new BadRequestException("Cannot delete a session with enrollments. Please cancel the session instead.");
+            throw new BadRequestException(
+                    "Cannot delete a session with enrollments. Please cancel the session instead.");
         }
 
         // 4. Delete the session
@@ -493,9 +497,28 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
             userRepository.save(vendorUser);
             log.info("[Session COMPLETED] Credited {} VND to vendor {} (sessionId={})",
                     totalNet, vendorUser.getEmail(), session.getId());
+
+            // --- NOTIFICATION TRIGGER ---
+            try {
+                notificationService.createAndSendNotification(
+                        vendorUser,
+                        NotificationMessages.walletPayoutTitle(),
+                        NotificationMessages.walletPayoutMessage(totalNet, session.getWorkshopTemplate().getName()),
+                        NotificationMessages.TYPE_WALLET_PAYOUT,
+                        session.getId());
+            } catch (Exception e) {
+                log.error("[Session COMPLETED] Failed to send notification to vendor {}: {}",
+                        vendorUser.getEmail(), e.getMessage());
+            }
         } else {
-            log.info("[Session COMPLETED] No paid orders found for session {}, nothing credited.",
-                    session.getId());
+            if (paidDetails.isEmpty()) {
+                log.info("[Session COMPLETED] No paid orders found for session {}, nothing credited.",
+                        session.getId());
+            } else {
+                log.warn(
+                        "[Session COMPLETED] Found {} paid orders for session {}, but total netAmount is zero/null. Check commission settings.",
+                        paidDetails.size(), session.getId());
+            }
         }
     }
 

@@ -12,6 +12,7 @@ public final class NotificationMessages {
     public static final String TYPE_EVENT = "EVENT";
     public static final String TYPE_CHECKIN_SUCCESS = "CHECKIN_SUCCESS";
     public static final String TYPE_ORDER_SUCCESS = "ORDER_SUCCESS";
+    public static final String TYPE_WALLET_PAYOUT = "WALLET_PAYOUT";
 
     // ──── Event Notifications ───────────────────────────────────────────────
     public static final String EVENT_TITLE_PREFIX = "New event: ";
@@ -83,5 +84,17 @@ public final class NotificationMessages {
             base += String.format(ADMIN_NOTE_SUFFIX, adminNote);
         }
         return base;
+    }
+
+    // ──── Wallet Payout Notifications ───────────────────────────────────────
+    public static final String WALLET_PAYOUT_TITLE = "💰 Wallet Credited!";
+    public static final String WALLET_PAYOUT_MESSAGE_TEMPLATE = "You have received %s VNĐ into your wallet for the workshop session: %s";
+
+    public static String walletPayoutTitle() {
+        return WALLET_PAYOUT_TITLE;
+    }
+
+    public static String walletPayoutMessage(BigDecimal amount, String sessionTitle) {
+        return String.format(WALLET_PAYOUT_MESSAGE_TEMPLATE, amount.toString(), sessionTitle);
     }
 }

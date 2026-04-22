@@ -3,6 +3,7 @@ package fpt.project.NeoNHS.service;
 import fpt.project.NeoNHS.dto.request.workshop.CreateWorkshopSessionRequest;
 import fpt.project.NeoNHS.dto.request.workshop.UpdateWorkshopSessionRequest;
 import fpt.project.NeoNHS.dto.response.workshop.WorkshopSessionResponse;
+import fpt.project.NeoNHS.entity.WorkshopSession;
 import fpt.project.NeoNHS.enums.SessionStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -54,4 +55,7 @@ public interface WorkshopSessionService {
     void deleteWorkshopSession(String email, UUID id);
 
     WorkshopSessionResponse cancelWorkshopSession(String email, UUID id);
+
+    // ==================== FINANCIAL / HELPERS ====================
+    void creditVendorWallet(WorkshopSession session);
 }
