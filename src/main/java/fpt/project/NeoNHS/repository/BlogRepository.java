@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.repository;
 
 import fpt.project.NeoNHS.entity.Blog;
+import fpt.project.NeoNHS.enums.BlogStatus;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -10,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -41,4 +43,8 @@ public interface BlogRepository extends JpaRepository<Blog, UUID>, JpaSpecificat
     void deleteBlogById(UUID id);
     // Empty all blogs that is already deleted (Their deleted at is not null)
     void deleteAllByDeletedAtIsNotNull();
+
+    @Modifying
+    @Query("UPDATE Blog b SET b.isFeatured = false WHERE b.isFeatured = true AND b.id != :currentBlogId")
+    void resetFeaturedExcept(UUID currentBlogId);
 }
