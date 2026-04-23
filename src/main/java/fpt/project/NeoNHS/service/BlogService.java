@@ -20,6 +20,10 @@ public interface BlogService {
     Page<BlogResponse> getActiveBlogs(String search, BlogStatus status, List<String> tags, Pageable pageable,
                                       boolean featured, String categorySlug);
 
+    @Transactional(readOnly = true)
+    Page<BlogResponse> getActiveBlogsPreview(String search, BlogStatus status, List<String> tags, Pageable pageable,
+                                             boolean featured, String categorySlug);
+
     BlogResponse createBlog(BlogRequest request);
 
     BlogResponse updateBlog(UUID id, BlogRequest request);

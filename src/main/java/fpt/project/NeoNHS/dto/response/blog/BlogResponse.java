@@ -57,4 +57,24 @@ public class BlogResponse {
                 .user(UserInfoResponse.fromEntity(blog.getUser()))
                 .build();
     }
+
+    public static BlogResponse fromEntityLight(Blog blog) {
+        return BlogResponse.builder()
+                .id(blog.getId())
+                .title(blog.getTitle())
+                .slug(blog.getSlug())
+                .summary(blog.getSummary())
+                .thumbnailUrl(blog.getThumbnailUrl())
+                .bannerUrl(blog.getBannerUrl())
+                .isFeatured(blog.getIsFeatured())
+                .status(blog.getStatus())
+                .publishedAt(blog.getPublishedAt())
+                .createdAt(blog.getCreatedAt())
+                .updatedAt(blog.getUpdatedAt())
+                .tags(blog.getTags())
+                .viewCount(blog.getViewCount())
+                .blogCategory(BlogCategoryResponse.fromEntity(blog.getBlogCategory()))
+                .user(UserInfoResponse.fromEntityMinimal(blog.getUser()))
+                .build();
+    }
 }

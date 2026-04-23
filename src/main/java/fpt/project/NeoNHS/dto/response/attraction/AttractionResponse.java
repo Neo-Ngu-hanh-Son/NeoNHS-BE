@@ -1,11 +1,13 @@
 package fpt.project.NeoNHS.dto.response.attraction;
 
+import fpt.project.NeoNHS.dto.response.point.PointResponse;
 import fpt.project.NeoNHS.enums.AttractionStatus;
 import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -22,4 +24,5 @@ public class AttractionResponse {
     private String thumbnailUrl;
     private LocalTime openHour;
     private LocalTime closeHour;
+    private List<PointResponse> points;
 }

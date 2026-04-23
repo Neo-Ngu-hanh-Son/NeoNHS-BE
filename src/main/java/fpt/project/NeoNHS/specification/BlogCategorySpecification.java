@@ -19,9 +19,11 @@ public class BlogCategorySpecification {
             }
 
             if (search != null && !search.isBlank()) {
-                predicates.add(criteriaBuilder.like(
-                        criteriaBuilder.lower(root.get("name")),
-                        "%" + search.toLowerCase() + "%"));
+                String keyword = "%" + search.toLowerCase() + "%";
+                predicates.add(criteriaBuilder.or(
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), keyword),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("slug")), keyword)
+                ));
             }
 
             // DO NOT show deleted categories
