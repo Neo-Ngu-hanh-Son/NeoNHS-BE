@@ -108,6 +108,17 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles ForbiddenException (403 Forbidden)
+     */
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ApiResponse<Void>> handleForbiddenException(ForbiddenException ex) {
+        log.warn("Forbidden: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(HttpStatus.FORBIDDEN, ex.getMessage()));
+    }
+
+    /**
      * Handles UnauthorizedException (401 Unauthorized)
      */
     @ExceptionHandler(UnauthorizedException.class)
