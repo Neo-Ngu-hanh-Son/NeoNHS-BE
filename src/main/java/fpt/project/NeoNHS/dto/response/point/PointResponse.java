@@ -8,6 +8,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import fpt.project.NeoNHS.enums.PointDifficulty;
+import fpt.project.NeoNHS.enums.PointVibe;
 import fpt.project.NeoNHS.enums.PointType;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -29,12 +31,15 @@ public class PointResponse {
     protected String thumbnailUrl;
     protected Double latitude;
     protected Double longitude;
+    protected String address;
     protected Integer orderIndex;
     protected Integer estTimeSpent;
     protected PointType type;
     protected UUID attractionId;
     protected List<PointPanoramaResponse> panoramas;
     protected String googlePlaceId;
+    protected PointDifficulty difficulty;
+    protected PointVibe vibe;
     protected Integer historyAudioCount;
     private List<CheckinPointResponse> checkinPoints;
     protected LocalDateTime deletedAt;

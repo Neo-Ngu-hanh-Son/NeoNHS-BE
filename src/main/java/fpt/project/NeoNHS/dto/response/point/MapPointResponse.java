@@ -37,7 +37,10 @@ public class MapPointResponse extends PointResponse {
                                 .thumbnailUrl(p.getThumbnailUrl())
                                 .latitude(p.getLatitude().doubleValue())
                                 .longitude(p.getLongitude().doubleValue())
+                                .address(p.getAddress())
                                 .estTimeSpent(p.getEstTimeSpent())
+                                .difficulty(p.getDifficulty())
+                                .vibe(p.getVibe())
                                 .type(p.getType())
                                 .attractionId(p.getAttraction() != null ? p.getAttraction().getId() : null)
                                 .panoramas(Collections.emptyList()) // Map does not need to know about panoramas
