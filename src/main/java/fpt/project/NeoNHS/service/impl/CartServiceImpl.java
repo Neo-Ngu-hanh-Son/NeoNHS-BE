@@ -23,6 +23,7 @@ import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.repository.UserVoucherRepository;
 import fpt.project.NeoNHS.repository.WorkshopSessionRepository;
 import fpt.project.NeoNHS.service.CartService;
+import fpt.project.NeoNHS.enums.VoucherType;
 import fpt.project.NeoNHS.service.VoucherService;
 import java.time.LocalDateTime;
 import fpt.project.NeoNHS.entity.Event;
@@ -381,6 +382,12 @@ public class CartServiceImpl implements CartService {
 
         for (UserVoucher uv : userVouchers) {
             Voucher v = uv.getVoucher();
+            
+            // Only return DISCOUNT vouchers for cart
+            if (v.getVoucherType() != VoucherType.DISCOUNT) {
+                continue;
+            }
+
             if ((v.getStartDate() != null && now.isBefore(v.getStartDate())) ||
                     (v.getEndDate() != null && now.isAfter(v.getEndDate()))) {
                 continue;

@@ -151,4 +151,15 @@ public class AdminVoucherController {
         voucherService.hardDeleteVoucher(id);
         return ResponseEntity.ok(ApiResponse.success("Voucher permanently deleted successfully", null));
     }
+
+    @Operation(
+            summary = "Redeem gift voucher at counter (Admin)",
+            description = "Mark a user's GIFT_PRODUCT voucher as used. Admin can only redeem platform-wide vouchers."
+    )
+    @PostMapping("/redeem/{userVoucherId}")
+    public ResponseEntity<ApiResponse<fpt.project.NeoNHS.dto.response.voucher.UserVoucherRespone>> redeemVoucher(
+            @Parameter(description = "User Voucher ID (from QR scan)") @PathVariable UUID userVoucherId) {
+        var response = voucherService.redeemVoucher(userVoucherId);
+        return ResponseEntity.ok(ApiResponse.success("Voucher redeemed successfully", response));
+    }
 }
