@@ -53,6 +53,10 @@ public class User extends BaseEntity {
 
     private Double balance;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private Integer rewardPoints = 0;
+
     // for payout
     private String bankName;
     private String bankBin;

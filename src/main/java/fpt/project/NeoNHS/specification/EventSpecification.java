@@ -33,6 +33,10 @@ public class EventSpecification {
                 predicates.add(criteriaBuilder.equal(root.get("status"), filter.getStatus()));
             }
 
+            if (filter.getIsTicketRequired() != null) {
+                predicates.add(criteriaBuilder.equal(root.get("isTicketRequired"), filter.getIsTicketRequired()));
+            }
+
             if (filter.getName() != null && !filter.getName().isBlank()) {
                 predicates.add(criteriaBuilder.like(
                         criteriaBuilder.lower(root.get("name")),
@@ -61,19 +65,6 @@ public class EventSpecification {
                 ));
             }
 
-            if (filter.getMinPrice() != null) {
-                predicates.add(criteriaBuilder.greaterThanOrEqualTo(
-                        root.get("price"),
-                        filter.getMinPrice()
-                ));
-            }
-
-            if (filter.getMaxPrice() != null) {
-                predicates.add(criteriaBuilder.lessThanOrEqualTo(
-                        root.get("price"),
-                        filter.getMaxPrice()
-                ));
-            }
 
             // Filter by tags (OR logic: event has at least one of the specified tags)
             if (filter.getTagIds() != null && !filter.getTagIds().isEmpty()) {

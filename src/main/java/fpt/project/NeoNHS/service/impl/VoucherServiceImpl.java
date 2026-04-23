@@ -164,6 +164,14 @@ public class VoucherServiceImpl implements VoucherService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public VoucherResponse getVendorVoucherById(UUID id) {
+        Voucher voucher = getActiveVoucher(id);
+        validateVendorOwnership(voucher);
+        return VoucherResponse.fromEntity(voucher);
+    }
+
+    @Override
     @Transactional
     public VoucherResponse updateVendorVoucher(UUID id, UpdateVoucherRequest request) {
         Voucher voucher = getActiveVoucher(id);
@@ -221,17 +229,27 @@ public class VoucherServiceImpl implements VoucherService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<VoucherResponse> getAvailablePlatformVouchers(Pageable pageable) {
-        return voucherRepository.findAvailableVouchers(
-                        VoucherScope.PLATFORM, VoucherStatus.ACTIVE, LocalDateTime.now(), pageable)
+    public Page<VoucherResponse> getAvailablePlatformVouchers(VoucherFilterRequest filter, Pageable pageable) {
+        filter.setScope(VoucherScope.PLATFORM);
+        var spec = VoucherSpecification.withAvailableFilters(filter, LocalDateTime.now());
+        return voucherRepository.findAll(spec, pageable)
                 .map(VoucherResponse::fromEntity);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<VoucherResponse> getAvailableVendorVouchers(UUID vendorId, Pageable pageable) {
-        return voucherRepository.findAvailableVouchersByVendor(
-                        vendorId, VoucherStatus.ACTIVE, LocalDateTime.now(), pageable)
+    public Page<VoucherResponse> getAvailableVendorVouchers(UUID vendorId, VoucherFilterRequest filter, Pageable pageable) {
+        var spec = VoucherSpecification.withAvailableVendorFilters(vendorId, filter, LocalDateTime.now());
+        return voucherRepository.findAll(spec, pageable)
+                .map(VoucherResponse::fromEntity);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<VoucherResponse> getAvailableAllVendorVouchers(VoucherFilterRequest filter, Pageable pageable) {
+        filter.setScope(VoucherScope.VENDOR);
+        var spec = VoucherSpecification.withAvailableFilters(filter, LocalDateTime.now());
+        return voucherRepository.findAll(spec, pageable)
                 .map(VoucherResponse::fromEntity);
     }
 
@@ -258,6 +276,15 @@ public class VoucherServiceImpl implements VoucherService {
         // Check if user already collected this voucher
         if (userVoucherRepository.existsByUser_IdAndVoucher_Id(currentUser.getId(), voucherId)) {
             throw new BadRequestException("You have already collected this voucher");
+        }
+
+        // Handle point exchange if voucher is not free
+        if (voucher.getPointCost() != null && voucher.getPointCost() > 0) {
+            if (currentUser.getRewardPoints() < voucher.getPointCost()) {
+                throw new BadRequestException("Insufficient reward points to collect this voucher");
+            }
+            currentUser.setRewardPoints(currentUser.getRewardPoints() - voucher.getPointCost());
+            userRepository.save(currentUser);
         }
 
         // Increase usage count upon collection (reserve the spot)
@@ -356,6 +383,7 @@ public class VoucherServiceImpl implements VoucherService {
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
                 .usageLimit(request.getUsageLimit())
+                .pointCost(request.getPointCost() != null ? request.getPointCost() : 0)
                 .status(VoucherStatus.ACTIVE)
                 .build();
     }
@@ -372,6 +400,7 @@ public class VoucherServiceImpl implements VoucherService {
         if (request.getStartDate() != null) voucher.setStartDate(request.getStartDate());
         if (request.getEndDate() != null) voucher.setEndDate(request.getEndDate());
         if (request.getUsageLimit() != null) voucher.setUsageLimit(request.getUsageLimit());
+        if (request.getPointCost() != null) voucher.setPointCost(request.getPointCost());
         if (request.getStatus() != null) voucher.setStatus(request.getStatus());
 
         validateDateRange(voucher.getStartDate(), voucher.getEndDate());

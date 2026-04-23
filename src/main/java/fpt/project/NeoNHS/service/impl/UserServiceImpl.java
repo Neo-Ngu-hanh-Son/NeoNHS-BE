@@ -385,8 +385,7 @@ public class UserServiceImpl implements UserService {
                 .kycVerified(user.getKycVerified())
                 .kycFullName(user.getKycFullName())
                 .kycIdNumber(user.getKycIdNumber())
-                .userPoint(user.getCheckIns().stream().reduce(0, (sum, checkIn) -> sum + checkIn.getEarnedPoints(),
-                        Integer::sum))
+                .userPoint(user.getRewardPoints())
                 .build();
     }
 }

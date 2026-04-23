@@ -97,10 +97,13 @@ public class UserCheckInServiceImpl implements UserCheckInService {
         userCheckIn.setCheckinImages(checkinImages);
         userCheckInRepository.save(userCheckIn);
 
-        int userTotalPoint = user.getCheckIns().stream()
-                .reduce(0, (sum, checkIn) -> sum + checkIn.getEarnedPoints(),
-                        (first, second) -> first + second);
-        userTotalPoint += checkinPoint.getRewardPoints();
+        // Update user's persistent reward points
+        if (checkinPoint.getRewardPoints() != null && checkinPoint.getRewardPoints() > 0) {
+            user.setRewardPoints(user.getRewardPoints() + checkinPoint.getRewardPoints());
+            userRepository.save(user);
+        }
+
+        int userTotalPoint = user.getRewardPoints();
 
         if (checkinPoint.getRewardPoints() > 0) {
             notificationService.createAndSendNotification(

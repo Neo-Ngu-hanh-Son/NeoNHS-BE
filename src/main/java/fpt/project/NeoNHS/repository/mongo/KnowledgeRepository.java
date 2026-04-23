@@ -20,4 +20,6 @@ public interface KnowledgeRepository extends MongoRepository<KnowledgeDocument, 
     List<KnowledgeDocument> findByIsActiveTrue();
 
     List<KnowledgeDocument> findByKnowledgeType(String knowledgeType);
+
+    Page<KnowledgeDocument> findByKnowledgeType(String knowledgeType, Pageable pageable);
 }
