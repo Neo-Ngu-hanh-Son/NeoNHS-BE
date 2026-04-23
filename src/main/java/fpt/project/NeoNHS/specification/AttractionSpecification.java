@@ -2,7 +2,10 @@ package fpt.project.NeoNHS.specification;
 
 import fpt.project.NeoNHS.dto.request.attraction.AttractionFilterRequest;
 import fpt.project.NeoNHS.entity.Attraction;
+import fpt.project.NeoNHS.entity.Point;
 import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -14,6 +17,11 @@ public class AttractionSpecification {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
+            // Handle Spring Boot pagination related stuff (Because it return a long when it is counting, and we don't want to perform
+            // the distinct on the count number
+            if (query.getResultType() != Long.class && query.getResultType() != long.class) {
+                query.distinct(true);
+            }
             if (activeOnly) {
                 predicates.add(criteriaBuilder.isTrue(root.get("isActive")));
                 predicates.add(criteriaBuilder.isNull(root.get("deletedAt")));
@@ -25,11 +33,11 @@ public class AttractionSpecification {
 
             if (filter.getName() != null && !filter.getName().isBlank()) {
                 String keyword = "%" + filter.getName().toLowerCase() + "%";
-
+                Join<Attraction, Point> pointsJoin = root.join("points", JoinType.LEFT);
                 predicates.add(criteriaBuilder.or(
                         criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), keyword),
-//                        criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), keyword),
-                        criteriaBuilder.like(criteriaBuilder.lower(root.get("address")), keyword)
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("address")), keyword),
+                        criteriaBuilder.like(criteriaBuilder.lower(pointsJoin.get("name")), keyword)
                 ));
             }
 //            This old code is using AND for name, description, and address, which is too strict.

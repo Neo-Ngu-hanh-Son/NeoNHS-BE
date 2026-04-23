@@ -26,7 +26,7 @@ public class PagedResponse<T> {
     /**
      * Current page number (0-indexed)
      */
-    private int page;
+    private int number;
 
     /**
      * Number of items per page

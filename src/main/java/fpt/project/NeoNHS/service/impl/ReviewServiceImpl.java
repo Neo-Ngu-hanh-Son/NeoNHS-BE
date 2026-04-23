@@ -156,7 +156,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .map(GenericReviewResponse::fromEntity)
                 .collect(Collectors.toList());
         return PagedResponse.<GenericReviewResponse>builder()
-                .page(reviewPage.getNumber())
+                .number(reviewPage.getNumber())
                 .size(reviewPage.getSize())
                 .totalPages(reviewPage.getTotalPages())
                 .totalElements(reviewPage.getTotalElements())
@@ -173,7 +173,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .collect(Collectors.toList());
 
         return PagedResponse.<ReviewResponse>builder()
-                .page(reviewPage.getNumber())
+                .number(reviewPage.getNumber())
                 .size(reviewPage.getSize())
                 .totalPages(reviewPage.getTotalPages())
                 .totalElements(reviewPage.getTotalElements())

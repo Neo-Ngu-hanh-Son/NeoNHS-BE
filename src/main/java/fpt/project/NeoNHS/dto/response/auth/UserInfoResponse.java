@@ -41,4 +41,15 @@ public class UserInfoResponse {
                 .updatedAt(user.getUpdatedAt())
                 .build();
     }
+
+    public static UserInfoResponse fromEntityMinimal(User user) {
+        return UserInfoResponse.builder()
+                .id(user.getId())
+                .fullname(user.getFullname())
+                .email(user.getEmail())
+                .avatarUrl(user.getAvatarUrl())
+                .role(user.getRole())
+                .isActive(user.getIsActive())
+                .build();
+    }
 }
