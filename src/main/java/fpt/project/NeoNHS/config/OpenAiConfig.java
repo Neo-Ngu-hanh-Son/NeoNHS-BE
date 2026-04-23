@@ -44,4 +44,12 @@ public class OpenAiConfig {
     public String getChatCompletionUrl() {
         return "/chat/completions";
     }
+
+    public String getEmbeddingsUrl() {
+        return "/embeddings";
+    }
+
+    public String getEmbeddingModel() {
+        return "text-embedding-3-small";
+    }
 }
