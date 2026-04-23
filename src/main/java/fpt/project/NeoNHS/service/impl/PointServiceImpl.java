@@ -65,10 +65,13 @@ public class PointServiceImpl implements PointService {
                 .thumbnailUrl(request.getThumbnailUrl())
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
+                .address(request.getAddress())
                 .orderIndex(request.getOrderIndex())
                 .estTimeSpent(request.getEstTimeSpent())
                 .type(request.getType())
                 .googlePlaceId(request.getGooglePlaceId())
+                .difficulty(request.getDifficulty())
+                .vibe(request.getVibe())
                 .attraction(attraction)
                 .build();
 
@@ -111,6 +114,8 @@ public class PointServiceImpl implements PointService {
             point.setLatitude(request.getLatitude());
         if (request.getLongitude() != null)
             point.setLongitude(request.getLongitude());
+        if (request.getAddress() != null)
+            point.setAddress(request.getAddress());
         if (request.getOrderIndex() != null)
             point.setOrderIndex(request.getOrderIndex());
         if (request.getEstTimeSpent() != null)
@@ -119,6 +124,10 @@ public class PointServiceImpl implements PointService {
             point.setType(request.getType());
         if (request.getGooglePlaceId() != null)
             point.setGooglePlaceId(request.getGooglePlaceId());
+        if (request.getDifficulty() != null)
+            point.setDifficulty(request.getDifficulty());
+        if (request.getVibe() != null)
+            point.setVibe(request.getVibe());
 
         if (request.getAttractionId() != null) {
             Attraction attraction = attractionRepository.findById(request.getAttractionId())
@@ -200,8 +209,8 @@ public class PointServiceImpl implements PointService {
         }
 
         Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
-                ? Sort.by(sortBy).ascending()
-                : Sort.by(sortBy).descending();
+                ? Sort.by(sortBy).ascending().and(Sort.by("id").ascending())
+                : Sort.by(sortBy).descending().and(Sort.by("id").ascending());
 
         Pageable pageable = PageRequest.of(page, Math.min(size, PaginationConstants.MAX_PAGE_SIZE), sort);
 
@@ -217,8 +226,8 @@ public class PointServiceImpl implements PointService {
         }
 
         Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
-                ? Sort.by(sortBy).ascending()
-                : Sort.by(sortBy).descending();
+                ? Sort.by(sortBy).ascending().and(Sort.by("id").ascending())
+                : Sort.by(sortBy).descending().and(Sort.by("id").ascending());
 
         Pageable pageable = PageRequest.of(page, Math.min(size, PaginationConstants.MAX_PAGE_SIZE), sort);
 
@@ -276,6 +285,7 @@ public class PointServiceImpl implements PointService {
                     .thumbnailUrl(p.getThumbnailUrl())
                     .latitude(p.getLatitude().doubleValue())
                     .longitude(p.getLongitude().doubleValue())
+                    .address(p.getAddress())
                     .estTimeSpent(p.getEstTimeSpent())
                     .type(p.getType())
                     .attractionId(p.getAttraction() != null ? p.getAttraction().getId() : null)
@@ -304,8 +314,8 @@ public class PointServiceImpl implements PointService {
     private Page<PointResponse> findAllPoints(int page, int size, String sortBy, String sortDir, String search,
             boolean excludeDeleted) {
         Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
-                ? Sort.by(sortBy).ascending()
-                : Sort.by(sortBy).descending();
+                ? Sort.by(sortBy).ascending().and(Sort.by("id").ascending())
+                : Sort.by(sortBy).descending().and(Sort.by("id").ascending());
 
         Pageable pageable = PageRequest.of(page, Math.min(size, PaginationConstants.MAX_PAGE_SIZE), sort);
 
@@ -325,6 +335,7 @@ public class PointServiceImpl implements PointService {
                 .thumbnailUrl(entity.getThumbnailUrl())
                 .latitude(entity.getLatitude().doubleValue())
                 .longitude(entity.getLongitude().doubleValue())
+                .address(entity.getAddress())
                 .orderIndex(entity.getOrderIndex())
                 .estTimeSpent(entity.getEstTimeSpent())
                 .type(entity.getType())
@@ -339,6 +350,8 @@ public class PointServiceImpl implements PointService {
                                 .build())
                         .toList() : Collections.emptyList())
                 .googlePlaceId(entity.getGooglePlaceId())
+                .difficulty(entity.getDifficulty())
+                .vibe(entity.getVibe())
                 .historyAudioCount(historyAudioCount)
                 .deletedAt(entity.getDeletedAt())
                 .build();

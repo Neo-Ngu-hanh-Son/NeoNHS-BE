@@ -14,6 +14,8 @@ import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import fpt.project.NeoNHS.enums.PointDifficulty;
+import fpt.project.NeoNHS.enums.PointVibe;
 import fpt.project.NeoNHS.enums.PointType;
 
 import java.time.LocalDateTime;
@@ -48,6 +50,8 @@ public class Point extends BaseEntity {
     @Column(precision = 10, scale = 7)
     private BigDecimal longitude;
 
+    private String address;
+
     private Integer orderIndex;
 
     private Integer estTimeSpent;
@@ -63,19 +67,25 @@ public class Point extends BaseEntity {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-//    @Column(name = "panorama_image_url", length = 2048)
-//    private String panoramaImageUrl;
-//
-//    @Column(name = "default_yaw")
-//    @Builder.Default
-//    private Double defaultYaw = 0.0;
-//
-//    @Column(name = "default_pitch")
-//    @Builder.Default
-//    private Double defaultPitch = 0.0;
+    // @Column(name = "panorama_image_url", length = 2048)
+    // private String panoramaImageUrl;
+    //
+    // @Column(name = "default_yaw")
+    // @Builder.Default
+    // private Double defaultYaw = 0.0;
+    //
+    // @Column(name = "default_pitch")
+    // @Builder.Default
+    // private Double defaultPitch = 0.0;
 
     @Column(name = "google_place_id")
     private String googlePlaceId;
+
+    @Enumerated(EnumType.STRING)
+    private PointDifficulty difficulty = PointDifficulty.MODERATE;
+
+    @Enumerated(EnumType.STRING)
+    private PointVibe vibe = PointVibe.SPIRITUAL;
 
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)
