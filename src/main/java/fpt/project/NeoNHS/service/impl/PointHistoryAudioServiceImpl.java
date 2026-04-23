@@ -8,12 +8,9 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import fpt.project.NeoNHS.config.OpenAiConfig;
 import fpt.project.NeoNHS.constants.PointHistoryAudioConstants;
-import fpt.project.NeoNHS.dto.request.point.historyAudio.AudioMetadataRequest;
+import fpt.project.NeoNHS.dto.request.point.historyAudio.*;
 import fpt.project.NeoNHS.dto.request.point.CreateMultiplePointHistoryAudioRequest;
 import fpt.project.NeoNHS.dto.request.point.CreatePointHistoryAudio;
-import fpt.project.NeoNHS.dto.request.point.historyAudio.CreateSpeechFromTextRequest;
-import fpt.project.NeoNHS.dto.request.point.historyAudio.HistoryAudioTranslateRequest;
-import fpt.project.NeoNHS.dto.request.point.historyAudio.WordTimingRequest;
 import fpt.project.NeoNHS.dto.response.point.historyAudio.ForcedAlignmentResponse;
 import fpt.project.NeoNHS.dto.response.point.historyAudio.HistoryAudioTranslationObject;
 import fpt.project.NeoNHS.dto.response.point.historyAudio.PointHistoryAudioResponse;
@@ -25,6 +22,7 @@ import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.repository.PointHistoryAudioRepository;
 import fpt.project.NeoNHS.repository.PointRepository;
 import fpt.project.NeoNHS.service.PointHistoryAudioService;
+import io.swagger.v3.core.util.Json;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
@@ -40,10 +38,9 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -195,6 +192,7 @@ public class PointHistoryAudioServiceImpl implements PointHistoryAudioService {
                     .path("content")
                     .asText();
 
+            System.out.println("AI result: " + aiResultText);
             return objectMapper.readValue(
                     aiResultText,
                     new TypeReference<>() {
@@ -214,9 +212,25 @@ public class PointHistoryAudioServiceImpl implements PointHistoryAudioService {
 
     @Override
     public Resource createSpeechFromText(CreateSpeechFromTextRequest request) {
+        ElevenLabRequest elevenLabRequest = ElevenLabRequest.builder()
+//                .modelId(request.getModelId())
+//                .modelId("eleven_turbo_v2_5")
+                .modelId("eleven_v3")
+//                .languageCode(request.getLanguageCode())
+                .text(request.getText())
+                .voiceSettings(ElevenLabVoiceSettings.builder()
+                        .speed(0.91)
+                        .stability(0.60)
+                        .similarityBoost(0.75)
+                        .useSpeakerBoost(true)
+                        .build())
+                .applyTextNormalization("auto")
+//                .applyLanguageTextNormalization(request.getLanguageCode().equals("ja"))
+                .build();
+        System.out.println("ElevenLabRequest: " + elevenLabRequest.toString());
         Resource audioData = elevenLabsRestClient.post()
                 .uri("/text-to-speech/" + request.getVoiceId() + "?output_format=" + request.getOutputFormat())
-                .body(request)
+                .body(elevenLabRequest)
                 .retrieve()
                 .onStatus(status -> status.value() == 422, (req, res) -> {
                     String errorBody = new String(res.getBody().readAllBytes());
@@ -224,7 +238,10 @@ public class PointHistoryAudioServiceImpl implements PointHistoryAudioService {
                     throw new BadRequestException("Bad request: " + errorBody, null);
                 })
                 .onStatus(HttpStatusCode::isError, (req, res) -> {
-                    throw new AiServiceUnavailableException("AI voice generation service is not available");
+                    System.err.println("Status Code: " + res.getStatusCode());
+                    String errorBody = new String(res.getBody().readAllBytes(), StandardCharsets.UTF_8);
+                    System.err.println("ElevenLabs Error Body: " + errorBody);
+                    throw new AiServiceUnavailableException("AI voice generation service is not available: ");
                 })
                 .body(Resource.class);
         return audioData;

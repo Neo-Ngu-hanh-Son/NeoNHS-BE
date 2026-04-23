@@ -57,7 +57,7 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
           AND r.status = :status
     """
     )
-    Page<Review> pageVisibleReviewsForPoint(
+    Page<Review> getPageVisibleReview(
             @Param("pointId") UUID pointId,
             @Param("status") ReviewStatus status,
             @Param("type") ReviewTypeFlagEnum type,

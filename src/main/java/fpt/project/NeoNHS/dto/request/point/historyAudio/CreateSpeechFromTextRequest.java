@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.dto.request.point.historyAudio;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 @Data
@@ -8,5 +9,5 @@ public class CreateSpeechFromTextRequest {
     private String text;
     private String modelId;
     private String outputFormat;
-//    private String languageCode;
+    private String languageCode;
 }
