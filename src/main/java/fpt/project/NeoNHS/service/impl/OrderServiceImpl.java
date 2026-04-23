@@ -147,10 +147,36 @@ public class OrderServiceImpl implements OrderService {
         List<OrderDetail> orderDetails = new ArrayList<>();
         for (CartItem item : cartItems) {
             BigDecimal unitPrice = BigDecimal.ZERO;
+            BigDecimal commissionAmount = null;
+            BigDecimal netAmount = null;
+
             if (item.getTicketCatalog() != null) {
                 unitPrice = item.getTicketCatalog().getPrice();
+                // TicketCatalog (Event) không áp dụng commission
             } else if (item.getWorkshopSession() != null && item.getWorkshopSession().getPrice() != null) {
                 unitPrice = item.getWorkshopSession().getPrice();
+
+                // Tính commission từ VendorProfile.commissionRate
+                // Chain: WorkshopSession → WorkshopTemplate → VendorProfile → commissionRate
+                try {
+                    BigDecimal commissionRate = item.getWorkshopSession()
+                            .getWorkshopTemplate()
+                            .getVendor()
+                            .getCommissionRate();
+
+                    // Fallback to 10% if commission rate is not set
+                    if (commissionRate == null) {
+                        commissionRate = BigDecimal.valueOf(0.1);
+                    }
+
+                    BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
+                    // commissionAmount = phần admin giữ lại (e.g. 10%)
+                    commissionAmount = lineTotal.multiply(commissionRate);
+                    // netAmount = phần vendor nhận sau khi trừ commission (e.g. 90%)
+                    netAmount = lineTotal.subtract(commissionAmount);
+                } catch (Exception e) {
+                    // Nếu không lấy được commissionRate thì để null, không block order
+                }
             }
 
             OrderDetail detail = OrderDetail.builder()
@@ -159,6 +185,8 @@ public class OrderServiceImpl implements OrderService {
                     .workshopSession(item.getWorkshopSession())
                     .quantity(item.getQuantity())
                     .unitPrice(unitPrice)
+                    .commissionAmount(commissionAmount)
+                    .netAmount(netAmount)
                     .build();
             orderDetails.add(detail);
         }

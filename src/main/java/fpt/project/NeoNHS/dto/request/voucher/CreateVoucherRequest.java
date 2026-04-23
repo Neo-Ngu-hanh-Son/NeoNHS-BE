@@ -5,16 +5,19 @@ import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Getter
+@Setter
 public class CreateVoucherRequest {
 
     @NotBlank(message = "Voucher code is required")
@@ -50,13 +53,6 @@ public class CreateVoucherRequest {
     @Size(max = 255, message = "Gift image URL must not exceed 255 characters")
     private String giftImageUrl;
 
-    // ===== Bonus points (for BONUS_POINTS type) =====
-    @Positive(message = "Bonus points value must be positive")
-    private Integer bonusPointsValue;
-
-    // ===== Free service (for FREE_SERVICE type) =====
-    private UUID freeTicketCatalogId;
-
     // ===== Time & Usage =====
     @NotNull(message = "Start date is required")
     @FutureOrPresent(message = "Start date must be in the present or future")
@@ -66,9 +62,9 @@ public class CreateVoucherRequest {
     @Future(message = "End date must be in the future")
     private LocalDateTime endDate;
 
+    @PositiveOrZero(message = "Point cost must be non-negative")
+    private Integer pointCost;
+
     @Positive(message = "Usage limit must be positive")
     private Integer usageLimit;
-
-    @Positive(message = "Max usage per user must be positive")
-    private Integer maxUsagePerUser;
 }

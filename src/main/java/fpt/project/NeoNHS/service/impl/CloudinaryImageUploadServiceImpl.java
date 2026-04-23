@@ -2,6 +2,7 @@ package fpt.project.NeoNHS.service.impl;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import fpt.project.NeoNHS.dto.request.upload.ShortenImageRequest;
 import fpt.project.NeoNHS.dto.response.upload.ImageUploadResponse;
 import fpt.project.NeoNHS.exception.AppIOException;
 import fpt.project.NeoNHS.service.ImageUploadService;
@@ -11,6 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +44,30 @@ public class CloudinaryImageUploadServiceImpl implements ImageUploadService {
         } catch (IOException e) {
             log.error("Failed to upload image to Cloudinary", e);
             throw new AppIOException("Failed to upload image: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public ImageUploadResponse uploadImageFromUrl(ShortenImageRequest req) {
+        log.info("Fetching and shortening external image URL: {}", req.getUrl());
+        try {
+            // Cloudinary uploader can take a URL string directly
+            @SuppressWarnings("unchecked")
+            Map uploadResult = cloudinary.uploader().upload(req.getUrl(), ObjectUtils.asMap(
+                    "folder", "NeoNHS/Shortened",
+                    "resource_type", "image"
+            ));
+
+            String secureUrl = (String) uploadResult.get("secure_url");
+            String publicId = (String) uploadResult.get("public_id");
+
+            return ImageUploadResponse.builder()
+                    .mediaUrl(secureUrl)
+                    .publicId(publicId)
+                    .build();
+        } catch (IOException e) {
+            log.error("Failed to shorten image URL via Cloudinary", e);
+            throw new AppIOException("Failed to shorten image URL: " + e.getMessage());
         }
     }
 

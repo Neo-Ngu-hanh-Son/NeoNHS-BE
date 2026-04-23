@@ -6,7 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -19,6 +18,8 @@ public class EventFilterRequest {
 
     private EventStatus status;
 
+    private Boolean isTicketRequired;
+
     private String name;
 
     private String location;
@@ -27,9 +28,6 @@ public class EventFilterRequest {
 
     private LocalDate endDate;
 
-    private BigDecimal minPrice;
-
-    private BigDecimal maxPrice;
 
     private List<UUID> tagIds;
 

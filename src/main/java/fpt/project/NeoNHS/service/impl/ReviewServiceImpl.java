@@ -1,7 +1,7 @@
 package fpt.project.NeoNHS.service.impl;
 
-import fpt.project.NeoNHS.dto.response.review.PointReviewResponse;
-import fpt.project.NeoNHS.dto.response.review.PointReviewResponseWrapper;
+import fpt.project.NeoNHS.dto.response.review.GenericReviewResponse;
+import fpt.project.NeoNHS.dto.response.review.GenericReviewResponseWrapper;
 import fpt.project.NeoNHS.enums.ReviewTypeFlagEnum;
 import fpt.project.NeoNHS.dto.request.review.CreateReviewRequest;
 import fpt.project.NeoNHS.dto.request.review.UpdateReviewRequest;
@@ -139,33 +139,24 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<ReviewResponse> getReviewsForEvent(UUID eventId, Pageable pageable) {
-        validateReviewTarget(eventId, ReviewTypeFlagEnum.EVENT);
-        Page<Review> reviewPage = reviewRepository.pageVisibleReviewsForEvent(eventId, ReviewStatus.VISIBLE, ReviewTypeFlagEnum.EVENT, pageable);
-        return toPagedReviewResponse(reviewPage);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public PointReviewResponseWrapper getReviewsForPoint(UUID pointId, Pageable pageable) {
-        validateReviewTarget(pointId, ReviewTypeFlagEnum.POINT);
-        Page<Review> reviewPage = reviewRepository.pageVisibleReviewsForPoint(pointId, ReviewStatus.VISIBLE, ReviewTypeFlagEnum.POINT, pageable);
-        var pagedResp =  toPagedPointReviewResponse(reviewPage);
-        // Get the metadata
-        var stats = reviewRepository.getReviewStats(pointId, ReviewTypeFlagEnum.POINT, ReviewStatus.VISIBLE);
-        return PointReviewResponseWrapper.builder()
+    public GenericReviewResponseWrapper getReviews(UUID pointId, ReviewTypeFlagEnum flag, Pageable pageable) {
+        validateReviewTarget(pointId, flag);
+        Page<Review> reviewPage = reviewRepository.getPageVisibleReview(pointId, ReviewStatus.VISIBLE, flag, pageable);
+        var pagedResp = toPagedPointReviewResponse(reviewPage);
+        var stats = reviewRepository.getReviewStats(pointId, flag, ReviewStatus.VISIBLE);
+        return GenericReviewResponseWrapper.builder()
                 .reviews(pagedResp)
-                .totalReviews(stats.count() != null ?  stats.count() : 0)
+                .totalReviews(stats.count() != null ? stats.count() : 0)
                 .avgRating(stats.averageRating() != null ? stats.averageRating() : 0)
                 .build();
     }
 
-    private PagedResponse<PointReviewResponse> toPagedPointReviewResponse(Page<Review> reviewPage) {
-        List<PointReviewResponse> responses = reviewPage.getContent().stream()
-                .map(PointReviewResponse::fromEntity)
+    private PagedResponse<GenericReviewResponse> toPagedPointReviewResponse(Page<Review> reviewPage) {
+        List<GenericReviewResponse> responses = reviewPage.getContent().stream()
+                .map(GenericReviewResponse::fromEntity)
                 .collect(Collectors.toList());
-        return PagedResponse.<PointReviewResponse>builder()
-                .page(reviewPage.getNumber())
+        return PagedResponse.<GenericReviewResponse>builder()
+                .number(reviewPage.getNumber())
                 .size(reviewPage.getSize())
                 .totalPages(reviewPage.getTotalPages())
                 .totalElements(reviewPage.getTotalElements())
@@ -182,7 +173,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .collect(Collectors.toList());
 
         return PagedResponse.<ReviewResponse>builder()
-                .page(reviewPage.getNumber())
+                .number(reviewPage.getNumber())
                 .size(reviewPage.getSize())
                 .totalPages(reviewPage.getTotalPages())
                 .totalElements(reviewPage.getTotalElements())

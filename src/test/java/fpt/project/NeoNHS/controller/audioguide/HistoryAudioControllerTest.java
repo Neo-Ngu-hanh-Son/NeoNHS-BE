@@ -2,7 +2,7 @@ package fpt.project.NeoNHS.controller.audioguide;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fpt.project.NeoNHS.controller.HistoryAudioController;
-import fpt.project.NeoNHS.dto.response.point.PointHistoryAudioResponse;
+import fpt.project.NeoNHS.dto.response.point.historyAudio.PointHistoryAudioResponse;
 import fpt.project.NeoNHS.exception.BadRequestException;
 import fpt.project.NeoNHS.exception.InvalidTokenException;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;

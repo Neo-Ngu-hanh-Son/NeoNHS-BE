@@ -71,4 +71,10 @@ public interface WorkshopSessionRepository extends JpaRepository<WorkshopSession
           AND ws.createdAt >= :since
     """)
     long countBookingsByVendorIdSince(@Param("vendorId") UUID vendorId, @Param("since") LocalDateTime since);
+
+    List<WorkshopSession> findByStatusAndCurrentEnrolledAndStartTimeBefore(SessionStatus status, Integer currentEnrolled, LocalDateTime startTime);
+
+    List<WorkshopSession> findByStatusAndCurrentEnrolledGreaterThanAndStartTimeBefore(SessionStatus status, Integer currentEnrolled, LocalDateTime startTime);
+
+    List<WorkshopSession> findByStatusAndEndTimeBefore(SessionStatus status, LocalDateTime endTime);
 }

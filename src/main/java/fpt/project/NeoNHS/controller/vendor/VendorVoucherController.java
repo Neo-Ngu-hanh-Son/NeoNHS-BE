@@ -92,6 +92,17 @@ public class VendorVoucherController {
     }
 
     @Operation(
+            summary = "Get voucher by ID (Vendor)",
+            description = "Retrieve detailed information of a specific voucher owned by current vendor"
+    )
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<VoucherResponse>> getVoucherById(
+            @Parameter(description = "Voucher ID") @PathVariable UUID id) {
+        VoucherResponse response = voucherService.getVendorVoucherById(id);
+        return ResponseEntity.ok(ApiResponse.success("Voucher retrieved successfully", response));
+    }
+
+    @Operation(
             summary = "Update voucher (Vendor)",
             description = "Update an existing voucher owned by current vendor"
     )

@@ -1,4 +1,4 @@
-package fpt.project.NeoNHS.dto.request.point;
+package fpt.project.NeoNHS.dto.request.point.historyAudio;
 
 import lombok.Data;
 

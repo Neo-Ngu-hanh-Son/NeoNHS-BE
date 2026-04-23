@@ -1,5 +1,7 @@
 package fpt.project.NeoNHS.dto.request.point;
 
+import fpt.project.NeoNHS.dto.request.point.historyAudio.AudioMetadataRequest;
+import fpt.project.NeoNHS.dto.request.point.historyAudio.WordTimingRequest;
 import lombok.Data;
 
 import java.util.List;

@@ -46,6 +46,29 @@ public class BlogController {
         return ResponseEntity.ok(ApiResponse.success("Blogs retrieved successfully", blogs));
     }
 
+    @Operation(summary = "Get all blogs", description = "Retrieve a paginated list of blogs with removed fields for lighter performance")
+    @GetMapping("/previews")
+    public ResponseEntity<ApiResponse<Page<BlogResponse>>> getBlogsPreviews(
+            @RequestParam(defaultValue = PaginationConstants.DEFAULT_PAGE) int page,
+            @RequestParam(defaultValue = PaginationConstants.DEFAULT_SIZE) int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) BlogStatus status,
+            @RequestParam(required = false) List<String> tags,
+            @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_BY) String sortBy,
+            @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_DIR) String sortDir,
+            @RequestParam(defaultValue = "false") boolean isFeatured,
+            @RequestParam(required = false) String categorySlug) {
+
+        Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<BlogResponse> blogs = blogService.getActiveBlogs(search, status, tags, pageable, isFeatured, categorySlug);
+        return ResponseEntity.ok(ApiResponse.success("Blogs retrieved successfully", blogs));
+    }
+
     @GetMapping("/slug/{slug}")
     public ApiResponse<BlogResponse> getBlogBySlug(@PathVariable String slug) {
         var blog = blogService.getBlogBySlug(slug);

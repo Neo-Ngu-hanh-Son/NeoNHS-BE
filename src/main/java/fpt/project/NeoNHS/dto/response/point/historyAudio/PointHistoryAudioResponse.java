@@ -1,7 +1,7 @@
-package fpt.project.NeoNHS.dto.response.point;
+package fpt.project.NeoNHS.dto.response.point.historyAudio;
 
-import fpt.project.NeoNHS.dto.request.point.AudioMetadataRequest;
-import fpt.project.NeoNHS.dto.request.point.WordTimingRequest;
+import fpt.project.NeoNHS.dto.request.point.historyAudio.AudioMetadataRequest;
+import fpt.project.NeoNHS.dto.request.point.historyAudio.WordTimingRequest;
 import lombok.*;
 
 import java.time.LocalDateTime;

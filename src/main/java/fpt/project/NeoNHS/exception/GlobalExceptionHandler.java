@@ -108,6 +108,17 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles ForbiddenException (403 Forbidden)
+     */
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ApiResponse<Void>> handleForbiddenException(ForbiddenException ex) {
+        log.warn("Forbidden: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(HttpStatus.FORBIDDEN, ex.getMessage()));
+    }
+
+    /**
      * Handles UnauthorizedException (401 Unauthorized)
      */
     @ExceptionHandler(UnauthorizedException.class)
@@ -176,6 +187,22 @@ public class GlobalExceptionHandler {
                 .body("Please upload file with size less than " + maximumFileSize + " MB");
     }
 
+    /**
+     * Handle external AI (GPT) calls related exception
+     */
+    @ExceptionHandler(AiResponseParseException.class)
+    public ResponseEntity<String> handleAIReturnWrongResponse() {
+        return ResponseEntity
+                .status(HttpStatus.UNPROCESSABLE_CONTENT)
+                .body("AI service returned an unexpected response. Please try again later.");
+    }
+
+    @ExceptionHandler(AiServiceUnavailableException.class)
+    public ResponseEntity<String> handleAIServiceUnavailable() {
+        return ResponseEntity
+                .status(HttpStatus.BAD_GATEWAY)
+                .body("AI server is busy, please try again later.");
+    }
     /**
      * Handles all other unhandled exceptions (500 Internal Server Error)
      */

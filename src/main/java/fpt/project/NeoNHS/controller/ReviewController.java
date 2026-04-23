@@ -5,10 +5,10 @@ import fpt.project.NeoNHS.dto.request.review.CreateReviewRequest;
 import fpt.project.NeoNHS.dto.request.review.UpdateReviewRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.PagedResponse;
-import fpt.project.NeoNHS.dto.response.review.PointReviewResponse;
-import fpt.project.NeoNHS.dto.response.review.PointReviewResponseWrapper;
+import fpt.project.NeoNHS.dto.response.review.GenericReviewResponseWrapper;
 import fpt.project.NeoNHS.dto.response.review.ReviewResponse;
 import fpt.project.NeoNHS.entity.User;
+import fpt.project.NeoNHS.enums.ReviewTypeFlagEnum;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.service.ReviewService;
@@ -87,33 +87,19 @@ public class ReviewController {
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Reviews retrieved successfully", response));
     }
 
-    @GetMapping("/events/{eventId}")
-    @Operation(summary = "List reviews for an event", description = "Joins reviews with events so only reviews for that event are returned.")
-    public ResponseEntity<ApiResponse<PagedResponse<ReviewResponse>>> getReviewsForEvent(
-            @PathVariable UUID eventId,
+    @GetMapping()
+    @Operation(summary = "Get a generic review (That is not workshop)")
+    public ResponseEntity<ApiResponse<GenericReviewResponseWrapper>> getReviews(
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_PAGE) int page,
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_SIZE) int size,
             @Parameter(description = "Sort field: createdAt, updatedAt, or rating")
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_BY) String sortBy,
-            @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_DIR) String sortDir) {
+            @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_DIR) String sortDir,
+            @RequestParam(required = true) UUID reviewTypeId,
+            @RequestParam(required = true) ReviewTypeFlagEnum reviewTypeFlg
+            ) {
 
-        PagedResponse<ReviewResponse> response = reviewService.getReviewsForEvent(
-                eventId, buildReviewPageable(page, size, sortBy, sortDir));
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Reviews retrieved successfully", response));
-    }
-
-    @GetMapping("/points/{pointId}")
-    @Operation(summary = "List reviews for a point", description = "Joins reviews with points so only reviews for that point are returned.")
-    public ResponseEntity<ApiResponse<PointReviewResponseWrapper>> getReviewsForPoint(
-            @PathVariable UUID pointId,
-            @RequestParam(defaultValue = PaginationConstants.DEFAULT_PAGE) int page,
-            @RequestParam(defaultValue = PaginationConstants.DEFAULT_SIZE) int size,
-            @Parameter(description = "Sort field: createdAt, updatedAt, or rating")
-            @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_BY) String sortBy,
-            @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_DIR) String sortDir) {
-
-        var response = reviewService.getReviewsForPoint(
-                pointId, buildReviewPageable(page, size, sortBy, sortDir));
+        var response = reviewService.getReviews(reviewTypeId, reviewTypeFlg, buildReviewPageable(page, size, sortBy, sortDir));
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Reviews retrieved successfully", response));
     }
 

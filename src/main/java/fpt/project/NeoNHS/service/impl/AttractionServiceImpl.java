@@ -4,6 +4,7 @@ import fpt.project.NeoNHS.constants.PaginationConstants;
 import fpt.project.NeoNHS.dto.request.attraction.AttractionFilterRequest;
 import fpt.project.NeoNHS.dto.request.attraction.AttractionRequest;
 import fpt.project.NeoNHS.dto.response.attraction.AttractionResponse;
+import fpt.project.NeoNHS.dto.response.point.PointResponse;
 import fpt.project.NeoNHS.entity.Attraction;
 import fpt.project.NeoNHS.enums.AttractionStatus;
 import fpt.project.NeoNHS.repository.AttractionRepository;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -59,8 +61,8 @@ public class AttractionServiceImpl implements AttractionService {
 
     @Override
     public Page<AttractionResponse> getAllAttractionsWithPaginationForAdmin(int page, int size, String sortBy,
-                                                                             String sortDir, String search,
-                                                                             boolean includeInactive) {
+                                                                            String sortDir, String search,
+                                                                            boolean includeInactive) {
         return findAttractions(page, size, sortBy, sortDir, search, !includeInactive);
     }
 
@@ -110,7 +112,8 @@ public class AttractionServiceImpl implements AttractionService {
         if (request.getAddress() != null) attraction.setAddress(request.getAddress());
         if (request.getLatitude() != null) attraction.setLatitude(request.getLatitude());
         if (request.getLongitude() != null) attraction.setLongitude(request.getLongitude());
-        if (request.getStatus() != null) attraction.setStatus(AttractionStatus.valueOf(String.valueOf(request.getStatus())));
+        if (request.getStatus() != null)
+            attraction.setStatus(AttractionStatus.valueOf(String.valueOf(request.getStatus())));
         if (request.getThumbnailUrl() != null) attraction.setThumbnailUrl(request.getThumbnailUrl());
         if (request.getOpenHour() != null) attraction.setOpenHour(request.getOpenHour());
         if (request.getCloseHour() != null) attraction.setCloseHour(request.getCloseHour());
@@ -143,10 +146,25 @@ public class AttractionServiceImpl implements AttractionService {
 
     private AttractionResponse mapToResponse(Attraction entity) {
         return AttractionResponse.builder()
-                .id(entity.getId()).name(entity.getName()).description(entity.getDescription())
-                .address(entity.getAddress()).latitude(entity.getLatitude()).longitude(entity.getLongitude())
-                .status(AttractionStatus.valueOf(String.valueOf(entity.getStatus()))).thumbnailUrl(entity.getThumbnailUrl())
+                .id(entity.getId())
+                .name(entity.getName())
+                .description(entity.getDescription())
+                .address(entity.getAddress())
+                .latitude(entity.getLatitude())
+                .longitude(entity.getLongitude())
+                .status(AttractionStatus.valueOf(String.valueOf(entity.getStatus())))
+                .thumbnailUrl(entity.getThumbnailUrl())
                 .openHour(entity.getOpenHour()).closeHour(entity.getCloseHour())
+                .points(entity.getPoints().stream().map(point -> PointResponse.builder()
+                        .attractionId(point.getAttraction().getId())
+                        .name(point.getName())
+                        .type(point.getType())
+                        .thumbnailUrl(point.getThumbnailUrl())
+                        .id(point.getId())
+                        .latitude(point.getLatitude().doubleValue())
+                        .longitude(point.getLongitude().doubleValue())
+                        .description(point.getDescription())
+                        .build()).collect(Collectors.toList()))
                 .build();
     }
 }

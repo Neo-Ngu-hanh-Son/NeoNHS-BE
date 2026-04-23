@@ -63,22 +63,19 @@ public class Voucher extends BaseEntity {
 
     private String giftImageUrl;
 
-    // ===== Bonus points fields (for BONUS_POINTS type) =====
-
-    private Integer bonusPointsValue;
-
     // ===== Time & Usage =====
 
     private LocalDateTime startDate;
 
     private LocalDateTime endDate;
 
+    @Builder.Default
+    private Integer pointCost = 0;
+
     private Integer usageLimit;
 
     @Builder.Default
     private Integer usageCount = 0;
-
-    private Integer maxUsagePerUser;
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
@@ -94,10 +91,6 @@ public class Voucher extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vendor_id")
     private VendorProfile vendor;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "free_ticket_catalog_id")
-    private TicketCatalog freeTicketCatalog;
 
     @OneToMany(mappedBy = "voucher", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<UserVoucher> userVouchers;

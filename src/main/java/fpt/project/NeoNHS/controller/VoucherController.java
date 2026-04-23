@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.controller;
 
 import fpt.project.NeoNHS.constants.PaginationConstants;
+import fpt.project.NeoNHS.dto.request.voucher.VoucherFilterRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.voucher.UserVoucherRespone;
 import fpt.project.NeoNHS.dto.response.voucher.VoucherResponse;
@@ -38,6 +39,7 @@ public class VoucherController {
     @GetMapping("/available")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Page<VoucherResponse>>> getAvailablePlatformVouchers(
+            VoucherFilterRequest filter,
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_PAGE) int page,
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_SIZE) int size,
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_BY) String sortBy,
@@ -49,7 +51,7 @@ public class VoucherController {
 
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Page<VoucherResponse> response = voucherService.getAvailablePlatformVouchers(pageable);
+        Page<VoucherResponse> response = voucherService.getAvailablePlatformVouchers(filter, pageable);
         return ResponseEntity.ok(ApiResponse.success("Available vouchers retrieved successfully", response));
     }
 
@@ -61,6 +63,7 @@ public class VoucherController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Page<VoucherResponse>>> getAvailableVendorVouchers(
             @Parameter(description = "Vendor Profile ID") @PathVariable UUID vendorId,
+            VoucherFilterRequest filter,
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_PAGE) int page,
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_SIZE) int size,
             @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_BY) String sortBy,
@@ -72,8 +75,31 @@ public class VoucherController {
 
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Page<VoucherResponse> response = voucherService.getAvailableVendorVouchers(vendorId, pageable);
+        Page<VoucherResponse> response = voucherService.getAvailableVendorVouchers(vendorId, filter, pageable);
         return ResponseEntity.ok(ApiResponse.success("Vendor vouchers retrieved successfully", response));
+    }
+
+    @Operation(
+            summary = "Get available vouchers from all vendors",
+            description = "Retrieve a paginated list of currently available vouchers from all vendors"
+    )
+    @GetMapping("/available/vendors")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Page<VoucherResponse>>> getAvailableAllVendorVouchers(
+            VoucherFilterRequest filter,
+            @RequestParam(defaultValue = PaginationConstants.DEFAULT_PAGE) int page,
+            @RequestParam(defaultValue = PaginationConstants.DEFAULT_SIZE) int size,
+            @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_BY) String sortBy,
+            @RequestParam(defaultValue = PaginationConstants.DEFAULT_SORT_DIR) String sortDir) {
+
+        Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<VoucherResponse> response = voucherService.getAvailableAllVendorVouchers(filter, pageable);
+        return ResponseEntity.ok(ApiResponse.success("All vendor vouchers retrieved successfully", response));
     }
 
     @Operation(

@@ -77,7 +77,7 @@ public class NotificationServiceImpl implements NotificationService {
 
         return PagedResponse.<NotificationResponse>builder()
                 .content(content)
-                .page(notificationPage.getNumber())
+                .number(notificationPage.getNumber())
                 .size(notificationPage.getSize())
                 .totalElements(notificationPage.getTotalElements())
                 .totalPages(notificationPage.getTotalPages())
