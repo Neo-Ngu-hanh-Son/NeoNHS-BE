@@ -1,5 +1,8 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.dto.response.review.ReviewImageResponse;
+import fpt.project.NeoNHS.entity.Review;
+import fpt.project.NeoNHS.entity.ReviewImage;
 import fpt.project.NeoNHS.exception.BadRequestException;
 
 import fpt.project.NeoNHS.constants.PaginationConstants;
@@ -16,6 +19,7 @@ import fpt.project.NeoNHS.helpers.AuthHelper;
 import fpt.project.NeoNHS.repository.*;
 import fpt.project.NeoNHS.service.PanoramaService;
 import fpt.project.NeoNHS.service.PointService;
+import fpt.project.NeoNHS.service.ReviewService;
 import fpt.project.NeoNHS.specification.EventSpecification;
 import fpt.project.NeoNHS.specification.PointSpecification;
 import jakarta.transaction.Transactional;
@@ -30,6 +34,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -41,6 +46,7 @@ public class PointServiceImpl implements PointService {
     private final EventRepository eventRepository;
     private final WorkshopTemplateRepository workshopTemplateRepository;
     private final UserCheckInRepository userCheckInRepository;
+    private final ReviewRepository reviewRepository;
 
     @Override
     @Transactional
@@ -203,7 +209,7 @@ public class PointServiceImpl implements PointService {
 
     @Override
     public Page<PointResponse> getAllPointsWithPagination(UUID attractionId, int page, int size, String sortBy,
-            String sortDir, String search) {
+                                                          String sortDir, String search) {
         if (!attractionRepository.existsById(attractionId)) {
             throw new RuntimeException("Attraction not found");
         }
@@ -220,7 +226,7 @@ public class PointServiceImpl implements PointService {
 
     @Override
     public Page<PointResponse> getAllPointsWithPaginationForAdmin(UUID attractionId, int page, int size, String sortBy,
-            String sortDir, String search, boolean includeDeleted) {
+                                                                  String sortDir, String search, boolean includeDeleted) {
         if (!attractionRepository.existsById(attractionId)) {
             throw new RuntimeException("Attraction not found");
         }
@@ -307,12 +313,21 @@ public class PointServiceImpl implements PointService {
 
     @Override
     public Page<PointResponse> getAllPointsForAdmin(int page, int size, String sortBy, String sortDir, String search,
-            boolean includeDeleted) {
+                                                    boolean includeDeleted) {
         return findAllPoints(page, size, sortBy, sortDir, search, !includeDeleted);
     }
 
+    @Override
+    public Page<ReviewImageResponse> getPointPublicCheckinImage(UUID pointId, PageRequest pageable) {
+        if (!pointRepository.existsById(pointId)) {
+            throw new RuntimeException("Point not found with id: " + pointId);
+        }
+        Page<ReviewImage> entities = reviewRepository.findAllImagesByTarget(pointId, pageable);
+        return entities.map(ReviewImageResponse::fromEntity);
+    }
+
     private Page<PointResponse> findAllPoints(int page, int size, String sortBy, String sortDir, String search,
-            boolean excludeDeleted) {
+                                              boolean excludeDeleted) {
         Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
                 ? Sort.by(sortBy).ascending().and(Sort.by("id").ascending())
                 : Sort.by(sortBy).descending().and(Sort.by("id").ascending());

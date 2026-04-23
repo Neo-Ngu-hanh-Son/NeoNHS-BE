@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/panoramas")
+@RequestMapping("/api/public/panoramas")
 @RequiredArgsConstructor
 public class PointPanoramaController {
     private final PanoramaService panoramaService;
@@ -22,7 +22,7 @@ public class PointPanoramaController {
      * Get specific panorama by id
      */
     @GetMapping("/{panoramaId}")
-    public ApiResponse<PointPanoramaResponse> getPanoramaByid(@PathVariable UUID panoramaId) {
+    public ApiResponse<PointPanoramaResponse> getPanoramaById(@PathVariable UUID panoramaId) {
         PointPanoramaResponse response = panoramaService.getPanoramaById(panoramaId);
         return ApiResponse.success("Panorama data retrieved successfully", response);
     }
