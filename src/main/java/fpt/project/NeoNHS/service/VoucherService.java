@@ -37,6 +37,8 @@ public interface VoucherService {
 
     Page<VoucherResponse> getMyVendorVouchers(VoucherFilterRequest filter, Pageable pageable);
 
+    VoucherResponse getVendorVoucherById(UUID id);
+
     VoucherResponse updateVendorVoucher(UUID id, UpdateVoucherRequest request);
 
     void deleteVendorVoucher(UUID id);
@@ -46,9 +48,11 @@ public interface VoucherService {
     VoucherResponse restoreVendorVoucher(UUID id);
 
     // ===== Tourist =====
-    Page<VoucherResponse> getAvailablePlatformVouchers(Pageable pageable);
+    Page<VoucherResponse> getAvailablePlatformVouchers(VoucherFilterRequest filter, Pageable pageable);
 
-    Page<VoucherResponse> getAvailableVendorVouchers(UUID vendorId, Pageable pageable);
+    Page<VoucherResponse> getAvailableVendorVouchers(UUID vendorId, VoucherFilterRequest filter, Pageable pageable);
+
+    Page<VoucherResponse> getAvailableAllVendorVouchers(VoucherFilterRequest filter, Pageable pageable);
 
     UserVoucherRespone collectVoucher(UUID voucherId);
 
