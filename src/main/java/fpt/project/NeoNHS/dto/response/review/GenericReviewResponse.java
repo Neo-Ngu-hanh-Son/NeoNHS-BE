@@ -7,13 +7,12 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 @Data
 @Builder
-public class PointReviewResponse {
+public class GenericReviewResponse {
     UUID id;
     UUID reviewTypeId;
     ReviewTypeFlagEnum reviewTypeFlg;
@@ -23,8 +22,8 @@ public class PointReviewResponse {
     LocalDateTime createdAt;
     List<ReviewImageResponse> reviewImages;
 
-    public static PointReviewResponse fromEntity(Review review) {
-        return PointReviewResponse.builder()
+    public static GenericReviewResponse fromEntity(Review review) {
+        return GenericReviewResponse.builder()
                 .id(review.getId())
                 .reviewTypeId(review.getReviewTypeId())
                 .reviewTypeFlg(review.getReviewTypeFlg())

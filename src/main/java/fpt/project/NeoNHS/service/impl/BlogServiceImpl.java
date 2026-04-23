@@ -41,7 +41,7 @@ public class BlogServiceImpl implements BlogService {
     @Override
     @Transactional(readOnly = true)
     public Page<BlogResponse> getBlogs(String search, BlogStatus status, List<String> tags, Pageable pageable,
-            boolean featured, String categorySlug) {
+                                       boolean featured, String categorySlug) {
         var spec = BlogSpecification.withFilters(search, status, tags, featured, categorySlug);
         return blogRepository.findAll(spec, pageable).map(BlogResponse::fromEntity);
     }
@@ -53,6 +53,15 @@ public class BlogServiceImpl implements BlogService {
         status = BlogStatus.PUBLISHED; // Force only show published blogs
         var spec = BlogSpecification.withFilters(search, status, tags, featured, categorySlug);
         return blogRepository.findAll(spec, pageable).map(BlogResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Page<BlogResponse> getActiveBlogsPreview(String search, BlogStatus status, List<String> tags, Pageable pageable,
+                                                    boolean featured, String categorySlug) {
+        status = BlogStatus.PUBLISHED; // Force only show published blogs
+        var spec = BlogSpecification.withFilters(search, status, tags, featured, categorySlug);
+        return blogRepository.findAll(spec, pageable).map(BlogResponse::fromEntityLight);
     }
 
     @Override
@@ -78,8 +87,20 @@ public class BlogServiceImpl implements BlogService {
                 .blogCategory(blogCategory)
                 .user(author)
                 .build();
+        handleFeaturedBlog(blog);
 
         return BlogResponse.fromEntity(blogRepository.save(blog));
+    }
+
+    /**
+     * Check if the current blog is featured, if yes, toggle all other blog to be not featured
+     *
+     * @param blog
+     */
+    private void handleFeaturedBlog(Blog blog) {
+        if (blog.getIsFeatured()) {
+            blogRepository.resetFeaturedExcept(blog.getId());
+        }
     }
 
     @Override
@@ -94,11 +115,14 @@ public class BlogServiceImpl implements BlogService {
         var blogCategory = getActiveBlogCategory(request.getBlogCategoryId());
         var targetStatus = resolveStatus(request.getStatus());
 
-        if (blog.getStatus().equals(BlogStatus.ARCHIVED)) {
+        // If target status is different from the current status, and the old one is archived, it means that admin is
+        // restoring this one
+        if (blog.getStatus().equals(BlogStatus.ARCHIVED) && blog.getStatus() != targetStatus) {
             // Admin revoking an archived blog back to draft or published => Reset deletedAt
             // and deletedBy
             blog.setDeletedAt(null);
             blog.setDeletedBy(null);
+            blog.setStatus(targetStatus);
         }
 
         blog.setTitle(request.getTitle());
@@ -110,15 +134,17 @@ public class BlogServiceImpl implements BlogService {
         blog.setBannerUrl(request.getBannerUrl());
         blog.setTags(request.getTags());
         blog.setIsFeatured(Boolean.TRUE.equals(request.getIsFeatured()));
-        blog.setStatus(targetStatus);
         blog.setPublishedAt(resolvePublishedAt(blog.getPublishedAt(), targetStatus));
         blog.setBlogCategory(blogCategory);
+
+        handleFeaturedBlog(blog);
 
         return BlogResponse.fromEntity(blogRepository.save(blog));
     }
 
     /**
      * Soft delete blog
+     *
      * @param id
      */
     @Override

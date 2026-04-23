@@ -26,7 +26,7 @@ public class ElevenLabsConfig {
         return RestClient.builder()
                 .baseUrl(baseUrl)
                 .defaultHeader("xi-api-key", apiKey)
-                .defaultHeader("Content-Type", "application/json")
+                .defaultHeader("Content-Type", "application/json; charset=utf-8")
                 .build();
     }
 }
