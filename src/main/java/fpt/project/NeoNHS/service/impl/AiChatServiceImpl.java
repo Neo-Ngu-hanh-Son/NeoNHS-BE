@@ -42,7 +42,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import org.springframework.data.redis.core.RedisTemplate;
 
@@ -78,7 +77,7 @@ public class AiChatServiceImpl implements AiChatService {
     // System Prompt
     // ═══════════════════════════════════════════════════════════════════
     private static final String DEFAULT_SYSTEM_PROMPT = """
-            Bạn là trợ lý du lịch ảo của Khu di tích Ngũ Hành Sơn (NeoNHS), Đà Nẵng, Việt Nam.
+            Bạn là trợ lý du lịch ảo của Khu di tích Ngũ Hành Sơn và khu vực Phường Ngũ Hành Sơn, Đà Nẵng, Việt Nam.
 
             Vai trò:
             - Hỗ trợ du khách với thông tin về khu di tích, các điểm tham quan, sự kiện, workshop và các bài viết tin tức/văn hóa (blog).
@@ -111,12 +110,30 @@ public class AiChatServiceImpl implements AiChatService {
         }
 
         StringBuilder prompt = new StringBuilder(currentPrompt);
-        // Save tokens by only loading relevant documents based on the user's message
-        // Ensure AI only uses active knowledge documents
-        List<KnowledgeDocument> knowledgeBase = knowledgeRepository.searchByKeyword(userMessage).stream()
-                .filter(KnowledgeDocument::isActive)
-                .limit(3)
-                .toList();
+
+        // VECTOR SEARCH: Get relevant knowledge documents
+        List<Double> queryVector = getEmbedding(userMessage);
+        List<KnowledgeDocument> knowledgeBase;
+
+        if (queryVector == null || queryVector.isEmpty()) {
+            // Fallback to keyword search if embedding fails
+            knowledgeBase = knowledgeRepository.searchByKeyword(userMessage).stream()
+                    .filter(KnowledgeDocument::isActive)
+                    .limit(5)
+                    .toList();
+        } else {
+            // Filter and sort by cosine similarity
+            List<KnowledgeDocument> allDocs = knowledgeRepository.findByIsActiveTrue();
+            knowledgeBase = allDocs.stream()
+                    .filter(doc -> doc.isActive() && !"SYSTEM_PROMPT".equals(doc.getKnowledgeType()))
+                    .filter(doc -> doc.getEmbedding() != null && !doc.getEmbedding().isEmpty())
+                    .sorted((d1, d2) -> Double.compare(
+                            cosineSimilarity(queryVector, d2.getEmbedding()),
+                            cosineSimilarity(queryVector, d1.getEmbedding())))
+                    .limit(5)
+                    .toList();
+        }
+
         if (!knowledgeBase.isEmpty()) {
             prompt.append("\n\n---\n")
                     .append("DỮ LIỆU KIẾN THỨC NỘI BỘ (Chỉ sử dụng khi cần trả lời các câu hỏi cụ thể):\n");
@@ -126,6 +143,19 @@ public class AiChatServiceImpl implements AiChatService {
             }
         }
         return prompt.toString();
+    }
+
+    private double cosineSimilarity(List<Double> vectorA, List<Double> vectorB) {
+        double dotProduct = 0.0;
+        double normA = 0.0;
+        double normB = 0.0;
+        int size = Math.min(vectorA.size(), vectorB.size());
+        for (int i = 0; i < size; i++) {
+            dotProduct += vectorA.get(i) * vectorB.get(i);
+            normA += Math.pow(vectorA.get(i), 2);
+            normB += Math.pow(vectorB.get(i), 2);
+        }
+        return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -313,7 +343,7 @@ public class AiChatServiceImpl implements AiChatService {
     private String executeSearchWorkshops(JsonNode args) {
         String keyword = args.has("keyword") ? args.get("keyword").asText("") : "";
         var workshops = workshopTemplateRepository.findAll().stream()
-                .filter(w -> Boolean.TRUE.equals(w.getIsPublished()) &&
+                .filter(w -> Boolean.TRUE.equals(w.getIsPublished()) && w.getDeletedAt() == null &&
                         (keyword.isEmpty() || w.getName().toLowerCase().contains(keyword.toLowerCase())))
                 .limit(3)
                 .map(w -> Map.of(
@@ -387,7 +417,8 @@ public class AiChatServiceImpl implements AiChatService {
     private String executeSearchEvents(JsonNode args) {
         String keyword = args.has("keyword") ? args.get("keyword").asText("") : "";
         var events = eventRepository.findAll().stream()
-                .filter(e -> (e.getStatus() == EventStatus.UPCOMING || e.getStatus() == EventStatus.ONGOING)
+                .filter(e -> e.getDeletedAt() == null
+                        && (e.getStatus() == EventStatus.UPCOMING || e.getStatus() == EventStatus.ONGOING)
                         && (keyword.isEmpty() || e.getName().toLowerCase().contains(keyword.toLowerCase())))
                 .limit(5)
                 .map(e -> Map.of(
@@ -442,7 +473,8 @@ public class AiChatServiceImpl implements AiChatService {
         } else {
             // Event-specific tickets
             var events = eventRepository.findAll().stream()
-                    .filter(e -> e.getName().toLowerCase().contains(eventName.toLowerCase()))
+                    .filter(e -> e.getDeletedAt() == null
+                            && e.getName().toLowerCase().contains(eventName.toLowerCase()))
                     .toList();
             if (events.isEmpty())
                 return "Không tìm thấy sự kiện '" + eventName + "'.";
@@ -643,6 +675,36 @@ public class AiChatServiceImpl implements AiChatService {
     // ═══════════════════════════════════════════════════════════════════
     // Main Streaming Logic
     // ═══════════════════════════════════════════════════════════════════
+    @Override
+    public List<Double> getEmbedding(String text) {
+        if (text == null || text.isBlank())
+            return Collections.emptyList();
+
+        ObjectNode request = objectMapper.createObjectNode();
+        request.put("model", openAiConfig.getEmbeddingModel());
+        request.put("input", text.replace("\n", " "));
+
+        try {
+            String responseJson = openAiRestClient.post()
+                    .uri(openAiConfig.getEmbeddingsUrl())
+                    .body(request.toString())
+                    .retrieve()
+                    .body(String.class);
+
+            JsonNode response = objectMapper.readTree(responseJson);
+            JsonNode embeddingNode = response.path("data").path(0).path("embedding");
+
+            List<Double> vector = new ArrayList<>();
+            for (JsonNode val : embeddingNode) {
+                vector.add(val.asDouble());
+            }
+            return vector;
+        } catch (Exception e) {
+            log.error("[AI] Failed to get embedding: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
     @Override
     public SseEmitter streamAiReply(String roomId, String senderId, String message) {
         SseEmitter emitter = new SseEmitter(60_000L); // 60s timeout
