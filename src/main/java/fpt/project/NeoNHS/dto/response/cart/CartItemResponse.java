@@ -22,5 +22,6 @@ public class CartItemResponse {
 
     // Workshop info (for workshop sessions)
     private UUID workshopSessionId;
+    private UUID workshopTemplateId;
     private String workshopName;
 }
