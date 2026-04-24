@@ -24,13 +24,13 @@ public class PayoutController {
 
         private final PayOS payOS; // Inject PayOS bean từ PayOSConfig
 
-        @Value("${payos.return.client-id}")
+        @Value("${payos.return.client_id}")
         private String payosClientId;
 
-        @Value("${payos.return.api-key}")
+        @Value("${payos.return.api_key}")
         private String payosApiKey;
 
-        @Value("${payos.return.checksum-key}")
+        @Value("${payos.return.checksum_key}")
         private String payosChecksumKey;
 
         private static final String PAYOS_API_BASE_URL = "https://api-merchant.payos.vn";
