@@ -17,4 +17,5 @@ public interface ReviewService {
     PagedResponse<ReviewResponse> getReviewsForWorkshopTemplate(UUID workshopTemplateId, Pageable pageable);
 
     GenericReviewResponseWrapper getReviews(UUID pointId, ReviewTypeFlagEnum flag, Pageable pageable);
+
 }

@@ -13,7 +13,12 @@ import java.util.List;
 public interface KnowledgeRepository extends MongoRepository<KnowledgeDocument, String> {
     Page<KnowledgeDocument> findByIsActiveOrderByCreatedAtDesc(boolean isActive, Pageable pageable);
 
-    // Fallback simple search via regex if vector search is not configured
+    // Improved search using MongoDB Text Index
+    @Query("{ 'isActive': true, 'knowledgeType': { $ne: 'SYSTEM_PROMPT' }, $text: { $search: ?0 } }")
+    List<KnowledgeDocument> searchByText(String text);
+
+    // Fallback simple search via regex if text search is not preferred or for
+    // simple keywords
     @Query("{ 'isActive': true, 'knowledgeType': { $ne: 'SYSTEM_PROMPT' }, $or: [ { 'title': { $regex: ?0, $options: 'i' } }, { 'content': { $regex: ?0, $options: 'i' } } ] }")
     List<KnowledgeDocument> searchByKeyword(String keyword);
 

@@ -3,6 +3,7 @@ package fpt.project.NeoNHS.service;
 import fpt.project.NeoNHS.document.KnowledgeDocument;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import java.util.List;
 
 public interface KnowledgeService {
     KnowledgeDocument createDocument(String title, String content);
@@ -18,4 +19,6 @@ public interface KnowledgeService {
     KnowledgeDocument getDocument(String id);
 
     KnowledgeDocument uploadDocument(org.springframework.web.multipart.MultipartFile file);
+
+    List<KnowledgeDocument> searchSimilar(String query, int limit);
 }
