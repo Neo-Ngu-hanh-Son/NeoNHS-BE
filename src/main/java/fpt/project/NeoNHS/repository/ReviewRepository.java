@@ -2,6 +2,7 @@ package fpt.project.NeoNHS.repository;
 
 import fpt.project.NeoNHS.dto.response.review.ReviewMetadata;
 import fpt.project.NeoNHS.entity.Review;
+import fpt.project.NeoNHS.entity.ReviewImage;
 import fpt.project.NeoNHS.enums.ReviewStatus;
 import fpt.project.NeoNHS.enums.ReviewTypeFlagEnum;
 import org.springframework.data.domain.Page;
@@ -45,17 +46,17 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
 
     @Query(
             value = """
-        SELECT r FROM Review r
-        WHERE r.reviewTypeId = :pointId
-          AND r.reviewTypeFlg = :type
-          AND r.status = :status
-    """,
+                        SELECT r FROM Review r
+                        WHERE r.reviewTypeId = :pointId
+                          AND r.reviewTypeFlg = :type
+                          AND r.status = :status
+                    """,
             countQuery = """
-        SELECT count(r) FROM Review r
-        WHERE r.reviewTypeId = :pointId
-          AND r.reviewTypeFlg = :type
-          AND r.status = :status
-    """
+                        SELECT count(r) FROM Review r
+                        WHERE r.reviewTypeId = :pointId
+                          AND r.reviewTypeFlg = :type
+                          AND r.status = :status
+                    """
     )
     Page<Review> getPageVisibleReview(
             @Param("pointId") UUID pointId,
@@ -96,4 +97,12 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
     List<Object[]> findWorkshopReviewSummariesByVendorId(
             @Param("vendorId") UUID vendorId,
             @Param("since") LocalDateTime since, @Param("type") ReviewTypeFlagEnum type);
+
+
+    @Query("""
+        SELECT ri FROM ReviewImage ri
+        JOIN ri.review r
+        WHERE r.reviewTypeId = :reviewTypeId
+    """)
+    Page<ReviewImage> findAllImagesByTarget(@Param("reviewTypeId") UUID reviewTypeId, Pageable pageable);
 }

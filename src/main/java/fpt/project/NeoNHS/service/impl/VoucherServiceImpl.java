@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static fpt.project.NeoNHS.helpers.AuthHelper.getCurrentUserPrincipal;
+import static fpt.project.NeoNHS.helpers.AuthHelper.getCurrentUserPrincipalSilent;
 
 @Service
 @RequiredArgsConstructor
@@ -232,16 +233,22 @@ public class VoucherServiceImpl implements VoucherService {
     public Page<VoucherResponse> getAvailablePlatformVouchers(VoucherFilterRequest filter, Pageable pageable) {
         filter.setScope(VoucherScope.PLATFORM);
         var spec = VoucherSpecification.withAvailableFilters(filter, LocalDateTime.now());
-        return voucherRepository.findAll(spec, pageable)
+        Page<VoucherResponse> response = voucherRepository.findAll(spec, pageable)
                 .map(VoucherResponse::fromEntity);
+        
+        populateCollectionStatus(response.getContent());
+        return response;
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<VoucherResponse> getAvailableVendorVouchers(UUID vendorId, VoucherFilterRequest filter, Pageable pageable) {
         var spec = VoucherSpecification.withAvailableVendorFilters(vendorId, filter, LocalDateTime.now());
-        return voucherRepository.findAll(spec, pageable)
+        Page<VoucherResponse> response = voucherRepository.findAll(spec, pageable)
                 .map(VoucherResponse::fromEntity);
+        
+        populateCollectionStatus(response.getContent());
+        return response;
     }
 
     @Override
@@ -249,8 +256,11 @@ public class VoucherServiceImpl implements VoucherService {
     public Page<VoucherResponse> getAvailableAllVendorVouchers(VoucherFilterRequest filter, Pageable pageable) {
         filter.setScope(VoucherScope.VENDOR);
         var spec = VoucherSpecification.withAvailableFilters(filter, LocalDateTime.now());
-        return voucherRepository.findAll(spec, pageable)
+        Page<VoucherResponse> response = voucherRepository.findAll(spec, pageable)
                 .map(VoucherResponse::fromEntity);
+        
+        populateCollectionStatus(response.getContent());
+        return response;
     }
 
     @Override
@@ -476,6 +486,17 @@ public class VoucherServiceImpl implements VoucherService {
         UserPrincipal principal = getCurrentUserPrincipal();
         return userRepository.findById(principal.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found"));
+    }
+
+    private void populateCollectionStatus(List<VoucherResponse> vouchers) {
+        UserPrincipal principal = getCurrentUserPrincipalSilent();
+        if (principal == null) {
+            vouchers.forEach(v -> v.setIsCollected(false));
+            return;
+        }
+
+        List<UUID> collectedIds = userVoucherRepository.findVoucherIdsByUserId(principal.getId());
+        vouchers.forEach(v -> v.setIsCollected(collectedIds.contains(v.getId())));
     }
 
     // ==================== CART / PRE-CHECKOUT ====================
