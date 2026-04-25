@@ -152,30 +152,48 @@ public class OrderServiceImpl implements OrderService {
 
             if (item.getTicketCatalog() != null) {
                 unitPrice = item.getTicketCatalog().getPrice();
-                // TicketCatalog (Event) không áp dụng commission
+                
+                // 1. RESERVE TICKET: Update TicketCatalog Sold Quantity
+                TicketCatalog ticketCatalog = item.getTicketCatalog();
+                int currentSold = ticketCatalog.getSoldQuantity() != null ? ticketCatalog.getSoldQuantity() : 0;
+                ticketCatalog.setSoldQuantity(currentSold + item.getQuantity());
+
+                if (ticketCatalog.getTotalQuota() != null && ticketCatalog.getSoldQuantity() >= ticketCatalog.getTotalQuota()) {
+                    ticketCatalog.setStatus(TicketCatalogStatus.SOLD_OUT);
+                }
+                ticketCatalogRepository.save(ticketCatalog);
+
+                // Update Event Current Enrolled
+                Event event = ticketCatalog.getEvent();
+                if (event != null) {
+                    int currentEnrolled = event.getCurrentEnrolled() != null ? event.getCurrentEnrolled() : 0;
+                    event.setCurrentEnrolled(currentEnrolled + item.getQuantity());
+                    eventRepository.save(event);
+                }
             } else if (item.getWorkshopSession() != null && item.getWorkshopSession().getPrice() != null) {
                 unitPrice = item.getWorkshopSession().getPrice();
 
+                // RESERVE TICKET: Update WorkshopSession Enrolled
+                WorkshopSession session = item.getWorkshopSession();
+                int currentEnrolled = session.getCurrentEnrolled() != null ? session.getCurrentEnrolled() : 0;
+                session.setCurrentEnrolled(currentEnrolled + item.getQuantity());
+                workshopSessionRepository.save(session);
+
                 // Tính commission từ VendorProfile.commissionRate
-                // Chain: WorkshopSession → WorkshopTemplate → VendorProfile → commissionRate
                 try {
                     BigDecimal commissionRate = item.getWorkshopSession()
                             .getWorkshopTemplate()
                             .getVendor()
                             .getCommissionRate();
 
-                    // Fallback to 10% if commission rate is not set
                     if (commissionRate == null) {
                         commissionRate = BigDecimal.valueOf(0.1);
                     }
 
                     BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
-                    // commissionAmount = phần admin giữ lại (e.g. 10%)
                     commissionAmount = lineTotal.multiply(commissionRate);
-                    // netAmount = phần vendor nhận sau khi trừ commission (e.g. 90%)
                     netAmount = lineTotal.subtract(commissionAmount);
                 } catch (Exception e) {
-                    // Nếu không lấy được commissionRate thì để null, không block order
                 }
             }
 
@@ -276,31 +294,8 @@ public class OrderServiceImpl implements OrderService {
 
         for (OrderDetail detail : order.getOrderDetails()) {
 
-            // 1. Update TicketCatalog Sold Quantity
-            if (detail.getTicketCatalog() != null) {
-                TicketCatalog ticketCatalog = detail.getTicketCatalog();
-                int currentSold = ticketCatalog.getSoldQuantity() != null ? ticketCatalog.getSoldQuantity() : 0;
-                ticketCatalog.setSoldQuantity(currentSold + detail.getQuantity());
-
-                if (ticketCatalog.getTotalQuota() != null
-                        && ticketCatalog.getSoldQuantity() >= ticketCatalog.getTotalQuota()) {
-                    ticketCatalog.setStatus(TicketCatalogStatus.SOLD_OUT);
-                }
-                ticketCatalogRepository.save(ticketCatalog);
-
-                // 2. Update Event Current Enrolled
-                Event event = ticketCatalog.getEvent();
-                if (event != null) {
-                    int currentEnrolled = event.getCurrentEnrolled() != null ? event.getCurrentEnrolled() : 0;
-                    event.setCurrentEnrolled(currentEnrolled + detail.getQuantity());
-                    eventRepository.save(event);
-                }
-            } else if (detail.getWorkshopSession() != null) {
-                WorkshopSession session = detail.getWorkshopSession();
-                int currentEnrolled = session.getCurrentEnrolled() != null ? session.getCurrentEnrolled() : 0;
-                session.setCurrentEnrolled(currentEnrolled + detail.getQuantity());
-                workshopSessionRepository.save(session);
-            }
+            // We no longer increment soldQuantity and currentEnrolled here.
+            // It is already done in createOrder() (Reservation logic).
 
             for (int i = 0; i < detail.getQuantity(); i++) {
                 TicketType type = TicketType.ENTRANCE;
@@ -365,4 +360,45 @@ public class OrderServiceImpl implements OrderService {
         return UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
+    @Override
+    @Transactional
+    public void cancelExpiredOrders() {
+        // Find all transactions that are PENDING and older than 10 minutes
+        LocalDateTime tenMinutesAgo = LocalDateTime.now().minusMinutes(10);
+        List<Transaction> expiredTransactions = transactionRepository.findByStatusAndTransactionDateBefore(TransactionStatus.PENDING, tenMinutesAgo);
+
+        for (Transaction transaction : expiredTransactions) {
+            transaction.setStatus(TransactionStatus.FAILED);
+            transactionRepository.save(transaction);
+
+            Order order = transaction.getOrder();
+            if (order != null) {
+                // 1. Revert ticket reservation
+                for (OrderDetail detail : order.getOrderDetails()) {
+                    if (detail.getTicketCatalog() != null) {
+                        TicketCatalog ticketCatalog = detail.getTicketCatalog();
+                        int currentSold = ticketCatalog.getSoldQuantity() != null ? ticketCatalog.getSoldQuantity() : 0;
+                        ticketCatalog.setSoldQuantity(Math.max(0, currentSold - detail.getQuantity()));
+                        
+                        if (ticketCatalog.getStatus() == TicketCatalogStatus.SOLD_OUT && ticketCatalog.getTotalQuota() != null && ticketCatalog.getSoldQuantity() < ticketCatalog.getTotalQuota()) {
+                            ticketCatalog.setStatus(TicketCatalogStatus.ACTIVE);
+                        }
+                        ticketCatalogRepository.save(ticketCatalog);
+
+                        Event event = ticketCatalog.getEvent();
+                        if (event != null) {
+                            int currentEnrolled = event.getCurrentEnrolled() != null ? event.getCurrentEnrolled() : 0;
+                            event.setCurrentEnrolled(Math.max(0, currentEnrolled - detail.getQuantity()));
+                            eventRepository.save(event);
+                        }
+                    } else if (detail.getWorkshopSession() != null) {
+                        WorkshopSession session = detail.getWorkshopSession();
+                        int currentEnrolled = session.getCurrentEnrolled() != null ? session.getCurrentEnrolled() : 0;
+                        session.setCurrentEnrolled(Math.max(0, currentEnrolled - detail.getQuantity()));
+                        workshopSessionRepository.save(session);
+                    }
+                }
+            }
+        }
+    }
 }
