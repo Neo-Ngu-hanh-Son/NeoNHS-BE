@@ -52,20 +52,25 @@ public class TransactionServiceImpl implements TransactionService {
             for (OrderDetail detail : order.getOrderDetails()) {
                 if (detail.getTickets() != null) {
                     for (Ticket ticket : detail.getTickets()) {
+                        String eventName = null;
+                        String workshopName = null;
                         String itemName = "";
                         LocalDateTime validFrom = ticket.getIssueDate();
                         LocalDateTime validTo = ticket.getExpiryDate();
 
                         if (detail.getTicketCatalog() != null) {
                             if (detail.getTicketCatalog().getEvent() != null) {
-                                itemName = "Event: " + detail.getTicketCatalog().getName();
+                                itemName = detail.getTicketCatalog().getName();
+                                eventName = detail.getTicketCatalog().getEvent().getName();
                             } else if (detail.getTicketCatalog().getAttraction() != null) {
-                                itemName = "Entrance: " + detail.getTicketCatalog().getName();
+                                itemName = detail.getTicketCatalog().getName();
+                                eventName = detail.getTicketCatalog().getAttraction().getName();
                             } else {
                                 itemName = detail.getTicketCatalog().getName();
                             }
                         } else if (detail.getWorkshopSession() != null) {
-                            itemName = "Workshop: " + detail.getWorkshopSession().getWorkshopTemplate().getName();
+                            itemName = detail.getWorkshopSession().getWorkshopTemplate().getName();
+                            workshopName = detail.getWorkshopSession().getWorkshopTemplate().getName();
                             validFrom = detail.getWorkshopSession().getStartTime();
                             validTo = detail.getWorkshopSession().getEndTime();
                         }
@@ -78,6 +83,8 @@ public class TransactionServiceImpl implements TransactionService {
                                 .ticketType(ticket.getTicketType().name())
                                 .status(ticket.getStatus().name())
                                 .itemName(itemName)
+                                .eventName(eventName)
+                                .workshopName(workshopName)
                                 .validFrom(validFrom)
                                 .validTo(validTo)
                                 .price(detail.getUnitPrice())

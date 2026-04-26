@@ -214,6 +214,7 @@ public class CartServiceImpl implements CartService {
                 UUID eventId = null;
                 String eventName = null;
                 UUID workshopSessionId = null;
+                UUID workshopTemplateId = null;
                 String workshopName = null;
 
                 if (item.getTicketCatalog() != null) {
@@ -232,9 +233,10 @@ public class CartServiceImpl implements CartService {
                 // Extract workshop info
                 if (item.getWorkshopSession() != null) {
                     workshopSessionId = item.getWorkshopSession().getId();
-                    workshopName = item.getWorkshopSession().getWorkshopTemplate() != null
-                            ? item.getWorkshopSession().getWorkshopTemplate().getName()
-                            : null;
+                    if (item.getWorkshopSession().getWorkshopTemplate() != null) {
+                        workshopName = item.getWorkshopSession().getWorkshopTemplate().getName();
+                        workshopTemplateId = item.getWorkshopSession().getWorkshopTemplate().getId();
+                    }
                     if (itemPrice.compareTo(BigDecimal.ZERO) == 0 && item.getWorkshopSession().getPrice() != null) {
                         itemPrice = item.getWorkshopSession().getPrice();
                         itemName = workshopName != null ? workshopName : itemName;
@@ -254,6 +256,7 @@ public class CartServiceImpl implements CartService {
                         .eventId(eventId)
                         .eventName(eventName)
                         .workshopSessionId(workshopSessionId)
+                        .workshopTemplateId(workshopTemplateId)
                         .workshopName(workshopName)
                         .build());
             }
@@ -314,14 +317,15 @@ public class CartServiceImpl implements CartService {
                 eventName = item.getTicketCatalog().getEvent().getName();
             }
 
-            // Extract workshop info
+            UUID workshopTemplateId2 = null;
             UUID workshopSessionId = null;
             String workshopName = null;
             if (item.getWorkshopSession() != null) {
                 workshopSessionId = item.getWorkshopSession().getId();
-                workshopName = item.getWorkshopSession().getWorkshopTemplate() != null
-                        ? item.getWorkshopSession().getWorkshopTemplate().getName()
-                        : null;
+                if (item.getWorkshopSession().getWorkshopTemplate() != null) {
+                    workshopName = item.getWorkshopSession().getWorkshopTemplate().getName();
+                    workshopTemplateId2 = item.getWorkshopSession().getWorkshopTemplate().getId();
+                }
             }
 
             String itemName = item.getTicketCatalog() != null
@@ -338,6 +342,7 @@ public class CartServiceImpl implements CartService {
                     .eventId(eventId)
                     .eventName(eventName)
                     .workshopSessionId(workshopSessionId)
+                    .workshopTemplateId(workshopTemplateId2)
                     .workshopName(workshopName)
                     .build());
         }
