@@ -34,7 +34,7 @@ public class WorkshopSessionScheduler {
      */
     // Change to every 15 minutes to reduce load, since this is not time-sensitive
     // and can run less frequently
-    @Scheduled(cron = "0 */2 * * * *") // Every 15 minutes at 0 seconds
+    @Scheduled(cron = "0 */15 * * * *") // Every 15 minutes at 0 seconds
     @Transactional
     public void handleExpiredAndUnattendedSessions() {
         LocalDateTime now = LocalDateTime.now();

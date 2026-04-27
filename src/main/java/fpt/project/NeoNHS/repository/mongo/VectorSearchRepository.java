@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.repository.mongo;
 
 import fpt.project.NeoNHS.document.KnowledgeDocument;
+import fpt.project.NeoNHS.enums.KnowledgeTypeStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.Document;
@@ -57,7 +58,7 @@ public class VectorSearchRepository {
                     .append("limit", limit)
                     .append("filter", new Document()
                             .append("isActive", true)
-                            .append("knowledgeType", new Document("$ne", "SYSTEM_PROMPT"))
+                            .append("knowledgeType", new Document("$ne", KnowledgeTypeStatus.SYSTEM_PROMPT.name()))
                     )
             );
 

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import fpt.project.NeoNHS.config.OpenAiConfig;
 import fpt.project.NeoNHS.document.ChatMessage;
 import fpt.project.NeoNHS.document.KnowledgeDocument;
+import fpt.project.NeoNHS.enums.KnowledgeTypeStatus;
 import fpt.project.NeoNHS.dto.chat.ChatMessageDTO;
 import fpt.project.NeoNHS.dto.chat.ChatMessageRequest;
 import fpt.project.NeoNHS.enums.EventStatus;
@@ -123,7 +124,7 @@ public class AiChatServiceImpl implements AiChatService {
 
     private String getSystemPrompt(String userMessage) {
         // Fetch custom prompt from MongoDB, fallback to default
-        List<KnowledgeDocument> dbPrompts = knowledgeRepository.findByKnowledgeType("SYSTEM_PROMPT");
+        List<KnowledgeDocument> dbPrompts = knowledgeRepository.findByKnowledgeType(KnowledgeTypeStatus.SYSTEM_PROMPT);
         String currentPrompt = DEFAULT_SYSTEM_PROMPT;
 
         // Only use the custom SYSTEM_PROMPT if it is active
@@ -135,7 +136,7 @@ public class AiChatServiceImpl implements AiChatService {
             KnowledgeDocument newPromptDoc = KnowledgeDocument.builder()
                     .title("AI System Prompt")
                     .content(DEFAULT_SYSTEM_PROMPT)
-                    .knowledgeType("SYSTEM_PROMPT")
+                    .knowledgeType(KnowledgeTypeStatus.SYSTEM_PROMPT)
                     .isActive(true)
                     .build();
             try {

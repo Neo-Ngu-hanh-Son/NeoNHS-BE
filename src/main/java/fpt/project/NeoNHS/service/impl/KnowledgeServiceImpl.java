@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.document.KnowledgeDocument;
+import fpt.project.NeoNHS.enums.KnowledgeTypeStatus;
 import fpt.project.NeoNHS.repository.mongo.KnowledgeRepository;
 import fpt.project.NeoNHS.repository.mongo.VectorSearchRepository;
 import fpt.project.NeoNHS.service.EmbeddingService;
@@ -26,26 +27,23 @@ public class KnowledgeServiceImpl implements KnowledgeService {
     private final VectorSearchRepository vectorSearchRepository;
 
     @Override
-    public KnowledgeDocument createDocument(String title, String content, String knowledgeType) {
+    public KnowledgeDocument createDocument(String title, String content, KnowledgeTypeStatus knowledgeType) {
         KnowledgeDocument parent = KnowledgeDocument.builder()
                 .title(title)
                 .content(content)
+                .knowledgeType(knowledgeType)
                 .build();
         parent = knowledgeRepository.save(parent);
 
         // SYSTEM_PROMPT docs are not vectorized — they're used as-is for AI behavior
-        // if knowledgeType is SYSTEM_PROMPT, don't have it generate embeddings or chunks, just save the parent document
-        if (!"SYSTEM_PROMPT".equals(knowledgeType)) {
+        if (knowledgeType != KnowledgeTypeStatus.SYSTEM_PROMPT) {
             parent.setEmbedding(embeddingService.getEmbedding(title + " " + content));
-            parent.setKnowledgeType(knowledgeType);
             parent = knowledgeRepository.save(parent);
             createChunksForDocument(parent);
         } else {
-            parent.setKnowledgeType(knowledgeType);
-            parent.setEmbedding(null);
-            parent = knowledgeRepository.save(parent);
-            log.info("[Knowledge] Created SYSTEM_PROMPT document '{}'", title);
+            log.info("[Knowledge] Created SYSTEM_PROMPT document '{}' (no embedding/chunking)", title);
         }
+
         return parent;
     }
 
@@ -58,7 +56,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         doc.setUpdatedAt(LocalDateTime.now());
 
         // SYSTEM_PROMPT docs are not vectorized — skip embedding and chunking
-        if (!"SYSTEM_PROMPT".equals(doc.getKnowledgeType())) {
+        if (doc.getKnowledgeType() != KnowledgeTypeStatus.SYSTEM_PROMPT) {
             knowledgeRepository.deleteByParentDocumentId(id);
             doc.setEmbedding(embeddingService.getEmbedding(title + " " + content));
             doc = knowledgeRepository.save(doc);
@@ -98,9 +96,10 @@ public class KnowledgeServiceImpl implements KnowledgeService {
     }
 
     @Override
-    public Page<KnowledgeDocument> getDocuments(String knowledgeType, Pageable pageable) {
-        if (knowledgeType != null && !knowledgeType.isEmpty()) {
-            return knowledgeRepository.findByKnowledgeType(knowledgeType, pageable);
+    public Page<KnowledgeDocument> getDocuments(KnowledgeTypeStatus knowledgeType, Pageable pageable) {
+        if (knowledgeType != null) {
+            // Filter by type, but still exclude chunks (only show parent documents)
+            return knowledgeRepository.findByKnowledgeTypeAndParentDocumentIdIsNull(knowledgeType, pageable);
         }
         // Show only parent documents (not chunks) for admin listing
         return knowledgeRepository.findByParentDocumentIdIsNull(pageable);
@@ -152,7 +151,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         KnowledgeDocument doc = KnowledgeDocument.builder()
                 .title(title)
                 .content(content)
-                .knowledgeType("BLOG")
+                .knowledgeType(KnowledgeTypeStatus.BLOG)
                 .sourceType("BLOG_SYNC")
                 .sourceId(blogId)
                 .embedding(embeddingService.getEmbedding(title + " " + content))
@@ -182,7 +181,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         KnowledgeDocument doc = getDocument(id);
 
         // SYSTEM_PROMPT docs are not vectorized — nothing to re-embed
-        if ("SYSTEM_PROMPT".equals(doc.getKnowledgeType())) {
+        if (doc.getKnowledgeType() == KnowledgeTypeStatus.SYSTEM_PROMPT) {
             log.info("[Knowledge] Skipped re-embed for SYSTEM_PROMPT document '{}'", doc.getTitle());
             return doc;
         }
@@ -207,7 +206,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         // Find all parent documents (not chunks, not system prompts)
         List<KnowledgeDocument> allParents = knowledgeRepository.findByIsActiveTrue().stream()
                 .filter(doc -> doc.getParentDocumentId() == null)
-                .filter(doc -> !"SYSTEM_PROMPT".equals(doc.getKnowledgeType()))
+                .filter(doc -> doc.getKnowledgeType() != KnowledgeTypeStatus.SYSTEM_PROMPT)
                 .toList();
 
         int count = 0;
@@ -239,7 +238,8 @@ public class KnowledgeServiceImpl implements KnowledgeService {
 
         List<String> chunks = textChunkingService.chunkText(parent.getContent());
 
-        // Only create chunks if there's more than 1 (otherwise the parent embedding is sufficient)
+        // Only create chunks if there's more than 1 (otherwise the parent embedding is
+        // sufficient)
         if (chunks.size() <= 1) {
             return;
         }
@@ -260,7 +260,8 @@ public class KnowledgeServiceImpl implements KnowledgeService {
                     .sourceType(parent.getSourceType())
                     .sourceId(parent.getSourceId())
                     .isActive(parent.isActive())
-                    .embedding(i < embeddings.size() ? embeddings.get(i) : embeddingService.getEmbedding(chunkTexts.get(i)))
+                    .embedding(i < embeddings.size() ? embeddings.get(i)
+                            : embeddingService.getEmbedding(chunkTexts.get(i)))
                     .build();
             knowledgeRepository.save(chunk);
         }

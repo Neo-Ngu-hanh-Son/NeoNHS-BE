@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.document;
 
+import fpt.project.NeoNHS.enums.KnowledgeTypeStatus;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -46,7 +47,7 @@ public class KnowledgeDocument {
     private boolean isActive = true;
 
     @Builder.Default
-    private String knowledgeType = "INFORMATION"; // INFORMATION, SYSTEM_PROMPT, REGULATION, GUIDE, BLOG
+    private KnowledgeTypeStatus knowledgeType = KnowledgeTypeStatus.INFORMATION;
 
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();

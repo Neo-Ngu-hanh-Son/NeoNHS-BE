@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.controller;
 
 import fpt.project.NeoNHS.document.KnowledgeDocument;
+import fpt.project.NeoNHS.enums.KnowledgeTypeStatus;
 import fpt.project.NeoNHS.service.KnowledgeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,7 +22,11 @@ public class KnowledgeController {
 
     @PostMapping
     public ResponseEntity<KnowledgeDocument> createDocument(@RequestBody Map<String, String> request) {
-        return ResponseEntity.ok(knowledgeService.createDocument(request.get("title"), request.get("content"), request.get("knowledgeType")));
+        KnowledgeTypeStatus type = KnowledgeTypeStatus.INFORMATION; // default
+        if (request.get("knowledgeType") != null) {
+            type = KnowledgeTypeStatus.valueOf(request.get("knowledgeType"));
+        }
+        return ResponseEntity.ok(knowledgeService.createDocument(request.get("title"), request.get("content"), type));
     }
 
     @PutMapping("/{id}")
@@ -48,7 +53,7 @@ public class KnowledgeController {
 
     @GetMapping
     public ResponseEntity<Page<KnowledgeDocument>> getDocuments(
-            @RequestParam(required = false) String knowledgeType,
+            @RequestParam(required = false) KnowledgeTypeStatus knowledgeType,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(
