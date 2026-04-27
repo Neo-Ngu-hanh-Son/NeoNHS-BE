@@ -6,5 +6,4 @@ public enum KnowledgeTypeStatus {
     REGULATION,
     GUIDE,
     BLOG,
-    KNOWLEDGE_BASE
 }
