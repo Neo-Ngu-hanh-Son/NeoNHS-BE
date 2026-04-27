@@ -48,16 +48,22 @@ public class KnowledgeServiceImpl implements KnowledgeService {
     }
 
     @Override
-    public KnowledgeDocument updateDocument(String id, String title, String content) {
+    public KnowledgeDocument updateDocument(String id, String title, String content,
+            KnowledgeTypeStatus knowledgeType) {
         KnowledgeDocument doc = getDocument(id);
 
         doc.setTitle(title);
         doc.setContent(content);
+        if (knowledgeType != null) {
+            doc.setKnowledgeType(knowledgeType);
+        }
         doc.setUpdatedAt(LocalDateTime.now());
+
+        // Delete old chunks first in case we are changing types or content
+        knowledgeRepository.deleteByParentDocumentId(id);
 
         // SYSTEM_PROMPT docs are not vectorized — skip embedding and chunking
         if (doc.getKnowledgeType() != KnowledgeTypeStatus.SYSTEM_PROMPT) {
-            knowledgeRepository.deleteByParentDocumentId(id);
             doc.setEmbedding(embeddingService.getEmbedding(title + " " + content));
             doc = knowledgeRepository.save(doc);
             createChunksForDocument(doc);
@@ -108,7 +114,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
     @Override
     public KnowledgeDocument getDocument(String id) {
         return knowledgeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Knowledge document not found"));
+                .orElseThrow(() -> new RuntimeException("Knowledge document not found with id: " + id));
     }
 
     @Override
@@ -129,7 +135,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
             createChunksForDocument(doc);
             return doc;
         } catch (Exception e) {
-            throw new RuntimeException("Failed to process file: " + e.getMessage());
+            throw new RuntimeException("Failed to process file " + file.getOriginalFilename() + ": " + e.getMessage());
         }
     }
 
@@ -140,40 +146,6 @@ public class KnowledgeServiceImpl implements KnowledgeService {
             return knowledgeRepository.searchByKeyword(query); // Fallback to keyword if embedding fails
         }
         return vectorSearchRepository.vectorSearch(queryVector, limit, 0.5); // Lower threshold for search testing
-    }
-
-    @Override
-    public KnowledgeDocument syncBlogToKnowledge(String blogId, String title, String content) {
-        // Remove existing sync for this blog (if re-syncing)
-        removeBlogFromKnowledge(blogId);
-
-        // Create a new knowledge document from the blog
-        KnowledgeDocument doc = KnowledgeDocument.builder()
-                .title(title)
-                .content(content)
-                .knowledgeType(KnowledgeTypeStatus.BLOG)
-                .sourceType("BLOG_SYNC")
-                .sourceId(blogId)
-                .embedding(embeddingService.getEmbedding(title + " " + content))
-                .build();
-        doc = knowledgeRepository.save(doc);
-
-        createChunksForDocument(doc);
-        log.info("[Knowledge] Blog '{}' synced to AI knowledge base (docId: {})", title, doc.getId());
-        return doc;
-    }
-
-    @Override
-    public void removeBlogFromKnowledge(String blogId) {
-        // Delete all documents (parent + chunks) synced from this blog
-        List<KnowledgeDocument> existing = knowledgeRepository.findBySourceTypeAndSourceId("BLOG_SYNC", blogId);
-        for (KnowledgeDocument doc : existing) {
-            knowledgeRepository.deleteByParentDocumentId(doc.getId());
-        }
-        knowledgeRepository.deleteBySourceTypeAndSourceId("BLOG_SYNC", blogId);
-        if (!existing.isEmpty()) {
-            log.info("[Knowledge] Removed blog {} from AI knowledge base", blogId);
-        }
     }
 
     @Override

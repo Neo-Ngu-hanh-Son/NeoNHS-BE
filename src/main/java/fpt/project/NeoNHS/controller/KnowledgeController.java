@@ -32,7 +32,11 @@ public class KnowledgeController {
     @PutMapping("/{id}")
     public ResponseEntity<KnowledgeDocument> updateDocument(@PathVariable String id,
             @RequestBody Map<String, String> request) {
-        return ResponseEntity.ok(knowledgeService.updateDocument(id, request.get("title"), request.get("content")));
+        KnowledgeTypeStatus type = null;
+        if (request.get("knowledgeType") != null) {
+            type = KnowledgeTypeStatus.valueOf(request.get("knowledgeType"));
+        }
+        return ResponseEntity.ok(knowledgeService.updateDocument(id, request.get("title"), request.get("content"), type));
     }
 
     @DeleteMapping("/{id}")
@@ -76,26 +80,6 @@ public class KnowledgeController {
     // New RAG Endpoints
     // ═══════════════════════════════════════════════════════════════════
 
-    /**
-     * Sync a blog post to the AI knowledge base (manual sync by admin).
-     */
-    public record SyncBlogRequest(String blogId, String title, String content) {
-    }
-
-    @PostMapping("/sync-blog")
-    public ResponseEntity<KnowledgeDocument> syncBlog(@RequestBody SyncBlogRequest request) {
-        return ResponseEntity.ok(
-                knowledgeService.syncBlogToKnowledge(request.blogId(), request.title(), request.content()));
-    }
-
-    /**
-     * Remove a blog from the AI knowledge base.
-     */
-    @DeleteMapping("/sync-blog/{blogId}")
-    public ResponseEntity<Void> removeBlogSync(@PathVariable String blogId) {
-        knowledgeService.removeBlogFromKnowledge(blogId);
-        return ResponseEntity.ok().build();
-    }
 
     /**
      * Force re-generate embeddings and chunks for a single document.

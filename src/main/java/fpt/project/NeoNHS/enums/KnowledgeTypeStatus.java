@@ -5,5 +5,4 @@ public enum KnowledgeTypeStatus {
     INFORMATION,
     REGULATION,
     GUIDE,
-    BLOG,
 }

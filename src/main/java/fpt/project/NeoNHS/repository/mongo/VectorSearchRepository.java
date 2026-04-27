@@ -95,4 +95,71 @@ public class VectorSearchRepository {
     public List<KnowledgeDocument> vectorSearch(List<Double> queryVector) {
         return vectorSearch(queryVector, defaultMaxResults, defaultMinScore);
     }
+
+    /**
+     * Perform a vector search filtered by specific knowledge types.
+     * Used by the classification-based RAG flow to retrieve only relevant document categories.
+     *
+     * @param queryVector    the embedding vector of the user's query
+     * @param knowledgeTypes the list of knowledge types to filter by (uses $in operator)
+     *                       If null or empty, falls back to default behavior (all types except SYSTEM_PROMPT)
+     * @return list of KnowledgeDocuments sorted by relevance within the specified types
+     */
+    public List<KnowledgeDocument> vectorSearch(List<Double> queryVector, List<KnowledgeTypeStatus> knowledgeTypes) {
+        if (knowledgeTypes == null || knowledgeTypes.isEmpty()) {
+            return vectorSearch(queryVector);
+        }
+
+        if (queryVector == null || queryVector.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        try {
+            // Convert enum list to string list for MongoDB filter
+            List<String> typeStrings = knowledgeTypes.stream()
+                    .map(Enum::name)
+                    .toList();
+
+            // Build the $vectorSearch aggregation stage with type filter
+            Document vectorSearchStage = new Document("$vectorSearch", new Document()
+                    .append("index", indexName)
+                    .append("path", "embedding")
+                    .append("queryVector", queryVector)
+                    .append("numCandidates", defaultMaxResults * 10)
+                    .append("limit", defaultMaxResults)
+                    .append("filter", new Document()
+                            .append("isActive", true)
+                            .append("knowledgeType", new Document("$in", typeStrings))
+                    )
+            );
+
+            // Add score field
+            Document addFieldsStage = new Document("$addFields", new Document()
+                    .append("searchScore", new Document("$meta", "vectorSearchScore"))
+            );
+
+            // Filter by minimum score
+            Document matchStage = new Document("$match", new Document()
+                    .append("searchScore", new Document("$gte", defaultMinScore))
+            );
+
+            AggregationOperation vectorSearchOp = context -> vectorSearchStage;
+            AggregationOperation addScoreOp = context -> addFieldsStage;
+            AggregationOperation matchScoreOp = context -> matchStage;
+
+            Aggregation aggregation = Aggregation.newAggregation(vectorSearchOp, addScoreOp, matchScoreOp);
+
+            AggregationResults<KnowledgeDocument> results = mongoTemplate.aggregate(
+                    aggregation, "knowledge_base", KnowledgeDocument.class);
+
+            log.debug("[VectorSearch] Type-filtered search for types {} returned {} results",
+                    typeStrings, results.getMappedResults().size());
+
+            return results.getMappedResults();
+        } catch (Exception e) {
+            log.error("[VectorSearch] Type-filtered search failed: {}. Falling back to unfiltered search.",
+                    e.getMessage());
+            return vectorSearch(queryVector);
+        }
+    }
 }
