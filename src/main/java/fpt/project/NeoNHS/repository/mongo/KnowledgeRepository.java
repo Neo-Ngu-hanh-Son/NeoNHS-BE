@@ -27,4 +27,20 @@ public interface KnowledgeRepository extends MongoRepository<KnowledgeDocument, 
     List<KnowledgeDocument> findByKnowledgeType(String knowledgeType);
 
     Page<KnowledgeDocument> findByKnowledgeType(String knowledgeType, Pageable pageable);
+
+    // Chunking support: find all chunks belonging to a parent document
+    List<KnowledgeDocument> findByParentDocumentId(String parentDocumentId);
+
+    // Chunking support: delete all chunks when parent is updated/deleted
+    void deleteByParentDocumentId(String parentDocumentId);
+
+    // Blog sync: find documents synced from a specific blog
+    List<KnowledgeDocument> findBySourceTypeAndSourceId(String sourceType, String sourceId);
+
+    // Blog sync: delete all docs (parent + chunks) synced from a specific blog
+    void deleteBySourceTypeAndSourceId(String sourceType, String sourceId);
+
+    // Find only parent documents (not chunks) for admin listing
+    Page<KnowledgeDocument> findByParentDocumentIdIsNull(Pageable pageable);
 }
+

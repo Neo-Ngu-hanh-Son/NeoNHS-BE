@@ -19,12 +19,14 @@ import fpt.project.NeoNHS.repository.WorkshopTemplateRepository;
 import fpt.project.NeoNHS.repository.mongo.ChatMessageRepository;
 import fpt.project.NeoNHS.repository.BlogRepository;
 import fpt.project.NeoNHS.repository.mongo.KnowledgeRepository;
+import fpt.project.NeoNHS.repository.mongo.VectorSearchRepository;
 import fpt.project.NeoNHS.enums.BlogStatus;
 import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.repository.PointRepository;
 import fpt.project.NeoNHS.service.AiChatService;
 import fpt.project.NeoNHS.service.CartService;
 import fpt.project.NeoNHS.service.ChatService;
+import fpt.project.NeoNHS.service.EmbeddingService;
 import fpt.project.NeoNHS.dto.request.cart.AddToCartRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -58,6 +60,8 @@ public class AiChatServiceImpl implements AiChatService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final UserRepository userRepository;
     private final CartService cartService;
+    private final EmbeddingService embeddingService;
+    private final VectorSearchRepository vectorSearchRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -79,10 +83,42 @@ public class AiChatServiceImpl implements AiChatService {
     private static final String DEFAULT_SYSTEM_PROMPT = """
             Bạn là trợ lý du lịch ảo của Khu di tích Ngũ Hành Sơn và khu vực Phường Ngũ Hành Sơn, Đà Nẵng, Việt Nam.
 
-            Vai trò:
-            - Hỗ trợ du khách với thông tin về khu di tích, các điểm tham quan, sự kiện, workshop và các bài viết tin tức/văn hóa (blog).
-            - Trả lời bằng ngôn ngữ của người dùng nhắn tin cho bạn, thân thiện, ngắn gọn và chính xác.
-            - Khi được hỏi về thông tin cụ thể (giá vé, lịch workshop, sự kiện, bài viết), hãy sử dụng các công cụ (tools/functions) được cung cấp để tra cứu dữ liệu thực tế.
+            === PHẠM VI HOẠT ĐỘNG (RẤT QUAN TRỌNG) ===
+            Bạn CHỈ trả lời các câu hỏi liên quan đến:
+            - Khu di tích Ngũ Hành Sơn (Marble Mountains): lịch sử, hang động, chùa, điểm tham quan
+            - Phường Ngũ Hành Sơn, Đà Nẵng: làng nghề đá, văn hóa địa phương
+            - Dịch vụ của hệ thống: vé tham quan, workshop, sự kiện, blog/tin tức
+            - Hướng dẫn tham quan: đường đi, giờ mở cửa, nội quy, mẹo du lịch
+            - Thông tin du lịch Đà Nẵng liên quan trực tiếp đến Ngũ Hành Sơn
+
+            === QUY TẮC XỬ LÝ CÂU HỎI ===
+
+            1. CÂU HỎI NGOÀI PHẠM VI (Từ chối - KHÔNG chuyển cho admin):
+               Nếu người dùng hỏi về: dịch thuật, lập trình, toán học, khoa học,
+               các địa điểm không liên quan, tin tức thời sự, giải trí, hay bất kỳ
+               chủ đề nào KHÔNG liên quan đến Ngũ Hành Sơn/Đà Nẵng:
+               → Từ chối lịch sự và gợi ý họ hỏi về Ngũ Hành Sơn.
+               → TUYỆT ĐỐI KHÔNG thêm tag [TRANSFER_TO_HUMAN].
+               → KHÔNG hỏi "Bạn có muốn gặp người hỗ trợ không?" cho câu hỏi ngoài phạm vi.
+               Ví dụ trả lời: "Xin lỗi, tôi chỉ hỗ trợ về du lịch Ngũ Hành Sơn.
+               Bạn có muốn tìm hiểu về các hang động, workshop hay sự kiện tại đây không?"
+
+            2. CÂU HỎI TRONG PHẠM VI - TRẢ LỜI ĐƯỢC:
+               Sử dụng kiến thức nội bộ (dữ liệu bên dưới) và các công cụ (Function Calling) để trả lời.
+               Trả lời thân thiện, ngắn gọn, chính xác.
+
+            3. CÂU HỎI TRONG PHẠM VI - CẦN NHÂN VIÊN (Chuyển tiếp cho admin):
+               CHỈ thêm tag [TRANSFER_TO_HUMAN] khi người dùng yêu cầu thuộc các trường hợp sau:
+               - Khiếu nại, phản ánh về dịch vụ
+               - Yêu cầu đặt tour đoàn lớn hoặc dịch vụ đặc biệt
+               - Vấn đề thanh toán, hoàn tiền
+               - Mất đồ, tai nạn, tình huống khẩn cấp
+               - Yêu cầu hỗ trợ người khuyết tật
+               - Câu hỏi nghiệp vụ phức tạp mà bạn không có thông tin
+               - Khi người dùng CHÍNH HỌ yêu cầu nói chuyện với nhân viên
+
+            === NGÔN NGỮ ===
+            Trả lời bằng ngôn ngữ mà người dùng sử dụng.
             """;
 
     private String getSystemPrompt(String userMessage) {
@@ -111,27 +147,20 @@ public class AiChatServiceImpl implements AiChatService {
 
         StringBuilder prompt = new StringBuilder(currentPrompt);
 
-        // VECTOR SEARCH: Get relevant knowledge documents
-        List<Double> queryVector = getEmbedding(userMessage);
+        // VECTOR SEARCH: Use MongoDB Atlas Vector Search instead of in-memory
+        // similarity
+        List<Double> queryVector = embeddingService.getEmbedding(userMessage);
         List<KnowledgeDocument> knowledgeBase;
 
         if (queryVector == null || queryVector.isEmpty()) {
             // Fallback to keyword search if embedding fails
             knowledgeBase = knowledgeRepository.searchByKeyword(userMessage).stream()
                     .filter(KnowledgeDocument::isActive)
-                    .limit(5)
+                    .limit(3)
                     .toList();
         } else {
-            // Filter and sort by cosine similarity
-            List<KnowledgeDocument> allDocs = knowledgeRepository.findByIsActiveTrue();
-            knowledgeBase = allDocs.stream()
-                    .filter(doc -> doc.isActive() && !"SYSTEM_PROMPT".equals(doc.getKnowledgeType()))
-                    .filter(doc -> doc.getEmbedding() != null && !doc.getEmbedding().isEmpty())
-                    .sorted((d1, d2) -> Double.compare(
-                            cosineSimilarity(queryVector, d2.getEmbedding()),
-                            cosineSimilarity(queryVector, d1.getEmbedding())))
-                    .limit(5)
-                    .toList();
+            // Use MongoDB Atlas $vectorSearch (with min score threshold)
+            knowledgeBase = vectorSearchRepository.vectorSearch(queryVector);
         }
 
         if (!knowledgeBase.isEmpty()) {
@@ -143,19 +172,6 @@ public class AiChatServiceImpl implements AiChatService {
             }
         }
         return prompt.toString();
-    }
-
-    private double cosineSimilarity(List<Double> vectorA, List<Double> vectorB) {
-        double dotProduct = 0.0;
-        double normA = 0.0;
-        double normB = 0.0;
-        int size = Math.min(vectorA.size(), vectorB.size());
-        for (int i = 0; i < size; i++) {
-            dotProduct += vectorA.get(i) * vectorB.get(i);
-            normA += Math.pow(vectorA.get(i), 2);
-            normB += Math.pow(vectorB.get(i), 2);
-        }
-        return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -675,35 +691,6 @@ public class AiChatServiceImpl implements AiChatService {
     // ═══════════════════════════════════════════════════════════════════
     // Main Streaming Logic
     // ═══════════════════════════════════════════════════════════════════
-    @Override
-    public List<Double> getEmbedding(String text) {
-        if (text == null || text.isBlank())
-            return Collections.emptyList();
-
-        ObjectNode request = objectMapper.createObjectNode();
-        request.put("model", openAiConfig.getEmbeddingModel());
-        request.put("input", text.replace("\n", " "));
-
-        try {
-            String responseJson = openAiRestClient.post()
-                    .uri(openAiConfig.getEmbeddingsUrl())
-                    .body(request.toString())
-                    .retrieve()
-                    .body(String.class);
-
-            JsonNode response = objectMapper.readTree(responseJson);
-            JsonNode embeddingNode = response.path("data").path(0).path("embedding");
-
-            List<Double> vector = new ArrayList<>();
-            for (JsonNode val : embeddingNode) {
-                vector.add(val.asDouble());
-            }
-            return vector;
-        } catch (Exception e) {
-            log.error("[AI] Failed to get embedding: {}", e.getMessage());
-            return Collections.emptyList();
-        }
-    }
 
     @Override
     public SseEmitter streamAiReply(String roomId, String senderId, String message) {
@@ -744,8 +731,7 @@ public class AiChatServiceImpl implements AiChatService {
                 System.out.println("AI Reply after processing: " + aiReplyText);
 
                 // 5. Check for handover signal
-                if (aiReplyText.contains("[TRANSFER_TO_HUMAN]")
-                        || aiReplyText.toLowerCase().contains("người hỗ trợ không")) {
+                if (aiReplyText.contains("[TRANSFER_TO_HUMAN]")) {
                     String cleanText = aiReplyText.replaceAll("(?i)\\s*\\[TRANSFER_TO_HUMAN\\]\\s*", "").trim();
                     handleTransferToHuman(roomId, senderId, emitter, cleanText);
                     return;

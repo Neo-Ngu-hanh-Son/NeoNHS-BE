@@ -27,13 +27,26 @@ public class KnowledgeDocument {
     // Holds the vector embedding for vector search
     private List<Double> embedding;
 
+    // Chunking support: null for parent docs, set for chunks
+    private String parentDocumentId;
+
+    // Order of chunk within parent document (null for parent docs)
+    private Integer chunkIndex;
+
+    // Source tracking: MANUAL, BLOG_SYNC, FILE_UPLOAD
+    @Builder.Default
+    private String sourceType = "MANUAL";
+
+    // Reference ID (e.g., Blog UUID if synced from blog)
+    private String sourceId;
+
     @org.springframework.data.mongodb.core.mapping.Field("isActive")
     @com.fasterxml.jackson.annotation.JsonProperty("isActive")
     @Builder.Default
     private boolean isActive = true;
 
     @Builder.Default
-    private String knowledgeType = "INFORMATION"; // INFORMATION, SYSTEM_PROMPT
+    private String knowledgeType = "INFORMATION"; // INFORMATION, SYSTEM_PROMPT, REGULATION, GUIDE, BLOG
 
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();

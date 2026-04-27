@@ -9,6 +9,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -20,7 +21,7 @@ public class KnowledgeController {
 
     @PostMapping
     public ResponseEntity<KnowledgeDocument> createDocument(@RequestBody Map<String, String> request) {
-        return ResponseEntity.ok(knowledgeService.createDocument(request.get("title"), request.get("content")));
+        return ResponseEntity.ok(knowledgeService.createDocument(request.get("title"), request.get("content"), request.get("knowledgeType")));
     }
 
     @PutMapping("/{id}")
@@ -64,5 +65,60 @@ public class KnowledgeController {
     public ResponseEntity<KnowledgeDocument> uploadDocument(
             @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
         return ResponseEntity.ok(knowledgeService.uploadDocument(file));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // New RAG Endpoints
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * Sync a blog post to the AI knowledge base (manual sync by admin).
+     */
+    public record SyncBlogRequest(String blogId, String title, String content) {
+    }
+
+    @PostMapping("/sync-blog")
+    public ResponseEntity<KnowledgeDocument> syncBlog(@RequestBody SyncBlogRequest request) {
+        return ResponseEntity.ok(
+                knowledgeService.syncBlogToKnowledge(request.blogId(), request.title(), request.content()));
+    }
+
+    /**
+     * Remove a blog from the AI knowledge base.
+     */
+    @DeleteMapping("/sync-blog/{blogId}")
+    public ResponseEntity<Void> removeBlogSync(@PathVariable String blogId) {
+        knowledgeService.removeBlogFromKnowledge(blogId);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Force re-generate embeddings and chunks for a single document.
+     */
+    @PostMapping("/{id}/re-embed")
+    public ResponseEntity<KnowledgeDocument> reEmbed(@PathVariable String id) {
+        return ResponseEntity.ok(knowledgeService.reEmbedDocument(id));
+    }
+
+    /**
+     * Test vector search — admin tool to preview what the AI would find.
+     */
+    @GetMapping("/search")
+    public ResponseEntity<List<KnowledgeDocument>> searchSimilar(
+            @RequestParam String query,
+            @RequestParam(defaultValue = "5") int limit) {
+        return ResponseEntity.ok(knowledgeService.searchSimilar(query, limit));
+    }
+
+    /**
+     * One-time migration: re-chunk and re-embed ALL existing documents.
+     * Use this after upgrading to the new vector search system.
+     */
+    @PostMapping("/re-embed-all")
+    public ResponseEntity<Map<String, Object>> reEmbedAll() {
+        int count = knowledgeService.reEmbedAll();
+        return ResponseEntity.ok(Map.of(
+                "message", "Re-embedded " + count + " documents",
+                "documentsProcessed", count));
     }
 }
