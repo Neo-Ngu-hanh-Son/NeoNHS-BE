@@ -46,6 +46,8 @@ public interface KnowledgeRepository extends MongoRepository<KnowledgeDocument, 
 
     // Find only parent documents of a specific type (not chunks)
     Page<KnowledgeDocument> findByKnowledgeTypeAndParentDocumentIdIsNull(KnowledgeTypeStatus knowledgeType, Pageable pageable);
+
+    // Find only parent documents excluding a specific type (not chunks)
+    Page<KnowledgeDocument> findByKnowledgeTypeNotAndParentDocumentIdIsNull(KnowledgeTypeStatus knowledgeType, Pageable pageable);
+
 }
-
-

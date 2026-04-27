@@ -107,8 +107,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
             // Filter by type, but still exclude chunks (only show parent documents)
             return knowledgeRepository.findByKnowledgeTypeAndParentDocumentIdIsNull(knowledgeType, pageable);
         }
-        // Show only parent documents (not chunks) for admin listing
-        return knowledgeRepository.findByParentDocumentIdIsNull(pageable);
+        return knowledgeRepository.findByKnowledgeTypeNotAndParentDocumentIdIsNull(KnowledgeTypeStatus.SYSTEM_PROMPT, pageable);
     }
 
     @Override
