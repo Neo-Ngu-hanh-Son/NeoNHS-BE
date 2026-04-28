@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import fpt.project.NeoNHS.config.OpenAiConfig;
 import fpt.project.NeoNHS.document.ChatMessage;
 import fpt.project.NeoNHS.document.KnowledgeDocument;
+import fpt.project.NeoNHS.enums.KnowledgeTypeStatus;
 import fpt.project.NeoNHS.dto.chat.ChatMessageDTO;
 import fpt.project.NeoNHS.dto.chat.ChatMessageRequest;
 import fpt.project.NeoNHS.enums.EventStatus;
@@ -19,12 +20,14 @@ import fpt.project.NeoNHS.repository.WorkshopTemplateRepository;
 import fpt.project.NeoNHS.repository.mongo.ChatMessageRepository;
 import fpt.project.NeoNHS.repository.BlogRepository;
 import fpt.project.NeoNHS.repository.mongo.KnowledgeRepository;
+import fpt.project.NeoNHS.repository.mongo.VectorSearchRepository;
 import fpt.project.NeoNHS.enums.BlogStatus;
 import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.repository.PointRepository;
 import fpt.project.NeoNHS.service.AiChatService;
 import fpt.project.NeoNHS.service.CartService;
 import fpt.project.NeoNHS.service.ChatService;
+import fpt.project.NeoNHS.service.EmbeddingService;
 import fpt.project.NeoNHS.dto.request.cart.AddToCartRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +45,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Pattern;
 
 import org.springframework.data.redis.core.RedisTemplate;
 
@@ -49,6 +53,9 @@ import org.springframework.data.redis.core.RedisTemplate;
 @RequiredArgsConstructor
 @Slf4j
 public class AiChatServiceImpl implements AiChatService {
+    private static final Pattern CARD_MARKDOWN_PATTERN = Pattern.compile(
+            "!\\[[^\\]]*\\bID\\s*:[^\\]]*\\bType\\s*:\\s*(workshop|event|blog|point)\\b[^\\]]*\\]\\([^\\)]*\\)",
+            Pattern.CASE_INSENSITIVE);
 
     private final OpenAiConfig openAiConfig;
     private final RestClient openAiRestClient;
@@ -58,6 +65,8 @@ public class AiChatServiceImpl implements AiChatService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final UserRepository userRepository;
     private final CartService cartService;
+    private final EmbeddingService embeddingService;
+    private final VectorSearchRepository vectorSearchRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -79,15 +88,53 @@ public class AiChatServiceImpl implements AiChatService {
     private static final String DEFAULT_SYSTEM_PROMPT = """
             Bạn là trợ lý du lịch ảo của Khu di tích Ngũ Hành Sơn và khu vực Phường Ngũ Hành Sơn, Đà Nẵng, Việt Nam.
 
-            Vai trò:
-            - Hỗ trợ du khách với thông tin về khu di tích, các điểm tham quan, sự kiện, workshop và các bài viết tin tức/văn hóa (blog).
-            - Trả lời bằng ngôn ngữ của người dùng nhắn tin cho bạn, thân thiện, ngắn gọn và chính xác.
-            - Khi được hỏi về thông tin cụ thể (giá vé, lịch workshop, sự kiện, bài viết), hãy sử dụng các công cụ (tools/functions) được cung cấp để tra cứu dữ liệu thực tế.
+            === PHẠM VI HOẠT ĐỘNG (RẤT QUAN TRỌNG) ===
+            Bạn CHỈ trả lời các câu hỏi liên quan đến:
+            - Khu di tích Ngũ Hành Sơn (Marble Mountains): lịch sử, hang động, chùa, điểm tham quan
+            - Phường Ngũ Hành Sơn, Đà Nẵng: làng nghề đá, văn hóa địa phương
+            - Dịch vụ của hệ thống: vé tham quan, workshop, sự kiện, blog/tin tức
+            - Hướng dẫn tham quan: đường đi, giờ mở cửa, nội quy, mẹo du lịch
+            - Thông tin du lịch Đà Nẵng liên quan trực tiếp đến Ngũ Hành Sơn
+
+            === QUY TẮC XỬ LÝ CÂU HỎI ===
+
+            1. CÂU HỎI NGOÀI PHẠM VI (Từ chối - KHÔNG chuyển cho admin):
+               Nếu người dùng hỏi về: dịch thuật, lập trình, toán học, khoa học,
+               các địa điểm không liên quan, tin tức thời sự, giải trí, hay bất kỳ
+               chủ đề nào KHÔNG liên quan đến Ngũ Hành Sơn/Đà Nẵng:
+               → Từ chối lịch sự và gợi ý họ hỏi về Ngũ Hành Sơn.
+               → TUYỆT ĐỐI KHÔNG thêm tag [TRANSFER_TO_HUMAN].
+               → KHÔNG hỏi "Bạn có muốn gặp người hỗ trợ không?" cho câu hỏi ngoài phạm vi.
+               Ví dụ trả lời: "Xin lỗi, tôi chỉ hỗ trợ về du lịch Ngũ Hành Sơn.
+               Bạn có muốn tìm hiểu về các hang động, workshop hay sự kiện tại đây không?"
+
+            2. CÂU HỎI TRONG PHẠM VI - TRẢ LỜI ĐƯỢC:
+               Sử dụng kiến thức nội bộ (dữ liệu bên dưới) và các công cụ (Function Calling) để trả lời.
+               Trả lời thân thiện, ngắn gọn, chính xác.
+
+            3. CÂU HỎI TRONG PHẠM VI - CẦN NHÂN VIÊN (Chuyển tiếp cho admin):
+               CHỈ thêm tag [TRANSFER_TO_HUMAN] khi người dùng yêu cầu thuộc các trường hợp sau:
+               - Khiếu nại, phản ánh về dịch vụ
+               - Yêu cầu đặt tour đoàn lớn hoặc dịch vụ đặc biệt
+               - Vấn đề thanh toán, hoàn tiền
+               - Mất đồ, tai nạn, tình huống khẩn cấp
+               - Yêu cầu hỗ trợ người khuyết tật
+               - Câu hỏi nghiệp vụ phức tạp mà bạn không có thông tin
+               - Khi người dùng CHÍNH HỌ yêu cầu nói chuyện với nhân viên
+
+            4. HIỂN THỊ THÔNG TIN DỊCH VỤ (Workshops, Events, Locations):
+               - Khi bạn gọi công cụ tìm kiếm (searchWorkshops, searchEvents, searchMapPoints...), hệ thống sẽ TỰ ĐỘNG hiển thị hình ảnh và thông tin chi tiết dưới dạng danh sách (Cards) cho người dùng.
+               - KHÔNG ĐƯỢC tự tạo hình ảnh Markdown hay đường dẫn URL trong câu trả lời.
+               - Bạn CHỈ CẦN viết 1-2 câu ngắn gọn, thân thiện để giới thiệu danh sách bên dưới (ví dụ: "Dạ, em tìm thấy một vài option rất thú vị dưới đây, anh/chị tham khảo nhé!").
+               - KHÔNG trình bày lại chi tiết giá cả, mô tả của từng dịch vụ vì hệ thống đã tự động vẽ UI cho chúng.
+
+            === NGÔN NGỮ ===
+            Trả lời bằng ngôn ngữ mà người dùng sử dụng.
             """;
 
     private String getSystemPrompt(String userMessage) {
         // Fetch custom prompt from MongoDB, fallback to default
-        List<KnowledgeDocument> dbPrompts = knowledgeRepository.findByKnowledgeType("SYSTEM_PROMPT");
+        List<KnowledgeDocument> dbPrompts = knowledgeRepository.findByKnowledgeType(KnowledgeTypeStatus.SYSTEM_PROMPT);
         String currentPrompt = DEFAULT_SYSTEM_PROMPT;
 
         // Only use the custom SYSTEM_PROMPT if it is active
@@ -99,7 +146,7 @@ public class AiChatServiceImpl implements AiChatService {
             KnowledgeDocument newPromptDoc = KnowledgeDocument.builder()
                     .title("AI System Prompt")
                     .content(DEFAULT_SYSTEM_PROMPT)
-                    .knowledgeType("SYSTEM_PROMPT")
+                    .knowledgeType(KnowledgeTypeStatus.SYSTEM_PROMPT)
                     .isActive(true)
                     .build();
             try {
@@ -111,27 +158,26 @@ public class AiChatServiceImpl implements AiChatService {
 
         StringBuilder prompt = new StringBuilder(currentPrompt);
 
-        // VECTOR SEARCH: Get relevant knowledge documents
-        List<Double> queryVector = getEmbedding(userMessage);
+        // Phase 1: Classify the user's intent into KnowledgeTypeStatus(es)
+        List<KnowledgeTypeStatus> classifiedTypes = classifyKnowledgeTypes(userMessage);
+        log.info("[AI-RAG] Classified knowledge types for '{}': {}", userMessage, classifiedTypes);
+
+        // Phase 2: Type-filtered Vector Search
+        List<Double> queryVector = embeddingService.getEmbedding(userMessage);
         List<KnowledgeDocument> knowledgeBase;
 
         if (queryVector == null || queryVector.isEmpty()) {
             // Fallback to keyword search if embedding fails
             knowledgeBase = knowledgeRepository.searchByKeyword(userMessage).stream()
                     .filter(KnowledgeDocument::isActive)
-                    .limit(5)
+                    .limit(3)
                     .toList();
+        } else if (!classifiedTypes.isEmpty()) {
+            // Use type-filtered vector search when classification succeeded
+            knowledgeBase = vectorSearchRepository.vectorSearch(queryVector, classifiedTypes);
         } else {
-            // Filter and sort by cosine similarity
-            List<KnowledgeDocument> allDocs = knowledgeRepository.findByIsActiveTrue();
-            knowledgeBase = allDocs.stream()
-                    .filter(doc -> doc.isActive() && !"SYSTEM_PROMPT".equals(doc.getKnowledgeType()))
-                    .filter(doc -> doc.getEmbedding() != null && !doc.getEmbedding().isEmpty())
-                    .sorted((d1, d2) -> Double.compare(
-                            cosineSimilarity(queryVector, d2.getEmbedding()),
-                            cosineSimilarity(queryVector, d1.getEmbedding())))
-                    .limit(5)
-                    .toList();
+            // Fallback: search all types (classification failed or returned empty)
+            knowledgeBase = vectorSearchRepository.vectorSearch(queryVector);
         }
 
         if (!knowledgeBase.isEmpty()) {
@@ -139,23 +185,118 @@ public class AiChatServiceImpl implements AiChatService {
                     .append("DỮ LIỆU KIẾN THỨC NỘI BỘ (Chỉ sử dụng khi cần trả lời các câu hỏi cụ thể):\n");
             for (int i = 0; i < knowledgeBase.size(); i++) {
                 KnowledgeDocument doc = knowledgeBase.get(i);
-                prompt.append(String.format("Bài viết %d: %s\n%s\n\n", i + 1, doc.getTitle(), doc.getContent()));
+                prompt.append(String.format("[%s] Bài viết %d: %s\n%s\n\n",
+                        doc.getKnowledgeType().name(), i + 1, doc.getTitle(), doc.getContent()));
             }
         }
         return prompt.toString();
     }
 
-    private double cosineSimilarity(List<Double> vectorA, List<Double> vectorB) {
-        double dotProduct = 0.0;
-        double normA = 0.0;
-        double normB = 0.0;
-        int size = Math.min(vectorA.size(), vectorB.size());
-        for (int i = 0; i < size; i++) {
-            dotProduct += vectorA.get(i) * vectorB.get(i);
-            normA += Math.pow(vectorA.get(i), 2);
-            normB += Math.pow(vectorB.get(i), 2);
+    // ═══════════════════════════════════════════════════════════════════
+    // Knowledge Type Classification (Phase 1 of Two-Phase RAG)
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * Classify a user message into one or more KnowledgeTypeStatus values
+     * using a lightweight OpenAI function-calling request.
+     * <p>
+     * This enables type-filtered vector search so only the most relevant
+     * knowledge category is queried, improving retrieval precision.
+     * <p>
+     * Falls back to an empty list on any failure (caller then searches all types).
+     */
+    private List<KnowledgeTypeStatus> classifyKnowledgeTypes(String userMessage) {
+        try {
+            // Build the lightweight classification request
+            ObjectNode request = objectMapper.createObjectNode();
+            request.put("model", openAiConfig.getModel());
+            request.put("temperature", 0.0); // Deterministic classification
+            request.put("max_tokens", 100);
+
+            // System prompt for classification
+            ArrayNode messages = objectMapper.createArrayNode();
+            ObjectNode systemMsg = objectMapper.createObjectNode();
+            systemMsg.put("role", "system");
+            systemMsg.put("content", """
+                    Bạn là bộ phân loại câu hỏi du lịch cho Khu di tích Ngũ Hành Sơn, Đà Nẵng.
+                    Nhiệm vụ: Xác định loại kiến thức phù hợp để trả lời câu hỏi của khách du lịch.
+                    Luôn gọi function classifyKnowledgeType với mảng các loại phù hợp.
+                    Nếu câu hỏi không liên quan đến du lịch Ngũ Hành Sơn, trả về mảng rỗng.
+                    """);
+            messages.add(systemMsg);
+
+            ObjectNode userMsg = objectMapper.createObjectNode();
+            userMsg.put("role", "user");
+            userMsg.put("content", userMessage);
+            messages.add(userMsg);
+            request.set("messages", messages);
+
+            // Function definition for classification
+            String classifyToolJson = """
+                    [{
+                      "type": "function",
+                      "function": {
+                        "name": "classifyKnowledgeType",
+                        "description": "Phân loại câu hỏi của du khách vào một hoặc nhiều loại kiến thức.",
+                        "parameters": {
+                          "type": "object",
+                          "properties": {
+                            "knowledgeTypes": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": ["INFORMATION", "REGULATION", "GUIDE"]
+                              },
+                              "description": "Danh sách loại kiến thức phù hợp. INFORMATION: thông tin địa điểm, giờ mở cửa, giá vé, lịch sử, văn hóa. REGULATION: quy định, nội quy, điều cấm, yêu cầu an toàn. GUIDE: hướng dẫn tham quan, lịch trình, mẹo du lịch, đường đi."
+                            }
+                          },
+                          "required": ["knowledgeTypes"]
+                        }
+                      }
+                    }]
+                    """;
+            request.set("tools", objectMapper.readTree(classifyToolJson));
+            request.put("tool_choice", "auto");
+
+            // Call OpenAI
+            String responseJson = openAiRestClient.post()
+                    .uri(openAiConfig.getChatCompletionUrl())
+                    .body(request.toString())
+                    .retrieve()
+                    .body(String.class);
+
+            JsonNode response = objectMapper.readTree(responseJson);
+            JsonNode choice = response.path("choices").path(0).path("message");
+
+            // Extract the classified types from the function call
+            if (choice.has("tool_calls")) {
+                JsonNode toolCall = choice.get("tool_calls").get(0);
+                String argsJson = toolCall.path("function").path("arguments").asText("{}");
+                JsonNode args = objectMapper.readTree(argsJson);
+                JsonNode typesArray = args.path("knowledgeTypes");
+
+                if (typesArray.isArray()) {
+                    List<KnowledgeTypeStatus> result = new ArrayList<>();
+                    for (JsonNode typeNode : typesArray) {
+                        try {
+                            result.add(KnowledgeTypeStatus.valueOf(typeNode.asText()));
+                        } catch (IllegalArgumentException ignored) {
+                            // Skip invalid enum values
+                        }
+                    }
+                    return result;
+                }
+            }
+
+            // If OpenAI responded with text instead of function call, return empty
+            // (fallback to all)
+            log.warn("[AI-RAG] Classification did not return a function call. Falling back to all types.");
+            return Collections.emptyList();
+
+        } catch (Exception e) {
+            log.error("[AI-RAG] Knowledge type classification failed: {}. Falling back to all types.", e.getMessage());
+            return Collections.emptyList();
         }
-        return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -320,18 +461,18 @@ public class AiChatServiceImpl implements AiChatService {
     // ═══════════════════════════════════════════════════════════════════
     // Function Calling Execution
     // ═══════════════════════════════════════════════════════════════════
-    private String executeFunctionCall(String functionName, JsonNode args, String senderId) {
+    private String executeFunctionCall(String functionName, JsonNode args, String senderId, Map<String, Object> metadata) {
         log.info("[AI] Executing function: {} with args: {} for user: {}", functionName, args, senderId);
         try {
             return switch (functionName) {
-                case "searchWorkshops" -> executeSearchWorkshops(args);
+                case "searchWorkshops" -> executeSearchWorkshops(args, metadata);
                 case "getWorkshopSessions" -> executeGetWorkshopSessions(args);
-                case "searchEvents" -> executeSearchEvents(args);
+                case "searchEvents" -> executeSearchEvents(args, metadata);
                 case "getTicketPrices" -> executeGetTicketPrices(args);
-                case "searchBlogs" -> executeSearchBlogs(args);
+                case "searchBlogs" -> executeSearchBlogs(args, metadata);
                 case "addToCart" -> executeAddToCart(args, senderId);
-                case "searchMapPoints" -> executeSearchMapPoints(args);
-                case "navigateToLocation" -> executeNavigateToLocation(args);
+                case "searchMapPoints" -> executeSearchMapPoints(args, metadata);
+                case "navigateToLocation" -> executeNavigateToLocation(args, metadata);
                 default -> "Không tìm thấy công cụ: " + functionName;
             };
         } catch (Exception e) {
@@ -340,7 +481,7 @@ public class AiChatServiceImpl implements AiChatService {
         }
     }
 
-    private String executeSearchWorkshops(JsonNode args) {
+    private String executeSearchWorkshops(JsonNode args, Map<String, Object> metadata) {
         String keyword = args.has("keyword") ? args.get("keyword").asText("") : "";
         var workshops = workshopTemplateRepository.findAll().stream()
                 .filter(w -> Boolean.TRUE.equals(w.getIsPublished()) && w.getDeletedAt() == null &&
@@ -361,6 +502,21 @@ public class AiChatServiceImpl implements AiChatService {
                                         .orElse(w.getWorkshopImages().getFirst().getImageUrl())
                                 : ""))
                 .toList();
+
+        if (!workshops.isEmpty()) {
+            List<Map<String, Object>> attachedCards = (List<Map<String, Object>>) metadata.computeIfAbsent("attachedCards", k -> new java.util.ArrayList<>());
+            for (var w : workshops) {
+                Map<String, Object> card = new java.util.HashMap<>();
+                card.put("id", w.get("workshopTemplateId"));
+                card.put("type", "workshop");
+                card.put("title", w.get("name"));
+                card.put("imageUrl", w.get("imageUrl"));
+                card.put("price", w.get("price"));
+                card.put("rating", w.get("rating"));
+                attachedCards.add(card);
+            }
+        }
+
         if (workshops.isEmpty())
             return "Không tìm thấy workshop nào" + (keyword.isEmpty() ? "." : " với từ khóa '" + keyword + "'.");
         try {
@@ -414,7 +570,7 @@ public class AiChatServiceImpl implements AiChatService {
         }
     }
 
-    private String executeSearchEvents(JsonNode args) {
+    private String executeSearchEvents(JsonNode args, Map<String, Object> metadata) {
         String keyword = args.has("keyword") ? args.get("keyword").asText("") : "";
         var events = eventRepository.findAll().stream()
                 .filter(e -> e.getDeletedAt() == null
@@ -429,12 +585,27 @@ public class AiChatServiceImpl implements AiChatService {
                         "startTime", e.getStartTime().toString(),
                         "endTime", e.getEndTime().toString(),
                         "status", e.getStatus().name(),
-                        "ticketRequired", e.getIsTicketRequired(),
+                        "ticketRequired", e.getIsTicketRequired() != null ? e.getIsTicketRequired() : false,
                         "price", e.getPrice() != null ? e.getPrice().toString() + " VND" : "Miễn phí",
                         "imageUrl", (e.getEventImages() != null && !e.getEventImages().isEmpty())
                                 ? e.getEventImages().get(0).getImageUrl()
                                 : ""))
                 .toList();
+
+        if (!events.isEmpty()) {
+            List<Map<String, Object>> attachedCards = (List<Map<String, Object>>) metadata.computeIfAbsent("attachedCards", k -> new java.util.ArrayList<>());
+            for (var e : events) {
+                Map<String, Object> card = new java.util.HashMap<>();
+                card.put("id", e.get("id"));
+                card.put("type", "event");
+                card.put("title", e.get("name"));
+                card.put("imageUrl", e.get("imageUrl"));
+                card.put("price", e.get("price"));
+                card.put("startTime", e.get("startTime"));
+                attachedCards.add(card);
+            }
+        }
+
         if (events.isEmpty())
             return "Không tìm thấy sự kiện nào"
                     + (keyword.isEmpty() ? " sắp diễn ra." : " với từ khóa '" + keyword + "'.");
@@ -555,7 +726,7 @@ public class AiChatServiceImpl implements AiChatService {
         }
     }
 
-    private String executeSearchBlogs(JsonNode args) {
+    private String executeSearchBlogs(JsonNode args, Map<String, Object> metadata) {
         String keyword = args.has("keyword") ? args.get("keyword").asText("") : "";
         var blogs = blogRepository.findAll().stream()
                 .filter(b -> b.getStatus() == BlogStatus.PUBLISHED &&
@@ -563,12 +734,27 @@ public class AiChatServiceImpl implements AiChatService {
                 .sorted((b1, b2) -> b2.getCreatedAt().compareTo(b1.getCreatedAt()))
                 .limit(5)
                 .map(b -> Map.of(
+                        "id", b.getId().toString(),
                         "title", b.getTitle(),
                         "summary", b.getSummary() != null ? b.getSummary() : "",
                         "imageUrl", b.getThumbnailUrl() != null ? b.getThumbnailUrl() : "",
                         "author", b.getUser() != null ? b.getUser().getFullname() : "Admin",
                         "publishedAt", b.getPublishedAt() != null ? b.getPublishedAt().toString() : ""))
                 .toList();
+
+        if (!blogs.isEmpty()) {
+            List<Map<String, Object>> attachedCards = (List<Map<String, Object>>) metadata.computeIfAbsent("attachedCards", k -> new java.util.ArrayList<>());
+            for (var b : blogs) {
+                Map<String, Object> card = new java.util.HashMap<>();
+                card.put("id", b.get("id"));
+                card.put("type", "blog");
+                card.put("title", b.get("title"));
+                card.put("imageUrl", b.get("imageUrl"));
+                card.put("author", b.get("author"));
+                attachedCards.add(card);
+            }
+        }
+
         if (blogs.isEmpty())
             return "Không tìm thấy bài viết nào" + (keyword.isEmpty() ? "." : " với từ khóa '" + keyword + "'.");
         try {
@@ -578,7 +764,7 @@ public class AiChatServiceImpl implements AiChatService {
         }
     }
 
-    private String executeSearchMapPoints(JsonNode args) {
+    private String executeSearchMapPoints(JsonNode args, Map<String, Object> metadata) {
         String keyword = args.has("keyword") ? args.get("keyword").asText("") : "";
         var points = pointRepository.findAll().stream()
                 .filter(p -> p.getDeletedAt() == null &&
@@ -592,6 +778,10 @@ public class AiChatServiceImpl implements AiChatService {
                         "longitude", p.getLongitude().toString(),
                         "imageUrl", p.getThumbnailUrl() != null ? p.getThumbnailUrl() : ""))
                 .toList();
+
+        // Intentionally do NOT attach point cards for generic map-point queries.
+        // Point cards are only attached in explicit navigateToLocation flow.
+
         if (points.isEmpty())
             return "Không tìm thấy địa điểm nào" + (keyword.isEmpty() ? "." : " với từ khóa '" + keyword + "'.");
         try {
@@ -601,8 +791,26 @@ public class AiChatServiceImpl implements AiChatService {
         }
     }
 
-    private String executeNavigateToLocation(JsonNode args) {
+    private String executeNavigateToLocation(JsonNode args, Map<String, Object> metadata) {
         String pointName = args.get("pointName").asText();
+        String pointId = args.get("pointId").asText();
+
+        // Attach a single deterministic point card only for explicit direction requests.
+        try {
+            UUID pid = UUID.fromString(pointId);
+            pointRepository.findById(pid).ifPresent(point -> {
+                List<Map<String, Object>> attachedCards =
+                        (List<Map<String, Object>>) metadata.computeIfAbsent("attachedCards", k -> new java.util.ArrayList<>());
+                Map<String, Object> card = new java.util.HashMap<>();
+                card.put("id", point.getId().toString());
+                card.put("type", "point");
+                card.put("title", point.getName());
+                card.put("imageUrl", point.getThumbnailUrl() != null ? point.getThumbnailUrl() : "");
+                attachedCards.add(card);
+            });
+        } catch (Exception ignored) {
+        }
+
         return "SUCCESS: Đã kích hoạt chỉ đường tới " + pointName
                 + ". Hệ thống sẽ hiển thị nút chỉ đường ngay bây giờ.";
     }
@@ -675,35 +883,6 @@ public class AiChatServiceImpl implements AiChatService {
     // ═══════════════════════════════════════════════════════════════════
     // Main Streaming Logic
     // ═══════════════════════════════════════════════════════════════════
-    @Override
-    public List<Double> getEmbedding(String text) {
-        if (text == null || text.isBlank())
-            return Collections.emptyList();
-
-        ObjectNode request = objectMapper.createObjectNode();
-        request.put("model", openAiConfig.getEmbeddingModel());
-        request.put("input", text.replace("\n", " "));
-
-        try {
-            String responseJson = openAiRestClient.post()
-                    .uri(openAiConfig.getEmbeddingsUrl())
-                    .body(request.toString())
-                    .retrieve()
-                    .body(String.class);
-
-            JsonNode response = objectMapper.readTree(responseJson);
-            JsonNode embeddingNode = response.path("data").path(0).path("embedding");
-
-            List<Double> vector = new ArrayList<>();
-            for (JsonNode val : embeddingNode) {
-                vector.add(val.asDouble());
-            }
-            return vector;
-        } catch (Exception e) {
-            log.error("[AI] Failed to get embedding: {}", e.getMessage());
-            return Collections.emptyList();
-        }
-    }
 
     @Override
     public SseEmitter streamAiReply(String roomId, String senderId, String message) {
@@ -740,19 +919,19 @@ public class AiChatServiceImpl implements AiChatService {
                 String aiReplyText = (String) result.get("text");
                 String messageType = (String) result.get("messageType");
                 Map<String, Object> aiMetadata = (Map<String, Object>) result.get("metadata");
+                aiReplyText = sanitizeAiTextForAttachedCards(aiReplyText, aiMetadata);
 
                 System.out.println("AI Reply after processing: " + aiReplyText);
 
                 // 5. Check for handover signal
-                if (aiReplyText.contains("[TRANSFER_TO_HUMAN]")
-                        || aiReplyText.toLowerCase().contains("người hỗ trợ không")) {
+                if (aiReplyText.contains("[TRANSFER_TO_HUMAN]")) {
                     String cleanText = aiReplyText.replaceAll("(?i)\\s*\\[TRANSFER_TO_HUMAN\\]\\s*", "").trim();
                     handleTransferToHuman(roomId, senderId, emitter, cleanText);
                     return;
                 }
 
                 // 6. Stream the response to client
-                streamTextToClient(emitter, aiReplyText);
+                streamTextToClient(emitter, aiReplyText, aiMetadata);
 
                 // 8. Save AI response to MongoDB and broadcast via WebSocket
                 saveAndBroadcastAiMessage(roomId, aiReplyText, messageType, aiMetadata);
@@ -808,7 +987,7 @@ public class AiChatServiceImpl implements AiChatService {
                     try {
                         functionResult = transactionTemplate.execute(status -> {
                             try {
-                                return executeFunctionCall(functionName, functionArgs, senderId);
+                                return executeFunctionCall(functionName, functionArgs, senderId, metadata);
                             } catch (Exception e) {
                                 status.setRollbackOnly();
                                 return "ERROR: " + e.getMessage();
@@ -879,6 +1058,21 @@ public class AiChatServiceImpl implements AiChatService {
         return res;
     }
 
+    private String sanitizeAiTextForAttachedCards(String aiReplyText, Map<String, Object> metadata) {
+        String safeText = aiReplyText == null ? "" : aiReplyText.trim();
+        if (metadata == null || !metadata.containsKey("attachedCards")) {
+            return safeText;
+        }
+        Object cardsObj = metadata.get("attachedCards");
+        if (!(cardsObj instanceof List<?> cards) || cards.isEmpty()) {
+            return safeText;
+        }
+        // Single source of truth: cards come from metadata.attachedCards only.
+        // Remove card-markdown from text to avoid duplicate rendering in FE.
+        String cleaned = CARD_MARKDOWN_PATTERN.matcher(safeText).replaceAll("");
+        return cleaned.replaceAll("\\n{3,}", "\n\n").trim();
+    }
+
     // ═══════════════════════════════════════════════════════════════════
     // Helper Methods
     // ═══════════════════════════════════════════════════════════════════
@@ -904,7 +1098,8 @@ public class AiChatServiceImpl implements AiChatService {
     // }
 
     private void saveAndBroadcastAiMessageWithMetadata(String roomId, String aiText, Map<String, Object> metadata) {
-        saveAndBroadcastAiMessage(roomId, aiText, "TEXT", null);
+        // SỬA: Phải truyền biến metadata vào, không được truyền null
+        saveAndBroadcastAiMessage(roomId, aiText, "TEXT", metadata);
     }
 
     private void saveAndBroadcastAiMessage(String roomId, String aiText, String messageType,
@@ -925,7 +1120,7 @@ public class AiChatServiceImpl implements AiChatService {
         }
     }
 
-    private void streamTextToClient(SseEmitter emitter, String text) throws IOException {
+    private void streamTextToClient(SseEmitter emitter, String text, Map<String, Object> metadata) throws IOException {
         // Simulate streaming by sending chunks of ~3-5 words
         String[] words = text.split("(?<=\\s)");
         StringBuilder chunk = new StringBuilder();
@@ -958,9 +1153,15 @@ public class AiChatServiceImpl implements AiChatService {
         }
 
         // Send completion event
+        ObjectNode doneNode = objectMapper.createObjectNode();
+        doneNode.put("fullText", text);
+        if (metadata != null && metadata.containsKey("attachedCards")) {
+            doneNode.set("attachedCards", objectMapper.valueToTree(metadata.get("attachedCards")));
+        }
+
         emitter.send(SseEmitter.event()
                 .name("done")
-                .data("{\"fullText\": " + objectMapper.writeValueAsString(text) + "}"));
+                .data(doneNode.toString()));
     }
 
     private void handleTransferToHuman(String roomId, String senderId, SseEmitter emitter, String cleanText)

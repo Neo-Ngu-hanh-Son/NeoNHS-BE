@@ -20,6 +20,12 @@ public class OpenAiConfig {
     @Value("${openai.base-url:https://api.openai.com/v1}")
     private String baseUrl;
 
+    @Value("${openai.embedding-model:text-embedding-3-small}")
+    private String embeddingModel;
+
+    @Value("${openai.embedding-dimensions:1536}")
+    private int embeddingDimensions;
+
     @Bean
     public RestClient openAiRestClient() {
         return RestClient.builder()
@@ -50,6 +56,10 @@ public class OpenAiConfig {
     }
 
     public String getEmbeddingModel() {
-        return "text-embedding-3-small";
+        return embeddingModel;
+    }
+
+    public int getEmbeddingDimensions() {
+        return embeddingDimensions;
     }
 }
