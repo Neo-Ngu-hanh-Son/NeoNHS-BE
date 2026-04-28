@@ -158,11 +158,7 @@ public class AiChatServiceImpl implements AiChatService {
 
         StringBuilder prompt = new StringBuilder(currentPrompt);
 
-        // Phase 1: Classify the user's intent into KnowledgeTypeStatus(es)
-        List<KnowledgeTypeStatus> classifiedTypes = classifyKnowledgeTypes(userMessage);
-        log.info("[AI-RAG] Classified knowledge types for '{}': {}", userMessage, classifiedTypes);
-
-        // Phase 2: Type-filtered Vector Search
+        // Vector Search (Single-Phase RAG)
         List<Double> queryVector = embeddingService.getEmbedding(userMessage);
         List<KnowledgeDocument> knowledgeBase;
 
@@ -172,11 +168,8 @@ public class AiChatServiceImpl implements AiChatService {
                     .filter(KnowledgeDocument::isActive)
                     .limit(3)
                     .toList();
-        } else if (!classifiedTypes.isEmpty()) {
-            // Use type-filtered vector search when classification succeeded
-            knowledgeBase = vectorSearchRepository.vectorSearch(queryVector, classifiedTypes);
         } else {
-            // Fallback: search all types (classification failed or returned empty)
+            // Perform global semantic vector search across all knowledge types
             knowledgeBase = vectorSearchRepository.vectorSearch(queryVector);
         }
 
@@ -190,113 +183,6 @@ public class AiChatServiceImpl implements AiChatService {
             }
         }
         return prompt.toString();
-    }
-
-    // ═══════════════════════════════════════════════════════════════════
-    // Knowledge Type Classification (Phase 1 of Two-Phase RAG)
-    // ═══════════════════════════════════════════════════════════════════
-
-    /**
-     * Classify a user message into one or more KnowledgeTypeStatus values
-     * using a lightweight OpenAI function-calling request.
-     * <p>
-     * This enables type-filtered vector search so only the most relevant
-     * knowledge category is queried, improving retrieval precision.
-     * <p>
-     * Falls back to an empty list on any failure (caller then searches all types).
-     */
-    private List<KnowledgeTypeStatus> classifyKnowledgeTypes(String userMessage) {
-        try {
-            // Build the lightweight classification request
-            ObjectNode request = objectMapper.createObjectNode();
-            request.put("model", openAiConfig.getModel());
-            request.put("temperature", 0.0); // Deterministic classification
-            request.put("max_tokens", 100);
-
-            // System prompt for classification
-            ArrayNode messages = objectMapper.createArrayNode();
-            ObjectNode systemMsg = objectMapper.createObjectNode();
-            systemMsg.put("role", "system");
-            systemMsg.put("content", """
-                    Bạn là bộ phân loại câu hỏi du lịch cho Khu di tích Ngũ Hành Sơn, Đà Nẵng.
-                    Nhiệm vụ: Xác định loại kiến thức phù hợp để trả lời câu hỏi của khách du lịch.
-                    Luôn gọi function classifyKnowledgeType với mảng các loại phù hợp.
-                    Nếu câu hỏi không liên quan đến du lịch Ngũ Hành Sơn, trả về mảng rỗng.
-                    """);
-            messages.add(systemMsg);
-
-            ObjectNode userMsg = objectMapper.createObjectNode();
-            userMsg.put("role", "user");
-            userMsg.put("content", userMessage);
-            messages.add(userMsg);
-            request.set("messages", messages);
-
-            // Function definition for classification
-            String classifyToolJson = """
-                    [{
-                      "type": "function",
-                      "function": {
-                        "name": "classifyKnowledgeType",
-                        "description": "Phân loại câu hỏi của du khách vào một hoặc nhiều loại kiến thức.",
-                        "parameters": {
-                          "type": "object",
-                          "properties": {
-                            "knowledgeTypes": {
-                              "type": "array",
-                              "items": {
-                                "type": "string",
-                                "enum": ["INFORMATION", "REGULATION", "GUIDE"]
-                              },
-                              "description": "Danh sách loại kiến thức phù hợp. INFORMATION: thông tin địa điểm, giờ mở cửa, giá vé, lịch sử, văn hóa. REGULATION: quy định, nội quy, điều cấm, yêu cầu an toàn. GUIDE: hướng dẫn tham quan, lịch trình, mẹo du lịch, đường đi."
-                            }
-                          },
-                          "required": ["knowledgeTypes"]
-                        }
-                      }
-                    }]
-                    """;
-            request.set("tools", objectMapper.readTree(classifyToolJson));
-            request.put("tool_choice", "auto");
-
-            // Call OpenAI
-            String responseJson = openAiRestClient.post()
-                    .uri(openAiConfig.getChatCompletionUrl())
-                    .body(request.toString())
-                    .retrieve()
-                    .body(String.class);
-
-            JsonNode response = objectMapper.readTree(responseJson);
-            JsonNode choice = response.path("choices").path(0).path("message");
-
-            // Extract the classified types from the function call
-            if (choice.has("tool_calls")) {
-                JsonNode toolCall = choice.get("tool_calls").get(0);
-                String argsJson = toolCall.path("function").path("arguments").asText("{}");
-                JsonNode args = objectMapper.readTree(argsJson);
-                JsonNode typesArray = args.path("knowledgeTypes");
-
-                if (typesArray.isArray()) {
-                    List<KnowledgeTypeStatus> result = new ArrayList<>();
-                    for (JsonNode typeNode : typesArray) {
-                        try {
-                            result.add(KnowledgeTypeStatus.valueOf(typeNode.asText()));
-                        } catch (IllegalArgumentException ignored) {
-                            // Skip invalid enum values
-                        }
-                    }
-                    return result;
-                }
-            }
-
-            // If OpenAI responded with text instead of function call, return empty
-            // (fallback to all)
-            log.warn("[AI-RAG] Classification did not return a function call. Falling back to all types.");
-            return Collections.emptyList();
-
-        } catch (Exception e) {
-            log.error("[AI-RAG] Knowledge type classification failed: {}. Falling back to all types.", e.getMessage());
-            return Collections.emptyList();
-        }
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -461,7 +347,8 @@ public class AiChatServiceImpl implements AiChatService {
     // ═══════════════════════════════════════════════════════════════════
     // Function Calling Execution
     // ═══════════════════════════════════════════════════════════════════
-    private String executeFunctionCall(String functionName, JsonNode args, String senderId, Map<String, Object> metadata) {
+    private String executeFunctionCall(String functionName, JsonNode args, String senderId,
+            Map<String, Object> metadata) {
         log.info("[AI] Executing function: {} with args: {} for user: {}", functionName, args, senderId);
         try {
             return switch (functionName) {
@@ -504,7 +391,8 @@ public class AiChatServiceImpl implements AiChatService {
                 .toList();
 
         if (!workshops.isEmpty()) {
-            List<Map<String, Object>> attachedCards = (List<Map<String, Object>>) metadata.computeIfAbsent("attachedCards", k -> new java.util.ArrayList<>());
+            List<Map<String, Object>> attachedCards = (List<Map<String, Object>>) metadata
+                    .computeIfAbsent("attachedCards", k -> new java.util.ArrayList<>());
             for (var w : workshops) {
                 Map<String, Object> card = new java.util.HashMap<>();
                 card.put("id", w.get("workshopTemplateId"));
@@ -593,7 +481,8 @@ public class AiChatServiceImpl implements AiChatService {
                 .toList();
 
         if (!events.isEmpty()) {
-            List<Map<String, Object>> attachedCards = (List<Map<String, Object>>) metadata.computeIfAbsent("attachedCards", k -> new java.util.ArrayList<>());
+            List<Map<String, Object>> attachedCards = (List<Map<String, Object>>) metadata
+                    .computeIfAbsent("attachedCards", k -> new java.util.ArrayList<>());
             for (var e : events) {
                 Map<String, Object> card = new java.util.HashMap<>();
                 card.put("id", e.get("id"));
@@ -743,7 +632,8 @@ public class AiChatServiceImpl implements AiChatService {
                 .toList();
 
         if (!blogs.isEmpty()) {
-            List<Map<String, Object>> attachedCards = (List<Map<String, Object>>) metadata.computeIfAbsent("attachedCards", k -> new java.util.ArrayList<>());
+            List<Map<String, Object>> attachedCards = (List<Map<String, Object>>) metadata
+                    .computeIfAbsent("attachedCards", k -> new java.util.ArrayList<>());
             for (var b : blogs) {
                 Map<String, Object> card = new java.util.HashMap<>();
                 card.put("id", b.get("id"));
@@ -795,12 +685,13 @@ public class AiChatServiceImpl implements AiChatService {
         String pointName = args.get("pointName").asText();
         String pointId = args.get("pointId").asText();
 
-        // Attach a single deterministic point card only for explicit direction requests.
+        // Attach a single deterministic point card only for explicit direction
+        // requests.
         try {
             UUID pid = UUID.fromString(pointId);
             pointRepository.findById(pid).ifPresent(point -> {
-                List<Map<String, Object>> attachedCards =
-                        (List<Map<String, Object>>) metadata.computeIfAbsent("attachedCards", k -> new java.util.ArrayList<>());
+                List<Map<String, Object>> attachedCards = (List<Map<String, Object>>) metadata
+                        .computeIfAbsent("attachedCards", k -> new java.util.ArrayList<>());
                 Map<String, Object> card = new java.util.HashMap<>();
                 card.put("id", point.getId().toString());
                 card.put("type", "point");
