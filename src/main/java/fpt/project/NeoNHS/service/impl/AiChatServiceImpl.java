@@ -45,6 +45,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Pattern;
 
 import org.springframework.data.redis.core.RedisTemplate;
 
@@ -52,6 +53,9 @@ import org.springframework.data.redis.core.RedisTemplate;
 @RequiredArgsConstructor
 @Slf4j
 public class AiChatServiceImpl implements AiChatService {
+    private static final Pattern CARD_MARKDOWN_PATTERN = Pattern.compile(
+            "!\\[[^\\]]*\\bID\\s*:[^\\]]*\\bType\\s*:\\s*(workshop|event|blog|point)\\b[^\\]]*\\]\\([^\\)]*\\)",
+            Pattern.CASE_INSENSITIVE);
 
     private final OpenAiConfig openAiConfig;
     private final RestClient openAiRestClient;
@@ -468,7 +472,7 @@ public class AiChatServiceImpl implements AiChatService {
                 case "searchBlogs" -> executeSearchBlogs(args, metadata);
                 case "addToCart" -> executeAddToCart(args, senderId);
                 case "searchMapPoints" -> executeSearchMapPoints(args, metadata);
-                case "navigateToLocation" -> executeNavigateToLocation(args);
+                case "navigateToLocation" -> executeNavigateToLocation(args, metadata);
                 default -> "Không tìm thấy công cụ: " + functionName;
             };
         } catch (Exception e) {
@@ -775,17 +779,8 @@ public class AiChatServiceImpl implements AiChatService {
                         "imageUrl", p.getThumbnailUrl() != null ? p.getThumbnailUrl() : ""))
                 .toList();
 
-        if (!points.isEmpty()) {
-            List<Map<String, Object>> attachedCards = (List<Map<String, Object>>) metadata.computeIfAbsent("attachedCards", k -> new java.util.ArrayList<>());
-            for (var p : points) {
-                Map<String, Object> card = new java.util.HashMap<>();
-                card.put("id", p.get("pointId"));
-                card.put("type", "location"); // Using location as the type for map points
-                card.put("title", p.get("name"));
-                card.put("imageUrl", p.get("imageUrl"));
-                attachedCards.add(card);
-            }
-        }
+        // Intentionally do NOT attach point cards for generic map-point queries.
+        // Point cards are only attached in explicit navigateToLocation flow.
 
         if (points.isEmpty())
             return "Không tìm thấy địa điểm nào" + (keyword.isEmpty() ? "." : " với từ khóa '" + keyword + "'.");
@@ -796,8 +791,26 @@ public class AiChatServiceImpl implements AiChatService {
         }
     }
 
-    private String executeNavigateToLocation(JsonNode args) {
+    private String executeNavigateToLocation(JsonNode args, Map<String, Object> metadata) {
         String pointName = args.get("pointName").asText();
+        String pointId = args.get("pointId").asText();
+
+        // Attach a single deterministic point card only for explicit direction requests.
+        try {
+            UUID pid = UUID.fromString(pointId);
+            pointRepository.findById(pid).ifPresent(point -> {
+                List<Map<String, Object>> attachedCards =
+                        (List<Map<String, Object>>) metadata.computeIfAbsent("attachedCards", k -> new java.util.ArrayList<>());
+                Map<String, Object> card = new java.util.HashMap<>();
+                card.put("id", point.getId().toString());
+                card.put("type", "point");
+                card.put("title", point.getName());
+                card.put("imageUrl", point.getThumbnailUrl() != null ? point.getThumbnailUrl() : "");
+                attachedCards.add(card);
+            });
+        } catch (Exception ignored) {
+        }
+
         return "SUCCESS: Đã kích hoạt chỉ đường tới " + pointName
                 + ". Hệ thống sẽ hiển thị nút chỉ đường ngay bây giờ.";
     }
@@ -906,6 +919,7 @@ public class AiChatServiceImpl implements AiChatService {
                 String aiReplyText = (String) result.get("text");
                 String messageType = (String) result.get("messageType");
                 Map<String, Object> aiMetadata = (Map<String, Object>) result.get("metadata");
+                aiReplyText = sanitizeAiTextForAttachedCards(aiReplyText, aiMetadata);
 
                 System.out.println("AI Reply after processing: " + aiReplyText);
 
@@ -1044,6 +1058,21 @@ public class AiChatServiceImpl implements AiChatService {
         return res;
     }
 
+    private String sanitizeAiTextForAttachedCards(String aiReplyText, Map<String, Object> metadata) {
+        String safeText = aiReplyText == null ? "" : aiReplyText.trim();
+        if (metadata == null || !metadata.containsKey("attachedCards")) {
+            return safeText;
+        }
+        Object cardsObj = metadata.get("attachedCards");
+        if (!(cardsObj instanceof List<?> cards) || cards.isEmpty()) {
+            return safeText;
+        }
+        // Single source of truth: cards come from metadata.attachedCards only.
+        // Remove card-markdown from text to avoid duplicate rendering in FE.
+        String cleaned = CARD_MARKDOWN_PATTERN.matcher(safeText).replaceAll("");
+        return cleaned.replaceAll("\\n{3,}", "\n\n").trim();
+    }
+
     // ═══════════════════════════════════════════════════════════════════
     // Helper Methods
     // ═══════════════════════════════════════════════════════════════════
@@ -1069,7 +1098,8 @@ public class AiChatServiceImpl implements AiChatService {
     // }
 
     private void saveAndBroadcastAiMessageWithMetadata(String roomId, String aiText, Map<String, Object> metadata) {
-        saveAndBroadcastAiMessage(roomId, aiText, "TEXT", null);
+        // SỬA: Phải truyền biến metadata vào, không được truyền null
+        saveAndBroadcastAiMessage(roomId, aiText, "TEXT", metadata);
     }
 
     private void saveAndBroadcastAiMessage(String roomId, String aiText, String messageType,
