@@ -538,6 +538,14 @@ public class VoucherServiceImpl implements VoucherService {
                 // ALL always passes
             }
 
+            // 5. Vendor-scoped voucher: cart must contain at least one item from that vendor
+            if (isValid && v.getVendor() != null) {
+                UUID voucherVendorId = v.getVendor().getId();
+                boolean cartHasVendorItem = cartItems.stream().anyMatch(i ->
+                        isWorkshopItemFromVendor(i, voucherVendorId));
+                if (!cartHasVendorItem) isValid = false;
+            }
+
             UserVoucherRespone response = UserVoucherRespone.fromEntity(uv);
             if (isValid) valid.add(response); else invalid.add(response);
         }
@@ -566,22 +574,45 @@ public class VoucherServiceImpl implements VoucherService {
                 .orElseThrow(() -> new BadRequestException("Voucher not found"));
         Voucher v = uv.getVoucher();
 
-        // Calculate the base amount the discount applies to (respects applicableProduct)
+        // Calculate the base amount the discount applies to (respects applicableProduct + vendor scope)
         BigDecimal applicableBase = switch (v.getApplicableProduct()) {
             case EVENT_TICKET -> cartItems.stream()
                     .filter(i -> i.getTicketCatalog() != null)
+                    // Event has no direct vendor link — platform vouchers cover all tickets;
+                    // vendor vouchers do not apply to tickets (no vendor relationship on Event)
+                    .filter(i -> v.getVendor() == null)
                     .map(i -> i.getTicketCatalog().getPrice()
                             .multiply(BigDecimal.valueOf(i.getQuantity())))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            case WORKSHOP -> cartItems.stream()
-                    .filter(i -> i.getWorkshopSession() != null
-                            && i.getWorkshopSession().getPrice() != null)
-                    .map(i -> i.getWorkshopSession().getPrice()
-                            .multiply(BigDecimal.valueOf(i.getQuantity())))
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            case WORKSHOP -> {
+                UUID voucherVendorId = v.getVendor() != null ? v.getVendor().getId() : null;
+                yield cartItems.stream()
+                        .filter(i -> i.getWorkshopSession() != null
+                                && i.getWorkshopSession().getPrice() != null)
+                        // If vendor-scoped, only count workshops from that vendor
+                        .filter(i -> voucherVendorId == null || isWorkshopItemFromVendor(i, voucherVendorId))
+                        .map(i -> i.getWorkshopSession().getPrice()
+                                .multiply(BigDecimal.valueOf(i.getQuantity())))
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+            }
 
-            default -> totalPrice; // ALL
+            default -> {
+                // ALL: platform vouchers → full cart; vendor vouchers → only that vendor's workshops
+                UUID voucherVendorId = v.getVendor() != null ? v.getVendor().getId() : null;
+                if (voucherVendorId == null) {
+                    yield totalPrice;
+                }
+                yield cartItems.stream()
+                        .filter(i -> isWorkshopItemFromVendor(i, voucherVendorId))
+                        .map(i -> {
+                            BigDecimal price = i.getWorkshopSession() != null && i.getWorkshopSession().getPrice() != null
+                                    ? i.getWorkshopSession().getPrice()
+                                    : BigDecimal.ZERO;
+                            return price.multiply(BigDecimal.valueOf(i.getQuantity()));
+                        })
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+            }
         };
 
         // Apply discount formula
@@ -596,5 +627,17 @@ public class VoucherServiceImpl implements VoucherService {
             // FIXED — cap at applicableBase so final price never goes below 0
             return v.getDiscountValue().min(applicableBase);
         }
+    }
+
+    /**
+     * Returns true if the cart item is a workshop session belonging to the given vendor.
+     * Path: CartItem → WorkshopSession → WorkshopTemplate → VendorProfile
+     */
+    private boolean isWorkshopItemFromVendor(CartItem item, UUID vendorId) {
+        if (item.getWorkshopSession() == null) return false;
+        WorkshopSession session = item.getWorkshopSession();
+        if (session.getWorkshopTemplate() == null) return false;
+        VendorProfile vendor = session.getWorkshopTemplate().getVendor();
+        return vendor != null && vendor.getId().equals(vendorId);
     }
 }
