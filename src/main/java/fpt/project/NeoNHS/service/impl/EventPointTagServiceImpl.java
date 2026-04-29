@@ -62,15 +62,16 @@ public class EventPointTagServiceImpl implements EventPointTagService {
                 .toList();
     }
 
+    // NOTE: Because event point tag can be reused across many event and used by many event points.
+    // When
     @Override
     @Transactional
     public void deleteTag(UUID id) {
         EventPointTag tag = tagRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("EventPointTag not found with id: " + id));
-
-        if (tag.getEventPoints() != null && !tag.getEventPoints().isEmpty()) {
-            throw new BadRequestException("Cannot delete tag that is being used by event points");
-        }
+//        if (tag.getEventPoints() != null && !tag.getEventPoints().isEmpty()) {
+//            throw new BadRequestException("Cannot delete tag that is being used by event points");
+//        }
         tagRepository.delete(tag);
     }
 }

@@ -272,7 +272,10 @@ public class PointServiceImpl implements PointService {
         List<MapPointResponse> mapPoints = new ArrayList<>();
         mapPoints.addAll(userMappedPoints);
         mapPoints.addAll(events.stream().map(MapPointResponse::fromEventPoint).toList());
-        mapPoints.addAll(workshopTemplate.stream().map(MapPointResponse::fromWorkshopTemplate).toList());
+        mapPoints.addAll(workshopTemplate.stream()
+                .filter(Objects::nonNull)
+                .map(MapPointResponse::fromWorkshopTemplate)
+                .filter(Objects::nonNull).toList());
         return mapPoints;
     }
 
