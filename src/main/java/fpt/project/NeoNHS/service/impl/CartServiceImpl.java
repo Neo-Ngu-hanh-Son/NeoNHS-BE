@@ -348,8 +348,8 @@ public class CartServiceImpl implements CartService {
         }
 
         // ── Voucher Logic (delegated to VoucherService) ──
-        VoucherClassificationResult classification =
-                voucherService.classifyVouchersForCart(user, selectedItems, totalPrice);
+        VoucherClassificationResult classification = voucherService.classifyVouchersForCart(user, selectedItems,
+                totalPrice);
 
         BigDecimal discountValue = BigDecimal.ZERO;
         UserVoucherRespone appliedVoucherResponse = null;
@@ -380,30 +380,26 @@ public class CartServiceImpl implements CartService {
     @Transactional(readOnly = true)
     public List<UserVoucherRespone> getUserVouchers(String userEmail) {
         User user = getUserByEmail(userEmail);
-        List<UserVoucher> userVouchers = userVoucherRepository.findByUser_IdAndIsUsedFalse(user.getId());
+        
+        Cart cart = getOrCreateCart(user);
+        List<CartItem> cartItems = cart.getCartItems() != null ? cart.getCartItems() : new ArrayList<>();
 
-        List<UserVoucherRespone> voucherResponses = new ArrayList<>();
-        LocalDateTime now = LocalDateTime.now();
-
-        for (UserVoucher uv : userVouchers) {
-            Voucher v = uv.getVoucher();
-            
-            // Only return DISCOUNT vouchers for cart
-            if (v.getVoucherType() != VoucherType.DISCOUNT) {
-                continue;
-            }
-
-            if ((v.getStartDate() != null && now.isBefore(v.getStartDate())) ||
-                    (v.getEndDate() != null && now.isAfter(v.getEndDate()))) {
-                continue;
-            }
-            if (v.getUsageLimit() != null && v.getUsageCount() >= v.getUsageLimit()) {
-                continue;
-            }
-
-            voucherResponses.add(UserVoucherRespone.fromEntity(uv));
+        BigDecimal totalPrice = BigDecimal.ZERO;
+        for (CartItem item : cartItems) {
+            BigDecimal itemPrice = item.getTicketCatalog() != null
+                    ? item.getTicketCatalog().getPrice()
+                    : (item.getWorkshopSession() != null && item.getWorkshopSession().getPrice() != null
+                            ? item.getWorkshopSession().getPrice()
+                            : BigDecimal.ZERO);
+            BigDecimal subTotal = itemPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
+            totalPrice = totalPrice.add(subTotal);
         }
-        return voucherResponses;
+
+        VoucherClassificationResult classification = voucherService.classifyVouchersForCart(user, cartItems, totalPrice);
+
+        return classification.getValidVouchers().stream()
+                .filter(v -> v.getVoucherType() == VoucherType.DISCOUNT)
+                .toList();
     }
 
 }
