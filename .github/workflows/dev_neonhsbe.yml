@@ -1,12 +1,13 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy JAR app to Azure Web App - NeoNHS
+name: Build and deploy JAR app to Azure Web App - NeoNHSBE
 
 on:
   push:
     branches:
       - dev
+      - main
   workflow_dispatch:
 
 jobs:
@@ -49,15 +50,15 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1CC81D6D3AE84C3699831BEC0D4BAAA4 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_B5A60CC454DE451EB7BBAC56F0D4A090 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_AB37B461D7C24023B2AF72CA48CAA183 }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_C426C1EE926F4AD1A6AC5A72CC7EFA9F }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_55C08AF1C8DF4A3E93C04ADEDFE7F958 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_32A2BB5FFAEF426CBC5D2B0D13C5D34A }}
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'NeoNHS'
+          app-name: 'NeoNHSBE'
           slot-name: 'Production'
           package: '*.jar'
           

@@ -23,6 +23,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
 
   Optional<Transaction> findByPaymentGateway(String paymentGateway);
 
+  List<Transaction> findByStatusAndTransactionDateBefore(fpt.project.NeoNHS.enums.TransactionStatus status, java.time.LocalDateTime dateTime);
+
   @Query("""
           SELECT t FROM Transaction t
           JOIN FETCH t.order o

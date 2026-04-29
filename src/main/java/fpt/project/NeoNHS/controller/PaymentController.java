@@ -62,6 +62,9 @@ public class PaymentController {
             description = description.substring(0, 25);
         }
 
+        // Define expiration time: 10 minutes from now
+        Long expiredAt = (System.currentTimeMillis() / 1000L) + (10L * 60L);
+
         // 3. Build PayOS Request
         CreatePaymentLinkRequest paymentData = CreatePaymentLinkRequest.builder()
                 .orderCode(orderCode)
@@ -69,6 +72,7 @@ public class PaymentController {
                 .description(description)
                 .returnUrl(returnUrl)
                 .cancelUrl(cancelUrl)
+                .expiredAt(expiredAt)
                 .build();
 
         try {
