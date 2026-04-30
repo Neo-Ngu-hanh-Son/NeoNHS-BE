@@ -29,8 +29,8 @@ public class CloudinaryImageUploadServiceImpl implements ImageUploadService {
 
     @Override
     public ImageUploadResponse uploadImage(MultipartFile file) {
-        log.info("Uploading image to Cloudinary for file: " + file.getOriginalFilename() + " " + file.getContentType()
-                + " " + file.getSize());
+        long startTime = System.currentTimeMillis();
+        log.info("[CloudinaryImageUploadService] Received file. Size: {} bytes", file.getSize());
         try {
             @SuppressWarnings("unchecked")
             Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
@@ -42,21 +42,22 @@ public class CloudinaryImageUploadServiceImpl implements ImageUploadService {
                     .publicId(publicId)
                     .build();
         } catch (IOException e) {
-            log.error("Failed to upload image to Cloudinary", e);
+            log.error("[CloudinaryImageUploadService] Failed to upload image to Cloudinary", e);
             throw new AppIOException("Failed to upload image: " + e.getMessage());
+        } finally {
+            log.info("[CloudinaryImageUploadService] Total Request Time: {} ms", (System.currentTimeMillis() - startTime));
         }
     }
 
     @Override
     public ImageUploadResponse uploadImageFromUrl(ShortenImageRequest req) {
-        log.info("Fetching and shortening external image URL: {}", req.getUrl());
+        log.info("[CloudinaryImageUploadService] Fetching and shortening external image URL: {}", req.getUrl());
         try {
             // Cloudinary uploader can take a URL string directly
             @SuppressWarnings("unchecked")
             Map uploadResult = cloudinary.uploader().upload(req.getUrl(), ObjectUtils.asMap(
                     "folder", "NeoNHS/Shortened",
-                    "resource_type", "image"
-            ));
+                    "resource_type", "image"));
 
             String secureUrl = (String) uploadResult.get("secure_url");
             String publicId = (String) uploadResult.get("public_id");
@@ -83,8 +84,7 @@ public class CloudinaryImageUploadServiceImpl implements ImageUploadService {
             @SuppressWarnings("unchecked")
             Map<String, Object> uploadResult = cloudinary.uploader().upload(
                     file.getBytes(),
-                    ObjectUtils.asMap("resource_type", "video")
-            );
+                    ObjectUtils.asMap("resource_type", "video"));
 
             String secureUrl = (String) uploadResult.get("secure_url");
             log.info("Successfully uploaded video / audio to Cloudinary. URL: {}", secureUrl);

@@ -80,7 +80,7 @@ translation:
 # OpenAI Configuration
 openai:
   api-key: ${OPENAI_API_KEY}
-  model: gpt-4o-mini
+  model: gpt-4o
   base-url: https://api.openai.com/v1
   embedding-model: text-embedding-3-small
   embedding-dimensions: 1536

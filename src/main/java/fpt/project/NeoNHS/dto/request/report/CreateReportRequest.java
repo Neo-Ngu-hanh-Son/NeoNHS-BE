@@ -5,13 +5,15 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import java.util.UUID;
 
+import fpt.project.NeoNHS.enums.ReportType;
+
 @Data
 public class CreateReportRequest {
     @NotNull(message = "Target ID is required")
     private UUID targetId;
 
     @NotBlank(message = "Target type is required")
-    private String targetType;
+    private ReportType targetType;
 
     @NotBlank(message = "Reason is required")
     private String reason;

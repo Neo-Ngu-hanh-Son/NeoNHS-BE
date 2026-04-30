@@ -1,9 +1,11 @@
 package fpt.project.NeoNHS.entity;
 
 import fpt.project.NeoNHS.enums.ReportStatus;
+import fpt.project.NeoNHS.enums.ReportType;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.tool.schema.TargetType;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -24,8 +26,10 @@ public class Report extends BaseEntity {
     @Column(nullable = false)
     private UUID targetId;
 
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String targetType;
+    private ReportType targetType = ReportType.REVIEW;
 
     @Column(nullable = false)
     private String reason;
