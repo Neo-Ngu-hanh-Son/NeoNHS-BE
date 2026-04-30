@@ -174,6 +174,7 @@ public class AiChatServiceImpl implements AiChatService {
         }
 
         if (!knowledgeBase.isEmpty()) {
+            log.info("[AI Strategy] Vector Search (MongoDB): Found {} relevant knowledge documents.", knowledgeBase.size());
             prompt.append("\n\n---\n")
                     .append("DỮ LIỆU KIẾN THỨC NỘI BỘ (Chỉ sử dụng khi cần trả lời các câu hỏi cụ thể):\n");
             for (int i = 0; i < knowledgeBase.size(); i++) {
@@ -181,6 +182,8 @@ public class AiChatServiceImpl implements AiChatService {
                 prompt.append(String.format("[%s] Bài viết %d: %s\n%s\n\n",
                         doc.getKnowledgeType().name(), i + 1, doc.getTitle(), doc.getContent()));
             }
+        }else {
+            log.info("[AI Strategy] Vector Search (MongoDB): No relevant content found.");
         }
         return prompt.toString();
     }
@@ -302,7 +305,7 @@ public class AiChatServiceImpl implements AiChatService {
                         "type": "function",
                         "function": {
                           "name": "searchMapPoints",
-                          "description": "Tìm kiếm các địa điểm tham quan, danh lam thắng cảnh (Point of Interest) trên bản đồ Ngũ Hành Sơn.",
+                          "description": "BẮT BUỘC SỬ DỤNG hàm này để lấy thông tin chi tiết khi người dùng hỏi về một địa điểm tham quan, hang động, chùa chiền cụ thể (ví dụ: Động Huyền Không, Tháp Xá Lợi, Vọng Giang Đài...). Hàm này chứa dữ liệu mô tả và hình ảnh.",
                           "parameters": {
                             "type": "object",
                             "properties": {
@@ -750,10 +753,10 @@ public class AiChatServiceImpl implements AiChatService {
         }
 
         // Add current user message
-        ObjectNode userNode = objectMapper.createObjectNode();
-        userNode.put("role", "user");
-        userNode.put("content", userMessage);
-        messages.add(userNode);
+//        ObjectNode userNode = objectMapper.createObjectNode();
+//        userNode.put("role", "user");
+//        userNode.put("content", userMessage);
+//        messages.add(userNode);
 
         return messages;
     }
@@ -810,6 +813,11 @@ public class AiChatServiceImpl implements AiChatService {
                 String aiReplyText = (String) result.get("text");
                 String messageType = (String) result.get("messageType");
                 Map<String, Object> aiMetadata = (Map<String, Object>) result.get("metadata");
+                boolean usedFunction = (aiMetadata != null && aiMetadata.containsKey("usedFunctionCalling"));
+                log.info("[AI Output Source] AI responded using data from: {}",
+                        usedFunction ? "MySQL (Function Calling)" : "MongoDB (Vector Search / System Prompt)");
+                log.info("[AI Output Text] {}", aiReplyText);
+
                 aiReplyText = sanitizeAiTextForAttachedCards(aiReplyText, aiMetadata);
 
                 System.out.println("AI Reply after processing: " + aiReplyText);
@@ -856,7 +864,6 @@ public class AiChatServiceImpl implements AiChatService {
         Map<String, Object> metadata = new java.util.HashMap<>();
         JsonNode currentResponse = response;
 
-        // Tăng lên 5 lần để thoải mái cho các bước: Search -> GetDetail -> AddToCart ->
         // Confirm
         int maxIterations = 5;
 
@@ -866,6 +873,8 @@ public class AiChatServiceImpl implements AiChatService {
 
             if (message.has("tool_calls")) {
                 JsonNode toolCalls = message.get("tool_calls");
+                log.info("[AI Strategy] Function Calling (MySQL): AI invoked {} tool(s).", toolCalls.size());
+                metadata.put("usedFunctionCalling", true); // Flag for the final response log
                 messages.add(message.deepCopy());
 
                 for (JsonNode toolCall : toolCalls) {
