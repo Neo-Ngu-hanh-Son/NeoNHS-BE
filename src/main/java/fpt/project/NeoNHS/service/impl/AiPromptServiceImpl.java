@@ -11,6 +11,7 @@ import fpt.project.NeoNHS.repository.mongo.KnowledgeRepository;
 import fpt.project.NeoNHS.repository.mongo.VectorSearchRepository;
 import fpt.project.NeoNHS.service.AiPromptService;
 import fpt.project.NeoNHS.service.EmbeddingService;
+import fpt.project.NeoNHS.service.LanguageDetectionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -31,6 +32,7 @@ public class AiPromptServiceImpl implements AiPromptService {
     private final VectorSearchRepository vectorSearchRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ObjectMapper objectMapper;
+    private final LanguageDetectionService languageDetectionService;
 
     // ═══════════════════════════════════════════════════════════════════
     // System Prompt
@@ -117,13 +119,19 @@ public class AiPromptServiceImpl implements AiPromptService {
 
         StringBuilder prompt = new StringBuilder(currentPrompt);
 
-        // Vector Search (Single-Phase RAG)
-        List<Double> queryVector = embeddingService.getEmbedding(userMessage);
+        // ── Cross-lingual RAG: detect language & normalise query to Vietnamese ──
+        // The knowledge base is stored entirely in Vietnamese, so we must translate
+        // the user's query before computing the embedding for vector search.
+        String detectedLang = languageDetectionService.detectLanguage(userMessage);
+        String queryForSearch = languageDetectionService.translateToVietnamese(userMessage, detectedLang);
+
+        // ── Vector Search (Cross-lingual Single-Phase RAG) ──────────────────────
+        List<Double> queryVector = embeddingService.getEmbedding(queryForSearch);
         List<KnowledgeDocument> knowledgeBase;
 
         if (queryVector == null || queryVector.isEmpty()) {
-            // Fallback to keyword search if embedding fails
-            knowledgeBase = knowledgeRepository.searchByKeyword(userMessage).stream()
+            // Fallback to keyword search using the Vietnamese translation
+            knowledgeBase = knowledgeRepository.searchByKeyword(queryForSearch).stream()
                     .filter(KnowledgeDocument::isActive)
                     .limit(3)
                     .toList();
@@ -133,8 +141,8 @@ public class AiPromptServiceImpl implements AiPromptService {
         }
 
         if (!knowledgeBase.isEmpty()) {
-            log.info("[AI Strategy] Vector Search (MongoDB): Found {} relevant knowledge documents.",
-                    knowledgeBase.size());
+            log.info("[AI Strategy] Vector Search (MongoDB): Found {} relevant knowledge documents (lang='{}', vi-query='{}').",
+                    knowledgeBase.size(), detectedLang, queryForSearch);
             prompt.append("\n\n---\n")
                     .append("DỮ LIỆU KIẾN THỨC NỘI BỘ (Chỉ sử dụng khi cần trả lời các câu hỏi cụ thể):\n");
             for (int i = 0; i < knowledgeBase.size(); i++) {
@@ -143,8 +151,24 @@ public class AiPromptServiceImpl implements AiPromptService {
                         doc.getKnowledgeType().name(), i + 1, doc.getTitle(), doc.getContent()));
             }
         } else {
-            log.info("[AI Strategy] Vector Search (MongoDB): No relevant content found.");
+            log.info("[AI Strategy] Vector Search (MongoDB): No relevant content found (lang='{}', vi-query='{}').",
+                    detectedLang, queryForSearch);
         }
+
+        // ── Inject user language directive so GPT-4o always replies correctly ───
+        // Even when context is found via cross-lingual search, GPT needs an explicit
+        // reminder of the target output language, because context docs are in Vietnamese.
+        if (!"vi".equals(detectedLang)) {
+            prompt.append("\n---\n");
+            prompt.append("[CROSS-LINGUAL OUTPUT DIRECTIVE]\n");
+            prompt.append("The user is communicating in language code: '").append(detectedLang).append("'.\n");
+            prompt.append("The Context/Knowledge documents above are written in Vietnamese.\n");
+            prompt.append("You MUST translate ALL factual content from the Context and Tool results ");
+            prompt.append("into language '").append(detectedLang).append("' before presenting it to the user.\n");
+            prompt.append("Do NOT output any Vietnamese text in your final reply. ");
+            prompt.append("Your ENTIRE response must be in language '").append(detectedLang).append("'.\n");
+        }
+
         return prompt.toString();
     }
 
