@@ -119,13 +119,16 @@ public class VendorDashboardServiceImpl implements VendorDashboardService {
         long currentBookings = workshopSessionRepository.countBookingsByVendorId(vendorId);
         long previousBookings = workshopSessionRepository.countBookingsByVendorIdSince(vendorId, weekAgo);
         long currentVouchers = voucherRepository.countByVendorIdAndDeletedAtIsNull(vendorId);
-        long previousVouchersDelta = voucherRepository.countByVendorIdAndDeletedAtIsNullAndCreatedAtAfter(vendorId, weekAgo);
+        long previousVouchersDelta = voucherRepository.countByVendorIdAndDeletedAtIsNullAndCreatedAtAfter(vendorId,
+                weekAgo);
 
         return VendorStatsResponse.builder()
                 .revenue(buildStatCard(totalRevenue, previousRevenue, "VND"))
                 .workshops(buildStatCard(BigDecimal.valueOf(currentWorkshops), null, null))
-                .bookings(buildStatCard(BigDecimal.valueOf(currentBookings), BigDecimal.valueOf(currentBookings - previousBookings), null))
-                .vouchers(buildStatCard(BigDecimal.valueOf(currentVouchers), BigDecimal.valueOf(currentVouchers - previousVouchersDelta), null))
+                .bookings(buildStatCard(BigDecimal.valueOf(currentBookings),
+                        BigDecimal.valueOf(currentBookings - previousBookings), null))
+                .vouchers(buildStatCard(BigDecimal.valueOf(currentVouchers),
+                        BigDecimal.valueOf(currentVouchers - previousVouchersDelta), null))
                 .build();
     }
 
@@ -154,7 +157,8 @@ public class VendorDashboardServiceImpl implements VendorDashboardService {
     // ─── Revenue series ─────────────────────────────────────────────
 
     private VendorRevenueSeriesResponse buildRevenueSeries(UUID vendorId, String range, LocalDateTime now) {
-        if (range == null) range = "week";
+        if (range == null)
+            range = "week";
 
         return switch (range.toLowerCase()) {
             case "month" -> buildMonthlyDayRevenue(vendorId, now);
@@ -169,21 +173,22 @@ public class VendorDashboardServiceImpl implements VendorDashboardService {
         LocalDateTime weekStart = monday.atStartOfDay();
         LocalDateTime weekEnd = monday.plusDays(7).atStartOfDay();
 
-        List<Object[]> raw = orderDetailRepository.getDailyRevenueByVendorId(vendorId, weekStart, weekEnd);
+        List<Object[]> rawRevenue = orderDetailRepository.getDailyRevenueByVendorId(vendorId, weekStart, weekEnd);
+        List<Object[]> rawNetAmount = orderDetailRepository.getDailyNetAmountByVendorId(vendorId, weekStart, weekEnd);
+
         Map<LocalDate, BigDecimal> revenueMap = new LinkedHashMap<>();
-        for (Object[] row : raw) {
-            LocalDate date;
-            if (row[0] instanceof java.sql.Date sqlDate) {
-                date = sqlDate.toLocalDate();
-            } else if (row[0] instanceof java.time.LocalDate localDate) {
-                date = localDate;
-            } else if (row[0] instanceof java.time.LocalDateTime localDateTime) {
-                date = localDateTime.toLocalDate();
-            } else {
-                date = LocalDate.parse(row[0].toString());
-            }
+        Map<LocalDate, BigDecimal> netAmountMap = new LinkedHashMap<>();
+
+        for (Object[] row : rawRevenue) {
+            LocalDate date = parseDateFromRow(row[0]);
             BigDecimal revenue = new BigDecimal(row[1].toString());
             revenueMap.put(date, revenue);
+        }
+
+        for (Object[] row : rawNetAmount) {
+            LocalDate date = parseDateFromRow(row[0]);
+            BigDecimal netAmount = new BigDecimal(row[1].toString());
+            netAmountMap.put(date, netAmount);
         }
 
         List<VendorRevenuePoint> points = new ArrayList<>();
@@ -191,7 +196,12 @@ public class VendorDashboardServiceImpl implements VendorDashboardService {
             LocalDate day = monday.plusDays(i);
             String label = day.getDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.ENGLISH);
             BigDecimal revenue = revenueMap.getOrDefault(day, BigDecimal.ZERO);
-            points.add(VendorRevenuePoint.builder().label(label).revenue(revenue).build());
+            BigDecimal netAmount = netAmountMap.getOrDefault(day, BigDecimal.ZERO);
+            points.add(VendorRevenuePoint.builder()
+                    .label(label)
+                    .revenue(revenue)
+                    .netAmount(netAmount)
+                    .build());
         }
 
         return VendorRevenueSeriesResponse.builder().range("week").points(points).build();
@@ -203,21 +213,22 @@ public class VendorDashboardServiceImpl implements VendorDashboardService {
         LocalDateTime monthStart = firstOfMonth.atStartOfDay();
         LocalDateTime monthEnd = firstOfNextMonth.atStartOfDay();
 
-        List<Object[]> raw = orderDetailRepository.getDailyRevenueByVendorId(vendorId, monthStart, monthEnd);
+        List<Object[]> rawRevenue = orderDetailRepository.getDailyRevenueByVendorId(vendorId, monthStart, monthEnd);
+        List<Object[]> rawNetAmount = orderDetailRepository.getDailyNetAmountByVendorId(vendorId, monthStart, monthEnd);
+
         Map<LocalDate, BigDecimal> revenueMap = new LinkedHashMap<>();
-        for (Object[] row : raw) {
-            LocalDate date;
-            if (row[0] instanceof java.sql.Date sqlDate) {
-                date = sqlDate.toLocalDate();
-            } else if (row[0] instanceof java.time.LocalDate localDate) {
-                date = localDate;
-            } else if (row[0] instanceof java.time.LocalDateTime localDateTime) {
-                date = localDateTime.toLocalDate();
-            } else {
-                date = LocalDate.parse(row[0].toString());
-            }
+        Map<LocalDate, BigDecimal> netAmountMap = new LinkedHashMap<>();
+
+        for (Object[] row : rawRevenue) {
+            LocalDate date = parseDateFromRow(row[0]);
             BigDecimal revenue = new BigDecimal(row[1].toString());
             revenueMap.put(date, revenue);
+        }
+
+        for (Object[] row : rawNetAmount) {
+            LocalDate date = parseDateFromRow(row[0]);
+            BigDecimal netAmount = new BigDecimal(row[1].toString());
+            netAmountMap.put(date, netAmount);
         }
 
         List<VendorRevenuePoint> points = new ArrayList<>();
@@ -225,7 +236,12 @@ public class VendorDashboardServiceImpl implements VendorDashboardService {
         for (int d = 1; d <= daysInMonth; d++) {
             LocalDate day = firstOfMonth.withDayOfMonth(d);
             BigDecimal revenue = revenueMap.getOrDefault(day, BigDecimal.ZERO);
-            points.add(VendorRevenuePoint.builder().label(String.valueOf(d)).revenue(revenue).build());
+            BigDecimal netAmount = netAmountMap.getOrDefault(day, BigDecimal.ZERO);
+            points.add(VendorRevenuePoint.builder()
+                    .label(String.valueOf(d))
+                    .revenue(revenue)
+                    .netAmount(netAmount)
+                    .build());
         }
 
         return VendorRevenueSeriesResponse.builder().range("month").points(points).build();
@@ -236,12 +252,22 @@ public class VendorDashboardServiceImpl implements VendorDashboardService {
         LocalDateTime yearStart = LocalDate.of(year, 1, 1).atStartOfDay();
         LocalDateTime yearEnd = LocalDate.of(year + 1, 1, 1).atStartOfDay();
 
-        List<Object[]> raw = orderDetailRepository.getMonthlyRevenueByVendorId(vendorId, yearStart, yearEnd);
+        List<Object[]> rawRevenue = orderDetailRepository.getMonthlyRevenueByVendorId(vendorId, yearStart, yearEnd);
+        List<Object[]> rawNetAmount = orderDetailRepository.getMonthlyNetAmountByVendorId(vendorId, yearStart, yearEnd);
+
         Map<String, BigDecimal> revenueMap = new LinkedHashMap<>();
-        for (Object[] row : raw) {
+        Map<String, BigDecimal> netAmountMap = new LinkedHashMap<>();
+
+        for (Object[] row : rawRevenue) {
             String monthKey = row[0].toString();
             BigDecimal revenue = new BigDecimal(row[1].toString());
             revenueMap.put(monthKey, revenue);
+        }
+
+        for (Object[] row : rawNetAmount) {
+            String monthKey = row[0].toString();
+            BigDecimal netAmount = new BigDecimal(row[1].toString());
+            netAmountMap.put(monthKey, netAmount);
         }
 
         List<VendorRevenuePoint> points = new ArrayList<>();
@@ -250,10 +276,28 @@ public class VendorDashboardServiceImpl implements VendorDashboardService {
             String key = String.format("%d-%02d", year, m);
             String label = month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH);
             BigDecimal revenue = revenueMap.getOrDefault(key, BigDecimal.ZERO);
-            points.add(VendorRevenuePoint.builder().label(label).revenue(revenue).build());
+            BigDecimal netAmount = netAmountMap.getOrDefault(key, BigDecimal.ZERO);
+            points.add(VendorRevenuePoint.builder()
+                    .label(label)
+                    .revenue(revenue)
+                    .netAmount(netAmount)
+                    .build());
         }
 
         return VendorRevenueSeriesResponse.builder().range("year").points(points).build();
+    }
+
+    // Helper method to parse date from different types
+    private LocalDate parseDateFromRow(Object obj) {
+        if (obj instanceof java.sql.Date sqlDate) {
+            return sqlDate.toLocalDate();
+        } else if (obj instanceof java.time.LocalDate localDate) {
+            return localDate;
+        } else if (obj instanceof java.time.LocalDateTime localDateTime) {
+            return localDateTime.toLocalDate();
+        } else {
+            return LocalDate.parse(obj.toString());
+        }
     }
 
     // ─── Workshop status ────────────────────────────────────────────
@@ -276,10 +320,13 @@ public class VendorDashboardServiceImpl implements VendorDashboardService {
     // ─── Recent transactions ────────────────────────────────────────
 
     private List<VendorTransactionItem> buildTransactions(UUID vendorId, int limit) {
-        List<Object[]> rawTransactions = transactionRepository.findRecentTransactionsWithTicketsByVendorIdNative(vendorId, PageRequest.of(0, limit));
+        List<Object[]> rawTransactions = transactionRepository
+                .findRecentTransactionsWithTicketsByVendorIdNative(vendorId, PageRequest.of(0, limit));
 
         return rawTransactions.stream().map(row -> {
-            String transactionId = row[0] != null ? (row[0] instanceof byte[] ? asUuid((byte[]) row[0]).toString() : row[0].toString()) : null;
+            String transactionId = row[0] != null
+                    ? (row[0] instanceof byte[] ? asUuid((byte[]) row[0]).toString() : row[0].toString())
+                    : null;
             String status = row[1] != null ? row[1].toString() : "UNKNOWN";
             String workshopName = row[2] != null ? row[2].toString() : "N/A";
             String customerName = row[3] != null ? row[3].toString() : "N/A";
@@ -339,7 +386,8 @@ public class VendorDashboardServiceImpl implements VendorDashboardService {
 
     private List<VendorWorkshopReviewItem> buildWorkshopReviews(UUID vendorId, LocalDateTime now, int limit) {
         LocalDateTime weekAgo = now.minusWeeks(1);
-        List<Object[]> raw = reviewRepository.findWorkshopReviewSummariesByVendorId(vendorId, weekAgo, ReviewTypeFlagEnum.WORKSHOP);
+        List<Object[]> raw = reviewRepository.findWorkshopReviewSummariesByVendorId(vendorId, weekAgo,
+                ReviewTypeFlagEnum.WORKSHOP);
 
         return raw.stream()
                 .limit(limit)
@@ -347,10 +395,11 @@ public class VendorDashboardServiceImpl implements VendorDashboardService {
                         .workshopId((UUID) row[0])
                         .workshopName((String) row[1])
                         .totalReviews(((Number) row[2]).longValue())
-                        .averageRating(BigDecimal.valueOf(((Number) row[3]).doubleValue()).setScale(1, RoundingMode.HALF_UP))
+                        .averageRating(
+                                BigDecimal.valueOf(((Number) row[3]).doubleValue()).setScale(1, RoundingMode.HALF_UP))
                         .newReviewsInWindow(((Number) row[4]).longValue())
-                        .build()
-                ).collect(Collectors.toList());
+                        .build())
+                .collect(Collectors.toList());
     }
 
     // ─── Sessions (calendar) ────────────────────────────────────────
