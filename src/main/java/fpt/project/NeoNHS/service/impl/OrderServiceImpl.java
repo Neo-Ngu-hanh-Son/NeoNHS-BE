@@ -302,6 +302,7 @@ public class OrderServiceImpl implements OrderService {
                 LocalDateTime expiryDate = null;
                 if (detail.getWorkshopSession() != null) {
                     type = TicketType.WORKSHOP;
+                    expiryDate= detail.getWorkshopSession().getEndTime();
                 } else if (detail.getTicketCatalog() != null && detail.getTicketCatalog().getEvent() != null) {
                     type = TicketType.EVENT;
                     expiryDate = detail.getTicketCatalog().getEvent().getEndTime();
