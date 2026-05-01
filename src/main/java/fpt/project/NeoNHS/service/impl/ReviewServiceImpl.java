@@ -209,24 +209,20 @@ public class ReviewServiceImpl implements ReviewService {
         if (reviewTypeId == null) {
             throw new BadRequestException("Review type ID must not be null");
         }
-        switch (reviewTypeFlg) {
-            case ReviewTypeFlagEnum.WORKSHOP: // Workshop
-                if (!workshopTemplateRepository.existsById(reviewTypeId)) {
-                    throw new ResourceNotFoundException("WorkshopTemplate", "id", reviewTypeId);
-                }
-                break;
-            case ReviewTypeFlagEnum.EVENT: // Event
-                if (!eventRepository.existsById(reviewTypeId)) {
-                    throw new ResourceNotFoundException("Event", "id", reviewTypeId);
-                }
-                break;
-            case ReviewTypeFlagEnum.POINT: // Point
-                if (!pointRepository.existsById(reviewTypeId)) {
-                    throw new ResourceNotFoundException("Point", "id", reviewTypeId);
-                }
-                break;
-            default:
-                throw new BadRequestException("Invalid review type flag. Allowed values: 1 (Workshop), 2 (Event), 3 (Point)");
+        if (reviewTypeFlg == ReviewTypeFlagEnum.WORKSHOP) {
+            if (!workshopTemplateRepository.existsById(reviewTypeId)) {
+                throw new ResourceNotFoundException("WorkshopTemplate", "id", reviewTypeId);
+            }
+        } else if (reviewTypeFlg == ReviewTypeFlagEnum.EVENT) {
+            if (!eventRepository.existsById(reviewTypeId)) {
+                throw new ResourceNotFoundException("Event", "id", reviewTypeId);
+            }
+        } else if (reviewTypeFlg == ReviewTypeFlagEnum.POINT) {
+            if (!pointRepository.existsById(reviewTypeId)) {
+                throw new ResourceNotFoundException("Point", "id", reviewTypeId);
+            }
+        } else {
+            throw new BadRequestException("Invalid review type flag. Allowed values: 1 (Workshop), 2 (Event), 3 (Point)");
         }
     }
 
@@ -247,7 +243,7 @@ public class ReviewServiceImpl implements ReviewService {
 
     private ReviewResponse mapToResponse(Review review) {
         List<String> imageUrls = review.getReviewImages() != null
-                ? review.getReviewImages().stream().map(ReviewImage::getImageUrl).collect(Collectors.toList())
+                ? review.getReviewImages().stream().map(ReviewImage::getImageUrl).toList()
                 : new ArrayList<>();
 
         UserResponse userResponse = UserResponse.builder()
@@ -265,6 +261,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .user(userResponse)
                 .rating(review.getRating())
                 .comment(review.getComment())
+                .imageUrls(imageUrls)
                 .createdAt(review.getCreatedAt())
                 .build();
     }

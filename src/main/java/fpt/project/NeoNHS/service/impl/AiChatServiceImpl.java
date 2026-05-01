@@ -205,6 +205,30 @@ public class AiChatServiceImpl implements AiChatService {
                         functionResult = "ERROR: Lỗi hệ thống.";
                     }
 
+                    if (functionResult == null) {
+                        functionResult = "ERROR: Kết quả trả về rỗng.";
+                    }
+
+                    // Kích hoạt Vector Search nếu Function Calling trả về "Không tìm thấy"
+                    if (functionResult != null && (functionResult.contains("Không tìm thấy") || functionResult.contains("hiện không có"))) {
+                        String keyword = "";
+                        if (functionArgs.has("keyword")) {
+                            keyword = functionArgs.get("keyword").asText();
+                        } else if (functionArgs.has("eventName")) {
+                            keyword = functionArgs.get("eventName").asText();
+                        }
+
+                        if (!keyword.isEmpty()) {
+                            log.info("[AI Strategy] Function {} returned empty. Forcing Vector Search for parsed keyword: {}", functionName, keyword);
+                            String additionalContext = aiPromptService.searchKnowledgeBaseContext(keyword);
+                            if (!additionalContext.isEmpty()) {
+                                functionResult += additionalContext;
+                                metadata.remove("usedFunctionCalling"); // Đánh dấu là sử dụng dữ liệu từ Vector Search
+                                log.info("[AI Strategy] Forced Vector Search successful. Injected into tool response.");
+                            }
+                        }
+                    }
+
                     // Lưu kết quả tool
                     ObjectNode toolResultNode = objectMapper.createObjectNode();
                     toolResultNode.put("role", "tool");
