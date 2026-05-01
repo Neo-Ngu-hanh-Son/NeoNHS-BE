@@ -4,4 +4,5 @@ import fpt.project.NeoNHS.dto.response.TicketDetailResponse;
 
 public interface TicketService {
     TicketDetailResponse verifyTicketViaCode(String code);
+    void expireOutdatedTickets();
 }

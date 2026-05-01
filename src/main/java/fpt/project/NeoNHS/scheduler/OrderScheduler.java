@@ -14,7 +14,7 @@ public class OrderScheduler {
     private final OrderService orderService;
 
     // Run every 1 minute
-    @Scheduled(fixedRate = 60000)
+    @Scheduled(fixedRate = 300000)
     public void cancelExpiredOrdersJob() {
         log.info("Running OrderScheduler to cancel expired pending orders...");
         try {
