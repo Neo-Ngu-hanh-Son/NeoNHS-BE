@@ -18,9 +18,11 @@ import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.repository.EventRepository;
 import fpt.project.NeoNHS.repository.PointRepository;
 import fpt.project.NeoNHS.repository.ReviewRepository;
+import fpt.project.NeoNHS.repository.TicketRepository;
 import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.repository.WorkshopTemplateRepository;
 import fpt.project.NeoNHS.service.ReviewService;
+import fpt.project.NeoNHS.dto.response.review.ReviewEligibilityResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -42,6 +44,17 @@ public class ReviewServiceImpl implements ReviewService {
     private final WorkshopTemplateRepository workshopTemplateRepository;
     private final EventRepository eventRepository;
     private final PointRepository pointRepository;
+    private final TicketRepository ticketRepository;
+
+    @Override
+    @Transactional(readOnly = true)
+    public ReviewEligibilityResponse checkEligibility(UUID userId, UUID reviewTypeId, ReviewTypeFlagEnum flag) {
+        if (flag == ReviewTypeFlagEnum.WORKSHOP) {
+            boolean hasUsedTicket = ticketRepository.hasUserUsedTicketForWorkshop(userId, reviewTypeId);
+            return new ReviewEligibilityResponse(hasUsedTicket, hasUsedTicket ? "" : "You must book a session and have a USED ticket before reviewing this workshop.");
+        }
+        return new ReviewEligibilityResponse(true, "");
+    }
 
     @Override
     @Transactional
@@ -51,6 +64,11 @@ public class ReviewServiceImpl implements ReviewService {
 
         // Validate the target exists
         validateReviewTarget(request.getReviewTypeId(), request.getReviewTypeFlg());
+        
+        ReviewEligibilityResponse eligibility = checkEligibility(userId, request.getReviewTypeId(), request.getReviewTypeFlg());
+        if (!eligibility.isEligible()) {
+            throw new BadRequestException(eligibility.getMessage());
+        }
 
         // Check if user already reviewed this target
         if (reviewRepository.existsByUser_IdAndReviewTypeIdAndReviewTypeFlgAndDeletedAtIsNull(userId, request.getReviewTypeId(), request.getReviewTypeFlg())) {
