@@ -58,7 +58,7 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
                             "properties": {
                               "keyword": {
                                 "type": "string",
-                                "description": "Từ khóa tìm kiếm (tên workshop). Để trống nếu muốn lấy tất cả."
+                                "description": "Từ khóa tìm kiếm (tên workshop). Bạn PHẢI dịch sang tiếng Việt trước khi tìm. Để trống nếu muốn lấy tất cả."
                               }
                             }
                           }
@@ -91,7 +91,7 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
                             "properties": {
                               "keyword": {
                                 "type": "string",
-                                "description": "Từ khóa tìm kiếm (tên sự kiện). Để trống nếu muốn lấy tất cả."
+                                "description": "Từ khóa tìm kiếm (tên sự kiện). Bạn PHẢI dịch sang tiếng Việt trước khi tìm. Để trống nếu muốn lấy tất cả."
                               }
                             }
                           }
@@ -107,7 +107,7 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
                             "properties": {
                               "eventName": {
                                 "type": "string",
-                                "description": "Tên sự kiện cần tra giá vé. Để trống nếu muốn tra giá vé tham quan chung."
+                                "description": "Tên sự kiện cần tra giá vé (bằng tiếng Việt). Để trống nếu muốn tra giá vé tham quan chung."
                               }
                             }
                           }
@@ -123,7 +123,7 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
                             "properties": {
                               "keyword": {
                                 "type": "string",
-                                "description": "Từ khóa tìm kiếm (tiêu đề bài viết). Để trống nếu muốn lấy các bài mới nhất."
+                                "description": "Từ khóa tìm kiếm (tiêu đề). Bạn PHẢI dịch sang tiếng Việt trước khi tìm. Để trống lấy bài mới nhất."
                               }
                             }
                           }
@@ -164,7 +164,7 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
                             "properties": {
                               "keyword": {
                                 "type": "string",
-                                "description": "Tên địa điểm cần tìm (ví dụ: Động Huyền Không, Vọng Giang Đài)."
+                                "description": "Tên địa điểm cần tìm. Bạn PHẢI dịch sang tiếng Việt trước khi tìm (ví dụ: Động Huyền Không, Vọng Giang Đài)."
                               }
                             }
                           }

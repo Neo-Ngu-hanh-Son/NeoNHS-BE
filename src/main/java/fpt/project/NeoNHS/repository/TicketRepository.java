@@ -33,8 +33,8 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
     @Modifying
     @Query("UPDATE Ticket t SET t.status = :expiredStatus WHERE t.status = :activeStatus AND t.expiryDate < :now")
     int updateExpiredTickets(
-        @Param("expiredStatus") TicketStatus expiredStatus,
-        @Param("activeStatus") TicketStatus activeStatus,
-        @Param("now") LocalDateTime now
+            @Param("expiredStatus") TicketStatus expiredStatus,
+            @Param("activeStatus") TicketStatus activeStatus,
+            @Param("now") LocalDateTime now
     );
 }
