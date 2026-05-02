@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fpt.project.NeoNHS.dto.request.cart.AddToCartRequest;
 import fpt.project.NeoNHS.enums.BlogStatus;
 import fpt.project.NeoNHS.enums.EventStatus;
-import fpt.project.NeoNHS.enums.SessionStatus;
 import fpt.project.NeoNHS.repository.BlogRepository;
 import fpt.project.NeoNHS.repository.EventRepository;
 import fpt.project.NeoNHS.repository.PointRepository;
@@ -58,29 +57,29 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
                             "properties": {
                               "keyword": {
                                 "type": "string",
-                                "description": "Từ khóa tìm kiếm (tên workshop). Để trống nếu muốn lấy tất cả."
+                                "description": "Từ khóa tìm kiếm (tên workshop). Bạn PHẢI dịch sang tiếng Việt trước khi tìm. Để trống nếu muốn lấy tất cả."
                               }
                             }
                           }
                         }
                       },
                       {
-                        "type": "function",
-                        "function": {
-                          "name": "getWorkshopSessions",
-                          "description": "Lấy danh sách các buổi (session) sắp diễn ra của một workshop cụ thể. Hãy dùng workshopTemplateId có được từ searchWorkshops.",
-                          "parameters": {
-                            "type": "object",
-                            "properties": {
-                              "workshopId": {
-                                "type": "string",
-                                "description": "ID của workshop (workshopTemplateId - chuỗi UUID) lấy từ searchWorkshops."
-                              }
-                            },
-                            "required": ["workshopId"]
-                          }
-                        }
-                      },
+                         "type": "function",
+                         "function": {
+                           "name": "getWorkshopSessions",
+                           "description": "Lấy danh sách các buổi học sắp tới của một workshop để hiển thị cho người dùng chọn. Trả về thông tin thời gian và số chỗ trống.",
+                           "parameters": {
+                             "type": "object",
+                             "properties": {
+                               "workshopTemplateId": {
+                                 "type": "string",
+                                 "description": "UUID của workshop template (lấy từ bảng tra cứu hoặc searchWorkshops)."
+                               }
+                             },
+                             "required": ["workshopTemplateId"]
+                           }
+                         }
+                       },
                       {
                         "type": "function",
                         "function": {
@@ -91,7 +90,7 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
                             "properties": {
                               "keyword": {
                                 "type": "string",
-                                "description": "Từ khóa tìm kiếm (tên sự kiện). Để trống nếu muốn lấy tất cả."
+                                "description": "Từ khóa tìm kiếm (tên sự kiện). Bạn PHẢI dịch sang tiếng Việt trước khi tìm. Để trống nếu muốn lấy tất cả."
                               }
                             }
                           }
@@ -101,13 +100,17 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
                         "type": "function",
                         "function": {
                           "name": "getTicketPrices",
-                          "description": "Lấy thông tin giá vé tham quan khu di tích Ngũ Hành Sơn (vé vào cổng) hoặc vé sự kiện.",
+                          "description": "Lấy thông tin giá vé tham quan (vé vào cổng) hoặc vé của một sự kiện cụ thể. Trả về 'BOOKING_ID_UUID_ONLY' để dùng cho addEventTicketToCart.",
                           "parameters": {
                             "type": "object",
                             "properties": {
+                              "eventId": {
+                                "type": "string",
+                                "description": "UUID của sự kiện lấy từ searchEvents. Ưu tiên dùng ID này."
+                              },
                               "eventName": {
                                 "type": "string",
-                                "description": "Tên sự kiện cần tra giá vé. Để trống nếu muốn tra giá vé tham quan chung."
+                                "description": "Tên sự kiện (tiếng Việt). Chỉ dùng nếu không có eventId."
                               }
                             }
                           }
@@ -123,34 +126,61 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
                             "properties": {
                               "keyword": {
                                 "type": "string",
-                                "description": "Từ khóa tìm kiếm (tiêu đề bài viết). Để trống nếu muốn lấy các bài mới nhất."
+                                "description": "Từ khóa tìm kiếm (tiêu đề). Bạn PHẢI dịch sang tiếng Việt trước khi tìm. Để trống lấy bài mới nhất."
                               }
                             }
                           }
                         }
                       },
                       {
+                         "type": "function",
+                         "function": {
+                           "name": "addWorkshopToCart",
+                           "description": "PHASE 2: Thêm workshop vào giỏ hàng sau khi user đã chọn một buổi cụ thể. Sử dụng ID của workshop gốc và số thứ tự của buổi học.",
+                           "parameters": {
+                             "type": "object",
+                             "properties": {
+                               "workshopTemplateId": {
+                                 "type": "string",
+                                 "description": "UUID của workshop gốc (ví dụ: 53762505-...). Lấy từ ID Table hoặc kết quả searchWorkshops."
+                               },
+                               "sessionIndex": {
+                                 "type": "integer",
+                                 "description": "Chỉ số dựa trên 0 (zero-based index) của buổi học mà user chọn. Ví dụ: User chọn 'Buổi 1' thì truyền 0, 'Buổi 2' thì truyền 1."
+                               },
+                               "quantity": {
+                                 "type": "integer",
+                                 "description": "Số lượng chỗ cần đặt. Mặc định là 1.",
+                                 "default": 1
+                               }
+                             },
+                             "required": ["workshopTemplateId", "sessionIndex"]
+                           }
+                         }
+                       },
+                      {
                         "type": "function",
                         "function": {
-                          "name": "addToCart",
-                          "description": "Thực hiện lệnh thêm một workshop hoặc vé sự kiện vào giỏ hàng thật của người dùng. Hãy gọi lệnh này ngay khi người dùng đồng ý đặt chỗ/vé.",
+                          "name": "addEventTicketToCart",
+                          "description": "Thêm vé vào giỏ hàng. CHỈ gọi ở PHASE 2 — sau khi user đã chọn loại vé cụ thể.",
                           "parameters": {
                             "type": "object",
                             "properties": {
-                              "sessionId": {
+                              "eventId": {
                                 "type": "string",
-                                "description": "ID của buổi workshop (Session ID - chuỗi UUID) được lấy từ getWorkshopSessions. KHÔNG dùng workshopTemplateId từ searchWorkshops."
+                                "description": "ID của sự kiện (Root ID) lấy từ bảng tra cứu hoặc searchEvents. Để trống nếu là vé tham quan chung."
                               },
-                              "ticketCatalogId": {
-                                "type": "string",
-                                "description": "ID của loại vé sự kiện (Ticket Catalog ID - chuỗi UUID) được lấy từ getTicketPrices. KHÔNG dùng số thứ tự."
+                              "ticketIndex": {
+                                "type": "integer",
+                                "description": "Số thứ tự của loại vé (bắt đầu từ 0) trong danh sách vừa hiển thị ở Phase 1."
                               },
                               "quantity": {
                                 "type": "integer",
-                                "description": "Số lượng vé/chỗ cần đặt. Mặc định là 1.",
+                                "description": "Số lượng vé. Mặc định là 1.",
                                 "default": 1
                               }
-                            }
+                            },
+                            "required": ["ticketIndex"]
                           }
                         }
                       },
@@ -164,7 +194,7 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
                             "properties": {
                               "keyword": {
                                 "type": "string",
-                                "description": "Tên địa điểm cần tìm (ví dụ: Động Huyền Không, Vọng Giang Đài)."
+                                "description": "Tên địa điểm cần tìm. Bạn PHẢI dịch sang tiếng Việt trước khi tìm (ví dụ: Động Huyền Không, Vọng Giang Đài)."
                               }
                             }
                           }
@@ -214,7 +244,8 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
                 case "searchEvents" -> executeSearchEvents(args, metadata);
                 case "getTicketPrices" -> executeGetTicketPrices(args);
                 case "searchBlogs" -> executeSearchBlogs(args, metadata);
-                case "addToCart" -> executeAddToCart(args, senderId);
+                case "addWorkshopToCart" -> executeAddWorkshopToCart(args, senderId);
+                case "addEventTicketToCart" -> executeAddEventTicketToCart(args, senderId);
                 case "searchMapPoints" -> executeSearchMapPoints(args, metadata);
                 case "navigateToLocation" -> executeNavigateToLocation(args, metadata);
                 default -> "Không tìm thấy công cụ: " + functionName;
@@ -272,33 +303,85 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
     }
 
     private String executeGetWorkshopSessions(JsonNode args) {
-        String workshopIdStr = args.get("workshopId").asText();
-        UUID workshopId;
+        String workshopIdStr = args.has("workshopTemplateId") ? args.get("workshopTemplateId").asText()
+                : (args.has("workshopId") ? args.get("workshopId").asText() : "");
+
+        if (workshopIdStr.isEmpty()) {
+            return "ERROR: Thiếu workshopTemplateId.";
+        }
+
+        // ── Try to parse as UUID first ────────────────────────────────────────
+        UUID workshopId = null;
         try {
             workshopId = UUID.fromString(workshopIdStr);
         } catch (IllegalArgumentException e) {
-            return "ERROR: Định dạng workshopId không hợp lệ.";
+            // Not a UUID — AI passed a number index or workshop name from conversation
+            // history. Attempt a name-based fallback so the user still gets results.
+            log.warn("[AI] getWorkshopSessions received non-UUID workshopId='{}'. "
+                    + "Falling back to keyword search by name.", workshopIdStr);
+            return executeGetWorkshopSessionsByName(workshopIdStr);
         }
 
         var templateOpt = workshopTemplateRepository.findById(workshopId);
         if (templateOpt.isEmpty())
-            return "Không tìm thấy workshop có ID '" + workshopIdStr + "'.";
+            return "Không tìm thấy workshop có ID '" + workshopIdStr + "'."
+                    + " Hãy gọi searchWorkshops để lấy danh sách và UUID chính xác.";
 
-        var template = templateOpt.get();
-        var sessions = workshopSessionRepository.findAll().stream()
-                .filter(s -> s.getWorkshopTemplate().getId().equals(template.getId())
-                        && s.getStartTime().isAfter(LocalDateTime.now())
-                        && s.getStatus() == SessionStatus.SCHEDULED
-                        && s.getDeletedAt() == null)
+        return buildSessionsResponse(templateOpt.get());
+    }
+
+    /**
+     * Fallback: find workshop by name keyword when the AI passed a non-UUID workshopId
+     * (e.g., "1", "2", or the workshop name itself from conversation history).
+     */
+    private String executeGetWorkshopSessionsByName(String keyword) {
+        // If the keyword looks like a small integer (e.g. "1", "2"), it's an index —
+        // we cannot reliably map it to a workshop, so instruct AI to re-search.
+        if (keyword.matches("\\d{1,3}")) {
+            return "ERROR: workshopId '" + keyword + "' không hợp lệ — đây là số thứ tự, không phải UUID. "
+                    + "Bạn PHẢI gọi searchWorkshops trước để lấy workshopTemplateId (UUID) của workshop.";
+        }
+
+        // Otherwise treat it as a name/keyword search
+        var matched = workshopTemplateRepository.findAll().stream()
+                .filter(w -> Boolean.TRUE.equals(w.getIsPublished())
+                        && w.getDeletedAt() == null
+                        && w.getName().toLowerCase().contains(keyword.toLowerCase()))
+                .findFirst();
+
+        if (matched.isEmpty()) {
+            return "Không tìm thấy workshop nào với từ khóa '" + keyword + "'. "
+                    + "Hãy gọi searchWorkshops để lấy danh sách workshop và workshopTemplateId chính xác.";
+        }
+
+        log.info("[AI] getWorkshopSessions name-fallback: '{}' → matched workshop '{}' (id={})",
+                keyword, matched.get().getName(), matched.get().getId());
+        return buildSessionsResponse(matched.get());
+    }
+
+    /** Shared helper: build the sessions JSON response for a resolved WorkshopTemplate. */
+    private String buildSessionsResponse(fpt.project.NeoNHS.entity.WorkshopTemplate template) {
+        var rawSessions = workshopSessionRepository
+                .findUpcomingByTemplateId(template.getId(), LocalDateTime.now());
+
+        log.info("[AI] findUpcomingByTemplateId for template='{}' (id={}) returned {} sessions.",
+                template.getName(), template.getId(), rawSessions.size());
+
+        var sessions = rawSessions.stream()
                 .limit(5)
                 .map(s -> {
+                    log.info("[AI] Session available: id={}, startTime={}, status={}, deletedAt={}",
+                            s.getId(), s.getStartTime(), s.getStatus(), s.getDeletedAt());
                     Map<String, Object> sessionMap = new java.util.HashMap<>();
-                    sessionMap.put("sessionId", s.getId().toString()); // Use simple 'sessionId' name
+                    sessionMap.put("SESSION_ID_UUID_ONLY", s.getId().toString());
+                    sessionMap.put("workshopName", template.getName());
                     sessionMap.put("startTime", s.getStartTime().toString());
                     sessionMap.put("endTime", s.getEndTime().toString());
-                    sessionMap.put("price", s.getPrice() != null ? s.getPrice().toString() + " VND"
+                    sessionMap.put("price", s.getPrice() != null
+                            ? s.getPrice().toString() + " VND"
                             : template.getDefaultPrice() + " VND");
-                    sessionMap.put("availableSlots", (s.getMaxParticipants() != null ? s.getMaxParticipants() : 0)
+                    sessionMap.put("availableSlots",
+                            (s.getMaxParticipants() != null ? s.getMaxParticipants() : 0)
                             - (s.getCurrentEnrolled() != null ? s.getCurrentEnrolled() : 0));
                     return sessionMap;
                 })
@@ -308,7 +391,6 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
             return "Workshop '" + template.getName() + "' hiện không có buổi nào sắp diễn ra.";
 
         try {
-            // Return only the list of sessions for easier AI parsing
             return objectMapper.writeValueAsString(sessions);
         } catch (JsonProcessingException e) {
             return sessions.toString();
@@ -323,7 +405,7 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
                         && (keyword.isEmpty() || e.getName().toLowerCase().contains(keyword.toLowerCase())))
                 .limit(5)
                 .map(e -> Map.of(
-                        "id", e.getId().toString(),
+                        "eventId", e.getId().toString(),
                         "name", e.getName(),
                         "description", e.getShortDescription() != null ? e.getShortDescription() : "",
                         "location", e.getLocationName() != null ? e.getLocationName() : "",
@@ -342,7 +424,7 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
                     .computeIfAbsent("attachedCards", k -> new java.util.ArrayList<>());
             for (var e : events) {
                 Map<String, Object> card = new java.util.HashMap<>();
-                card.put("id", e.get("id"));
+                card.put("id", e.get("eventId"));
                 card.put("type", "event");
                 card.put("title", e.get("name"));
                 card.put("imageUrl", e.get("imageUrl"));
@@ -363,16 +445,35 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
     }
 
     private String executeGetTicketPrices(JsonNode args) {
+        String eventIdStr = args.has("eventId") ? args.get("eventId").asText("") : "";
         String eventName = args.has("eventName") ? args.get("eventName").asText("") : "";
 
-        if (eventName.isEmpty()) {
+        fpt.project.NeoNHS.entity.Event event = null;
+
+        if (!eventIdStr.isEmpty()) {
+            try {
+                UUID eventId = UUID.fromString(eventIdStr);
+                event = eventRepository.findById(eventId).orElse(null);
+            } catch (Exception ignored) {
+            }
+        }
+
+        if (event == null && !eventName.isEmpty()) {
+            event = eventRepository.findAll().stream()
+                    .filter(e -> e.getDeletedAt() == null
+                            && e.getName().toLowerCase().contains(eventName.toLowerCase()))
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        if (event == null && eventIdStr.isEmpty() && eventName.isEmpty()) {
             // General attraction tickets
             var catalogs = ticketCatalogRepository.findAll().stream()
                     .filter(tc -> tc.getAttraction() != null)
                     .limit(20)
                     .map(tc -> {
                         Map<String, Object> map = new java.util.HashMap<>();
-                        map.put("ticketCatalogId", tc.getId().toString());
+                        map.put("BOOKING_ID_UUID_ONLY", tc.getId().toString());
                         map.put("name", tc.getName());
                         map.put("customerType", tc.getCustomerType() != null ? tc.getCustomerType() : "Chung");
                         map.put("price", tc.getPrice().toString() + " VND");
@@ -387,20 +488,12 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
             } catch (JsonProcessingException e) {
                 return catalogs.toString();
             }
-        } else {
-            // Event-specific tickets
-            var events = eventRepository.findAll().stream()
-                    .filter(e -> e.getDeletedAt() == null
-                            && e.getName().toLowerCase().contains(eventName.toLowerCase()))
-                    .toList();
-            if (events.isEmpty())
-                return "Không tìm thấy sự kiện '" + eventName + "'.";
-
-            var event = events.getFirst();
+        } else if (event != null) {
+            final UUID finalEventId = event.getId();
             var catalogs = ticketCatalogRepository.findAll().stream()
-                    .filter(tc -> tc.getEvent() != null && tc.getEvent().getId().equals(event.getId()))
+                    .filter(tc -> tc.getEvent() != null && tc.getEvent().getId().equals(finalEventId))
                     .map(tc -> Map.of(
-                            "ticketCatalogId", tc.getId().toString(),
+                            "BOOKING_ID_UUID_ONLY", tc.getId().toString(),
                             "name", tc.getName(),
                             "price", tc.getPrice().toString() + " VND",
                             "description", tc.getDescription() != null ? tc.getDescription() : "",
@@ -416,61 +509,82 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
             } catch (JsonProcessingException e) {
                 return catalogs.toString();
             }
+        } else {
+            return "Không tìm thấy sự kiện '" + (eventIdStr.isEmpty() ? eventName : eventIdStr) + "'.";
         }
     }
 
-    private String executeAddToCart(JsonNode args, String senderId) {
-        log.info("[AI] Processing addToCart logic for user: {}", senderId);
+    private String executeAddWorkshopToCart(JsonNode args, String senderId) {
+        log.info("[AI] Processing addWorkshopToCart for user: {}", senderId);
         try {
-            UUID userId = UUID.fromString(senderId);
-            var user = userRepository.findById(userId)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin khách hàng."));
+            String templateIdStr = args.has("workshopTemplateId") ? args.get("workshopTemplateId").asText() : "";
+            int index = args.has("sessionIndex") ? args.get("sessionIndex").asInt() : 0;
+            int quantity = args.has("quantity") ? args.get("quantity").asInt() : 1;
 
+            if (templateIdStr.isEmpty()) return "ERROR: Thiếu workshopTemplateId.";
+
+            UUID templateId = UUID.fromString(templateIdStr);
+            var sessions = workshopSessionRepository.findUpcomingByTemplateId(templateId, LocalDateTime.now());
+
+            if (index < 0 || index >= sessions.size()) {
+                return "ERROR: Số thứ tự buổi học '" + index + "' không hợp lệ. Workshop này chỉ có " + sessions.size() + " buổi sắp tới.";
+            }
+
+            UUID sessionId = sessions.get(index).getId();
             AddToCartRequest request = new AddToCartRequest();
+            request.setWorkshopSessionId(sessionId);
+            request.setQuantity(quantity);
 
-            // Xử lý Ticket
-            if (args.has("ticketCatalogId") && !args.get("ticketCatalogId").asText().isEmpty()) {
-                String tcId = args.get("ticketCatalogId").asText();
-                request.setTicketCatalogId(UUID.fromString(tcId));
-            }
-
-            // Xử lý Workshop
-            if (args.has("sessionId") && !args.get("sessionId").asText().isEmpty()) {
-                String wsIdStr = args.get("sessionId").asText();
-                UUID wsId = UUID.fromString(wsIdStr);
-
-                // KIỂM TRA: Nếu ID này là WorkshopTemplateId thay vì SessionId
-                if (workshopTemplateRepository.existsById(wsId)) {
-                    return "ERROR: '" + wsIdStr
-                            + "' là ID của Workshop (TemplateId). Bạn PHẢI gọi 'getWorkshopSessions' với ID này để lấy danh sách các buổi học cụ thể (sessionId) trước khi đặt chỗ.";
-                }
-
-                request.setWorkshopSessionId(wsId);
-            } else if (args.has("workshopSessionId") && !args.get("workshopSessionId").asText().isEmpty()) {
-                String wsIdStr = args.get("workshopSessionId").asText();
-                UUID wsId = UUID.fromString(wsIdStr);
-
-                // Fallback check
-                if (workshopTemplateRepository.existsById(wsId)) {
-                    return "ERROR: '" + wsIdStr
-                            + "' là ID của Workshop (TemplateId). Bạn PHẢI gọi 'getWorkshopSessions' với ID này để lấy danh sách các buổi học cụ thể (sessionId) trước khi đặt chỗ.";
-                }
-                request.setWorkshopSessionId(wsId);
-            }
-
-            request.setQuantity(args.has("quantity") ? args.get("quantity").asInt() : 1);
-
-            // Gọi service thêm vào giỏ hàng
+            UUID userId = UUID.fromString(senderId);
+            var user = userRepository.findById(userId).orElseThrow();
             cartService.addToCart(user.getEmail(), request);
 
-            return "SUCCESS: Đã thêm vào giỏ hàng thành công.";
-        } catch (IllegalArgumentException e) {
-            return "ERROR: Định dạng ID không hợp lệ. Vui lòng sử dụng mã UUID từ các công cụ tra cứu.";
+            return "SUCCESS: Đã thêm workshop vào giỏ hàng thành công.";
         } catch (Exception e) {
-            log.error("[AI] Add to cart logic failed: {}", e.getMessage());
+            log.error("[AI] addWorkshopToCart failed: {}", e.getMessage());
             return "ERROR: " + e.getMessage();
         }
     }
+
+    private String executeAddEventTicketToCart(JsonNode args, String senderId) {
+        log.info("[AI] Processing addEventTicketToCart for user: {}", senderId);
+        try {
+            String eventIdStr = args.has("eventId") ? args.get("eventId").asText() : "";
+            int index = args.has("ticketIndex") ? args.get("ticketIndex").asInt() : 0;
+            int quantity = args.has("quantity") ? args.get("quantity").asInt() : 1;
+
+            List<fpt.project.NeoNHS.entity.TicketCatalog> catalogs;
+            if (eventIdStr.isEmpty()) {
+                catalogs = ticketCatalogRepository.findAll().stream()
+                        .filter(tc -> tc.getAttraction() != null)
+                        .toList();
+            } else {
+                UUID eventId = UUID.fromString(eventIdStr);
+                catalogs = ticketCatalogRepository.findAll().stream()
+                        .filter(tc -> tc.getEvent() != null && tc.getEvent().getId().equals(eventId))
+                        .toList();
+            }
+
+            if (index < 0 || index >= catalogs.size()) {
+                return "ERROR: Số thứ tự loại vé '" + index + "' không hợp lệ.";
+            }
+
+            UUID ticketCatalogId = catalogs.get(index).getId();
+            AddToCartRequest request = new AddToCartRequest();
+            request.setTicketCatalogId(ticketCatalogId);
+            request.setQuantity(quantity);
+
+            UUID userId = UUID.fromString(senderId);
+            var user = userRepository.findById(userId).orElseThrow();
+            cartService.addToCart(user.getEmail(), request);
+
+            return "SUCCESS: Đã thêm vé vào giỏ hàng thành công.";
+        } catch (Exception e) {
+            log.error("[AI] addEventTicketToCart failed: {}", e.getMessage());
+            return "ERROR: " + e.getMessage();
+        }
+    }
+
 
     private String executeSearchBlogs(JsonNode args, Map<String, Object> metadata) {
         String keyword = args.has("keyword") ? args.get("keyword").asText("") : "";

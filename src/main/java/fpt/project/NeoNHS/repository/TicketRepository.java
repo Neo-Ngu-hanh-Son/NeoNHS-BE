@@ -33,8 +33,19 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
     @Modifying
     @Query("UPDATE Ticket t SET t.status = :expiredStatus WHERE t.status = :activeStatus AND t.expiryDate < :now")
     int updateExpiredTickets(
-        @Param("expiredStatus") TicketStatus expiredStatus,
-        @Param("activeStatus") TicketStatus activeStatus,
-        @Param("now") LocalDateTime now
+            @Param("expiredStatus") TicketStatus expiredStatus,
+            @Param("activeStatus") TicketStatus activeStatus,
+            @Param("now") LocalDateTime now
     );
+
+    @Query("""
+        SELECT COUNT(t) > 0 FROM Ticket t
+        JOIN t.orderDetail od
+        JOIN od.order o
+        JOIN t.workshopSession ws
+        WHERE o.user.id = :userId
+        AND ws.workshopTemplate.id = :workshopId
+        AND t.status = 'USED'
+    """)
+    boolean hasUserUsedTicketForWorkshop(@org.springframework.data.repository.query.Param("userId") UUID userId, @org.springframework.data.repository.query.Param("workshopId") UUID workshopId);
 }

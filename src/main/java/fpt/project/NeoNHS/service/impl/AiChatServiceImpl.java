@@ -45,8 +45,7 @@ public class AiChatServiceImpl implements AiChatService {
 
     private final AiPromptService aiPromptService;
     private final AiFunctionCallingService aiFunctionCallingService;
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper; // Injected Spring bean — DO NOT use new ObjectMapper()
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
     // ═══════════════════════════════════════════════════════════════════
@@ -59,6 +58,10 @@ public class AiChatServiceImpl implements AiChatService {
         request.set("tools", aiFunctionCallingService.buildToolDeclarations());
         request.put("temperature", 0.7);
         request.put("max_tokens", 1024);
+        // Disable parallel tool calls: forces AI to call tools sequentially so it
+        // always waits for getWorkshopSessions result before constructing addToCart.
+        // Without this, AI issues both calls simultaneously and guesses "1" as sessionId.
+        request.put("parallel_tool_calls", false);
         return request;
     }
 
@@ -145,7 +148,7 @@ public class AiChatServiceImpl implements AiChatService {
                 emitter.complete();
 
             } catch (Exception e) {
-                log.error("[AI] Error processing AI reply for room {}: {}", roomId, e.getMessage());
+                log.error("[AI] Error processing AI reply for room {}: {}", roomId, e.getMessage(), e);
                 String errorMsg = "Hệ thống AI đang quá tải (429/Quota). Hãy thử lại sau ít phút hoặc gặp NV hỗ trợ.";
                 if (e.getMessage() != null && e.getMessage().contains("403")) {
                     errorMsg = "Lỗi Access Denied: Hãy kiểm tra vùng địa lý hoặc API key.";
@@ -205,6 +208,30 @@ public class AiChatServiceImpl implements AiChatService {
                         functionResult = "ERROR: Lỗi hệ thống.";
                     }
 
+                    if (functionResult == null) {
+                        functionResult = "ERROR: Kết quả trả về rỗng.";
+                    }
+
+                    // Kích hoạt Vector Search nếu Function Calling trả về "Không tìm thấy"
+                    if (functionResult != null && (functionResult.contains("Không tìm thấy") || functionResult.contains("hiện không có"))) {
+                        String keyword = "";
+                        if (functionArgs.has("keyword")) {
+                            keyword = functionArgs.get("keyword").asText();
+                        } else if (functionArgs.has("eventName")) {
+                            keyword = functionArgs.get("eventName").asText();
+                        }
+
+                        if (!keyword.isEmpty()) {
+                            log.info("[AI Strategy] Function {} returned empty. Forcing Vector Search for parsed keyword: {}", functionName, keyword);
+                            String additionalContext = aiPromptService.searchKnowledgeBaseContext(keyword);
+                            if (!additionalContext.isEmpty()) {
+                                functionResult += additionalContext;
+                                metadata.remove("usedFunctionCalling"); // Đánh dấu là sử dụng dữ liệu từ Vector Search
+                                log.info("[AI Strategy] Forced Vector Search successful. Injected into tool response.");
+                            }
+                        }
+                    }
+
                     // Lưu kết quả tool
                     ObjectNode toolResultNode = objectMapper.createObjectNode();
                     toolResultNode.put("role", "tool");
@@ -213,7 +240,8 @@ public class AiChatServiceImpl implements AiChatService {
                     messages.add(toolResultNode);
 
                     // Đánh dấu metadata nếu thành công
-                    if ("addToCart".equals(functionName) && functionResult.contains("SUCCESS")) {
+                    if (("addWorkshopToCart".equals(functionName) || "addEventTicketToCart".equals(functionName))
+                            && functionResult.contains("SUCCESS")) {
                         metadata.put("redirectToCart", true);
                     }
 
@@ -360,7 +388,20 @@ public class AiChatServiceImpl implements AiChatService {
         ObjectNode doneNode = objectMapper.createObjectNode();
         doneNode.put("fullText", text);
         if (metadata != null && metadata.containsKey("attachedCards")) {
-            doneNode.set("attachedCards", objectMapper.valueToTree(metadata.get("attachedCards")));
+            try {
+                Object cardsRaw = metadata.get("attachedCards");
+                JsonNode cardsNode;
+                if (cardsRaw instanceof JsonNode) {
+                    // Already a JsonNode (e.g. ArrayNode deserialized from MongoDB) — use directly
+                    cardsNode = (JsonNode) cardsRaw;
+                } else {
+                    // Plain Java collections (ArrayList<LinkedHashMap>) from function calling — safe to convert
+                    cardsNode = objectMapper.valueToTree(cardsRaw);
+                }
+                doneNode.set("attachedCards", cardsNode);
+            } catch (Exception e) {
+                log.warn("[AI] Could not serialize attachedCards metadata: {}", e.getMessage());
+            }
         }
 
         emitter.send(SseEmitter.event()
