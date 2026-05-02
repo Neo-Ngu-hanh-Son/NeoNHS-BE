@@ -8,13 +8,10 @@ import fpt.project.NeoNHS.dto.response.report.ReportResponse;
 import fpt.project.NeoNHS.entity.Report;
 import fpt.project.NeoNHS.entity.User;
 import fpt.project.NeoNHS.enums.ReportStatus;
+import fpt.project.NeoNHS.enums.ReportType;
 import fpt.project.NeoNHS.exception.BadRequestException;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
-import fpt.project.NeoNHS.repository.ReportRepository;
-import fpt.project.NeoNHS.repository.UserRepository;
-import fpt.project.NeoNHS.repository.EventRepository;
-import fpt.project.NeoNHS.repository.PointRepository;
-import fpt.project.NeoNHS.repository.WorkshopTemplateRepository;
+import fpt.project.NeoNHS.repository.*;
 import fpt.project.NeoNHS.service.NotificationService;
 import fpt.project.NeoNHS.service.ReportService;
 import fpt.project.NeoNHS.specification.ReportSpecification;
@@ -37,6 +34,8 @@ public class ReportServiceImpl implements ReportService {
     private final PointRepository pointRepository;
     private final WorkshopTemplateRepository workshopTemplateRepository;
     private final NotificationService notificationService;
+    private final ReviewRepository reviewRepository;
+    private final BlogRepository blogRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -116,26 +115,34 @@ public class ReportServiceImpl implements ReportService {
         return response;
     }
 
-    private String fetchTargetName(String targetType, UUID targetId) {
+    private String fetchTargetName(ReportType targetType, UUID targetId) {
         if (targetType == null || targetId == null)
             return "Unknown";
 
-        return switch (targetType.toUpperCase()) {
-            case "POINT" -> pointRepository.findById(targetId)
+        return switch (targetType) {
+            case POINT -> pointRepository.findById(targetId)
                     .map(p -> p.getName())
                     .orElse("Point (Deleted)");
 
-            case "EVENT" -> eventRepository.findById(targetId)
+            case EVENT -> eventRepository.findById(targetId)
                     .map(e -> e.getName())
                     .orElse("Event (Deleted)");
 
-            case "WORKSHOP" -> workshopTemplateRepository.findById(targetId)
+            case WORKSHOP -> workshopTemplateRepository.findById(targetId)
                     .map(w -> w.getName())
                     .orElse("Workshop (Deleted)");
 
-            case "USER" -> userRepository.findById(targetId)
+            case USER -> userRepository.findById(targetId)
                     .map(u -> u.getFullname())
                     .orElse("User (Not Found)");
+
+            case REVIEW -> reviewRepository.findById(targetId)
+                    .map(r -> "Review of " + r.getUser().getFullname())
+                    .orElse("Review (Deleted)");
+
+            case BLOG -> blogRepository.findById(targetId)
+                    .map(b -> b.getTitle())
+                    .orElse("Blog (Deleted)");
 
             default -> "Type: " + targetType + " (ID: " + targetId + ")";
         };
@@ -151,7 +158,7 @@ public class ReportServiceImpl implements ReportService {
 
         Report report = Report.builder()
                 .targetId(request.getTargetId())
-                .targetType(request.getTargetType().toUpperCase())
+                .targetType(request.getTargetType())
                 .reason(request.getReason())
                 .description(request.getDescription())
                 .evidenceUrl(request.getEvidenceUrl())
@@ -164,17 +171,15 @@ public class ReportServiceImpl implements ReportService {
         return mapToResponse(savedReport);
     }
 
-    private void validateTargetExists(String type, UUID id) {
-        boolean exists = switch (type.toUpperCase()) {
-            case "EVENT" -> eventRepository.existsById(id);
-            case "POINT" -> pointRepository.existsById(id);
-            case "WORKSHOP" -> workshopTemplateRepository.existsById(id);
-            case "USER" -> userRepository.existsById(id);
-            default -> throw new BadRequestException("Invalid target type: " + type);
-        };
-
-        if (!exists) {
-            throw new ResourceNotFoundException(type + " with id " + id + " does not exist");
+    private void validateTargetExists(ReportType type, UUID id) {
+        switch (type) {
+            case ReportType.EVENT -> eventRepository.existsById(id);
+            case ReportType.POINT -> pointRepository.existsById(id);
+            case ReportType.WORKSHOP -> workshopTemplateRepository.existsById(id);
+            case ReportType.USER -> userRepository.existsById(id);
+            case ReportType.REVIEW -> reviewRepository.existsById(id);
+            case ReportType.BLOG -> blogRepository.existsById(id);
+            default -> throw new ResourceNotFoundException(type + " with id " + id + " does not exist");
         }
     }
 }

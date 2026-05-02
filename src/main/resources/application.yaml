@@ -80,9 +80,30 @@ translation:
 # OpenAI Configuration
 openai:
   api-key: ${OPENAI_API_KEY}
-  model: gpt-4o-mini
+  model: gpt-4.1
   base-url: https://api.openai.com/v1
+  embedding-model: text-embedding-3-small
+  embedding-dimensions: 1536
+
+# Vector Search Configuration (MongoDB Atlas)
+vector-search:
+  chunk-size: 600
+  chunk-overlap: 100
+  min-similarity-score: 0.75
+  max-results: 3
+  index-name: vector_index
 
 elevenlabs:
   key: ${ELEVEN_LABS_API_KEY}
   base-url: ${ELEVEN_LABS_BASE_URL}
+
+# PayOS Configuration
+payos:
+  client_id: ${payos.client-id}
+  api_key: ${payos.api-key}
+  checksum_key: ${payos.checksum-key}
+  return:
+    client_id: ${payos.return.client-id}
+    api_key: ${payos.return.api-key}
+    checksum_key: ${payos.return.checksum-key}
+

@@ -32,7 +32,7 @@ public class ReportResponse {
         return ReportResponse.builder()
                 .id(report.getId())
                 .targetId(report.getTargetId())
-                .targetType(report.getTargetType())
+                .targetType(report.getTargetType().toString())
                 .reason(report.getReason())
                 .description(report.getDescription())
                 .evidenceUrl(report.getEvidenceUrl())

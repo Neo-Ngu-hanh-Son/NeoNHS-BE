@@ -18,9 +18,11 @@ import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.repository.EventRepository;
 import fpt.project.NeoNHS.repository.PointRepository;
 import fpt.project.NeoNHS.repository.ReviewRepository;
+import fpt.project.NeoNHS.repository.TicketRepository;
 import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.repository.WorkshopTemplateRepository;
 import fpt.project.NeoNHS.service.ReviewService;
+import fpt.project.NeoNHS.dto.response.review.ReviewEligibilityResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -42,6 +44,17 @@ public class ReviewServiceImpl implements ReviewService {
     private final WorkshopTemplateRepository workshopTemplateRepository;
     private final EventRepository eventRepository;
     private final PointRepository pointRepository;
+    private final TicketRepository ticketRepository;
+
+    @Override
+    @Transactional(readOnly = true)
+    public ReviewEligibilityResponse checkEligibility(UUID userId, UUID reviewTypeId, ReviewTypeFlagEnum flag) {
+        if (flag == ReviewTypeFlagEnum.WORKSHOP) {
+            boolean hasUsedTicket = ticketRepository.hasUserUsedTicketForWorkshop(userId, reviewTypeId);
+            return new ReviewEligibilityResponse(hasUsedTicket, hasUsedTicket ? "" : "You must book a session and have a USED ticket before reviewing this workshop.");
+        }
+        return new ReviewEligibilityResponse(true, "");
+    }
 
     @Override
     @Transactional
@@ -51,6 +64,11 @@ public class ReviewServiceImpl implements ReviewService {
 
         // Validate the target exists
         validateReviewTarget(request.getReviewTypeId(), request.getReviewTypeFlg());
+        
+        ReviewEligibilityResponse eligibility = checkEligibility(userId, request.getReviewTypeId(), request.getReviewTypeFlg());
+        if (!eligibility.isEligible()) {
+            throw new BadRequestException(eligibility.getMessage());
+        }
 
         // Check if user already reviewed this target
         if (reviewRepository.existsByUser_IdAndReviewTypeIdAndReviewTypeFlgAndDeletedAtIsNull(userId, request.getReviewTypeId(), request.getReviewTypeFlg())) {
@@ -191,24 +209,20 @@ public class ReviewServiceImpl implements ReviewService {
         if (reviewTypeId == null) {
             throw new BadRequestException("Review type ID must not be null");
         }
-        switch (reviewTypeFlg) {
-            case ReviewTypeFlagEnum.WORKSHOP: // Workshop
-                if (!workshopTemplateRepository.existsById(reviewTypeId)) {
-                    throw new ResourceNotFoundException("WorkshopTemplate", "id", reviewTypeId);
-                }
-                break;
-            case ReviewTypeFlagEnum.EVENT: // Event
-                if (!eventRepository.existsById(reviewTypeId)) {
-                    throw new ResourceNotFoundException("Event", "id", reviewTypeId);
-                }
-                break;
-            case ReviewTypeFlagEnum.POINT: // Point
-                if (!pointRepository.existsById(reviewTypeId)) {
-                    throw new ResourceNotFoundException("Point", "id", reviewTypeId);
-                }
-                break;
-            default:
-                throw new BadRequestException("Invalid review type flag. Allowed values: 1 (Workshop), 2 (Event), 3 (Point)");
+        if (reviewTypeFlg == ReviewTypeFlagEnum.WORKSHOP) {
+            if (!workshopTemplateRepository.existsById(reviewTypeId)) {
+                throw new ResourceNotFoundException("WorkshopTemplate", "id", reviewTypeId);
+            }
+        } else if (reviewTypeFlg == ReviewTypeFlagEnum.EVENT) {
+            if (!eventRepository.existsById(reviewTypeId)) {
+                throw new ResourceNotFoundException("Event", "id", reviewTypeId);
+            }
+        } else if (reviewTypeFlg == ReviewTypeFlagEnum.POINT) {
+            if (!pointRepository.existsById(reviewTypeId)) {
+                throw new ResourceNotFoundException("Point", "id", reviewTypeId);
+            }
+        } else {
+            throw new BadRequestException("Invalid review type flag. Allowed values: 1 (Workshop), 2 (Event), 3 (Point)");
         }
     }
 
@@ -229,7 +243,7 @@ public class ReviewServiceImpl implements ReviewService {
 
     private ReviewResponse mapToResponse(Review review) {
         List<String> imageUrls = review.getReviewImages() != null
-                ? review.getReviewImages().stream().map(ReviewImage::getImageUrl).collect(Collectors.toList())
+                ? review.getReviewImages().stream().map(ReviewImage::getImageUrl).toList()
                 : new ArrayList<>();
 
         UserResponse userResponse = UserResponse.builder()
@@ -247,6 +261,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .user(userResponse)
                 .rating(review.getRating())
                 .comment(review.getComment())
+                .imageUrls(imageUrls)
                 .createdAt(review.getCreatedAt())
                 .build();
     }

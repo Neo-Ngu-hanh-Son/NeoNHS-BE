@@ -103,8 +103,9 @@ public class CartServiceImpl implements CartService {
                 cartItemRepository.save(newItem);
             }
         } else {
-            WorkshopSession workshopSession = workshopSessionRepository.findById(request.getWorkshopSessionId())
-                    .orElseThrow(() -> new BadRequestException("Workshop Session not found"));
+            WorkshopSession workshopSession = workshopSessionRepository
+                    .findByIdAndDeletedAtIsNull(request.getWorkshopSessionId())
+                    .orElseThrow(() -> new BadRequestException("Workshop Session not found or is no longer available"));
 
             Optional<CartItem> existingItem = cart.getCartItems().stream()
                     .filter(item -> item.getWorkshopSession() != null
@@ -214,6 +215,7 @@ public class CartServiceImpl implements CartService {
                 UUID eventId = null;
                 String eventName = null;
                 UUID workshopSessionId = null;
+                UUID workshopTemplateId = null;
                 String workshopName = null;
 
                 if (item.getTicketCatalog() != null) {
@@ -232,9 +234,10 @@ public class CartServiceImpl implements CartService {
                 // Extract workshop info
                 if (item.getWorkshopSession() != null) {
                     workshopSessionId = item.getWorkshopSession().getId();
-                    workshopName = item.getWorkshopSession().getWorkshopTemplate() != null
-                            ? item.getWorkshopSession().getWorkshopTemplate().getName()
-                            : null;
+                    if (item.getWorkshopSession().getWorkshopTemplate() != null) {
+                        workshopName = item.getWorkshopSession().getWorkshopTemplate().getName();
+                        workshopTemplateId = item.getWorkshopSession().getWorkshopTemplate().getId();
+                    }
                     if (itemPrice.compareTo(BigDecimal.ZERO) == 0 && item.getWorkshopSession().getPrice() != null) {
                         itemPrice = item.getWorkshopSession().getPrice();
                         itemName = workshopName != null ? workshopName : itemName;
@@ -254,6 +257,7 @@ public class CartServiceImpl implements CartService {
                         .eventId(eventId)
                         .eventName(eventName)
                         .workshopSessionId(workshopSessionId)
+                        .workshopTemplateId(workshopTemplateId)
                         .workshopName(workshopName)
                         .build());
             }
@@ -314,14 +318,15 @@ public class CartServiceImpl implements CartService {
                 eventName = item.getTicketCatalog().getEvent().getName();
             }
 
-            // Extract workshop info
+            UUID workshopTemplateId2 = null;
             UUID workshopSessionId = null;
             String workshopName = null;
             if (item.getWorkshopSession() != null) {
                 workshopSessionId = item.getWorkshopSession().getId();
-                workshopName = item.getWorkshopSession().getWorkshopTemplate() != null
-                        ? item.getWorkshopSession().getWorkshopTemplate().getName()
-                        : null;
+                if (item.getWorkshopSession().getWorkshopTemplate() != null) {
+                    workshopName = item.getWorkshopSession().getWorkshopTemplate().getName();
+                    workshopTemplateId2 = item.getWorkshopSession().getWorkshopTemplate().getId();
+                }
             }
 
             String itemName = item.getTicketCatalog() != null
@@ -338,13 +343,14 @@ public class CartServiceImpl implements CartService {
                     .eventId(eventId)
                     .eventName(eventName)
                     .workshopSessionId(workshopSessionId)
+                    .workshopTemplateId(workshopTemplateId2)
                     .workshopName(workshopName)
                     .build());
         }
 
         // ── Voucher Logic (delegated to VoucherService) ──
-        VoucherClassificationResult classification =
-                voucherService.classifyVouchersForCart(user, selectedItems, totalPrice);
+        VoucherClassificationResult classification = voucherService.classifyVouchersForCart(user, selectedItems,
+                totalPrice);
 
         BigDecimal discountValue = BigDecimal.ZERO;
         UserVoucherRespone appliedVoucherResponse = null;
@@ -375,30 +381,26 @@ public class CartServiceImpl implements CartService {
     @Transactional(readOnly = true)
     public List<UserVoucherRespone> getUserVouchers(String userEmail) {
         User user = getUserByEmail(userEmail);
-        List<UserVoucher> userVouchers = userVoucherRepository.findByUser_IdAndIsUsedFalse(user.getId());
+        
+        Cart cart = getOrCreateCart(user);
+        List<CartItem> cartItems = cart.getCartItems() != null ? cart.getCartItems() : new ArrayList<>();
 
-        List<UserVoucherRespone> voucherResponses = new ArrayList<>();
-        LocalDateTime now = LocalDateTime.now();
-
-        for (UserVoucher uv : userVouchers) {
-            Voucher v = uv.getVoucher();
-            
-            // Only return DISCOUNT vouchers for cart
-            if (v.getVoucherType() != VoucherType.DISCOUNT) {
-                continue;
-            }
-
-            if ((v.getStartDate() != null && now.isBefore(v.getStartDate())) ||
-                    (v.getEndDate() != null && now.isAfter(v.getEndDate()))) {
-                continue;
-            }
-            if (v.getUsageLimit() != null && v.getUsageCount() >= v.getUsageLimit()) {
-                continue;
-            }
-
-            voucherResponses.add(UserVoucherRespone.fromEntity(uv));
+        BigDecimal totalPrice = BigDecimal.ZERO;
+        for (CartItem item : cartItems) {
+            BigDecimal itemPrice = item.getTicketCatalog() != null
+                    ? item.getTicketCatalog().getPrice()
+                    : (item.getWorkshopSession() != null && item.getWorkshopSession().getPrice() != null
+                            ? item.getWorkshopSession().getPrice()
+                            : BigDecimal.ZERO);
+            BigDecimal subTotal = itemPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
+            totalPrice = totalPrice.add(subTotal);
         }
-        return voucherResponses;
+
+        VoucherClassificationResult classification = voucherService.classifyVouchersForCart(user, cartItems, totalPrice);
+
+        return classification.getValidVouchers().stream()
+                .filter(v -> v.getVoucherType() == VoucherType.DISCOUNT)
+                .toList();
     }
 
 }

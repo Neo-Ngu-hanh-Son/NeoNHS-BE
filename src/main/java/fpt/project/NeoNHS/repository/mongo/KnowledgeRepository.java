@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.repository.mongo;
 
 import fpt.project.NeoNHS.document.KnowledgeDocument;
+import fpt.project.NeoNHS.enums.KnowledgeTypeStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -24,7 +25,29 @@ public interface KnowledgeRepository extends MongoRepository<KnowledgeDocument, 
 
     List<KnowledgeDocument> findByIsActiveTrue();
 
-    List<KnowledgeDocument> findByKnowledgeType(String knowledgeType);
+    List<KnowledgeDocument> findByKnowledgeType(KnowledgeTypeStatus knowledgeType);
 
-    Page<KnowledgeDocument> findByKnowledgeType(String knowledgeType, Pageable pageable);
+    Page<KnowledgeDocument> findByKnowledgeType(KnowledgeTypeStatus knowledgeType, Pageable pageable);
+
+    // Chunking support: find all chunks belonging to a parent document
+    List<KnowledgeDocument> findByParentDocumentId(String parentDocumentId);
+
+    // Chunking support: delete all chunks when parent is updated/deleted
+    void deleteByParentDocumentId(String parentDocumentId);
+
+    // Blog sync: find documents synced from a specific blog
+    List<KnowledgeDocument> findBySourceTypeAndSourceId(String sourceType, String sourceId);
+
+    // Blog sync: delete all docs (parent + chunks) synced from a specific blog
+    void deleteBySourceTypeAndSourceId(String sourceType, String sourceId);
+
+    // Find only parent documents (not chunks) for admin listing
+    Page<KnowledgeDocument> findByParentDocumentIdIsNull(Pageable pageable);
+
+    // Find only parent documents of a specific type (not chunks)
+    Page<KnowledgeDocument> findByKnowledgeTypeAndParentDocumentIdIsNull(KnowledgeTypeStatus knowledgeType, Pageable pageable);
+
+    // Find only parent documents excluding a specific type (not chunks)
+    Page<KnowledgeDocument> findByKnowledgeTypeNotAndParentDocumentIdIsNull(KnowledgeTypeStatus knowledgeType, Pageable pageable);
+
 }

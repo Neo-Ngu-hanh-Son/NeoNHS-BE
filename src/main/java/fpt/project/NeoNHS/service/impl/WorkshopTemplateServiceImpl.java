@@ -149,7 +149,6 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
         return templates.map(this::mapToResponse);
     }
 
-
     @Override
     public List<WorkshopTemplateResponse> getMyWorkshopTemplates(String email) {
         List<WorkshopTemplate> templates = workshopTemplateRepository.findByVendorUserEmail(email);
@@ -191,8 +190,7 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
             BigDecimal maxPrice,
             Integer minDuration,
             Integer maxDuration,
-            BigDecimal minRating
-    ) {
+            BigDecimal minRating) {
         Specification<WorkshopTemplate> spec = Specification.where((root, query, cb) -> cb.conjunction());
 
         if (keyword != null && !keyword.isEmpty()) {
@@ -255,8 +253,7 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
             Integer minDuration,
             Integer maxDuration,
             BigDecimal minRating,
-            Pageable pageable
-    ) {
+            Pageable pageable) {
         Specification<WorkshopTemplate> spec = WorkshopTemplateSpecification.hasStatus(WorkshopStatus.ACTIVE)
                 .and(WorkshopTemplateSpecification.isPublished());
 
@@ -297,7 +294,8 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
 
         // 3. Only allow update if status is DRAFT or REJECTED
         if (template.getStatus() == WorkshopStatus.PENDING) {
-            throw new BadRequestException("Cannot update a template that is pending approval. Please wait for admin review.");
+            throw new BadRequestException(
+                    "Cannot update a template that is pending approval. Please wait for admin review.");
         }
         if (template.getStatus() == WorkshopStatus.ACTIVE) {
             throw new BadRequestException("Cannot update an active workshop template");
@@ -405,7 +403,8 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
             throw new BadRequestException("You do not have permission to delete this workshop template");
         }
 
-        // 3. Only allow delete if status is DRAFT, PENDING or REJECTED (no active sessions)
+        // 3. Only allow delete if status is DRAFT, PENDING or REJECTED (no active
+        // sessions)
         if (template.getStatus() == WorkshopStatus.ACTIVE) {
             throw new BadRequestException("Cannot delete an active workshop template. Please deactivate it first.");
         }
@@ -425,12 +424,14 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
 
         // 2. Verify ownership
         if (!template.getVendor().getUser().getEmail().equals(email)) {
-            throw new BadRequestException("You do not have permission to toggle publish status of this workshop template");
+            throw new BadRequestException(
+                    "You do not have permission to toggle publish status of this workshop template");
         }
 
         // 3. Only allow toggle if status is ACTIVE
         if (template.getStatus() != WorkshopStatus.ACTIVE) {
-            throw new BadRequestException("Only ACTIVE templates can be published/unpublished. Current status: " + template.getStatus());
+            throw new BadRequestException(
+                    "Only ACTIVE templates can be published/unpublished. Current status: " + template.getStatus());
         }
 
         // 4. Toggle isPublished
@@ -457,7 +458,8 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
 
         // 3. Check if template status allows submission (only DRAFT or REJECTED)
         if (template.getStatus() != WorkshopStatus.DRAFT && template.getStatus() != WorkshopStatus.REJECTED) {
-            throw new BadRequestException("Only templates with 'Draft' or 'Rejected' status can be submitted for approval");
+            throw new BadRequestException(
+                    "Only templates with 'Draft' or 'Rejected' status can be submitted for approval");
         }
 
         // 4. Validate mandatory fields for submission
@@ -497,11 +499,16 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
         if (template.getEstimatedDuration() == null || template.getEstimatedDuration() <= 0) {
             missingFields.add("Duration");
         }
-        if (template.getMinParticipants() == null || template.getMinParticipants() <= 0) {
+        if (template.getMinParticipants() == null || template.getMinParticipants() < 0) {
             missingFields.add("Minimum Participants");
         }
         if (template.getMaxParticipants() == null || template.getMaxParticipants() <= 0) {
             missingFields.add("Maximum Participants");
+        }
+        if (template.getMinParticipants() != null && template.getMaxParticipants() != null) {
+            if (template.getMinParticipants() > template.getMaxParticipants()) {
+                missingFields.add("Max Participants must be greater than or equal to Min Participants");
+            }
         }
 
         // Check if at least one image exists
@@ -517,7 +524,7 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
         // If there are missing fields, throw exception with list
         if (!missingFields.isEmpty()) {
             String errorMessage = "Cannot submit incomplete template. Missing required fields: "
-                + String.join(", ", missingFields);
+                    + String.join(", ", missingFields);
             throw new BadRequestException(errorMessage);
         }
     }
@@ -526,7 +533,7 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
 
     @Override
     @Transactional
-    public WorkshopTemplateResponse approveWorkshopTemplate(String adminEmail, UUID id, String adminNote)  {
+    public WorkshopTemplateResponse approveWorkshopTemplate(String adminEmail, UUID id, String adminNote) {
         // 1. Find the admin user
         User admin = userRepository.findByEmail(adminEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "email", adminEmail));
@@ -537,7 +544,8 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
 
         // 3. Check if template is in PENDING status
         if (template.getStatus() != WorkshopStatus.PENDING) {
-            throw new BadRequestException("Only templates with 'Pending' status can be approved. Current status: " + template.getStatus());
+            throw new BadRequestException(
+                    "Only templates with 'Pending' status can be approved. Current status: " + template.getStatus());
         }
 
         // 4. Update status to ACTIVE and set approval details
@@ -567,7 +575,8 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
 
         // 3. Check if template is in PENDING status
         if (template.getStatus() != WorkshopStatus.PENDING) {
-            throw new BadRequestException("Only templates with 'Pending' status can be rejected. Current status: " + template.getStatus());
+            throw new BadRequestException(
+                    "Only templates with 'Pending' status can be rejected. Current status: " + template.getStatus());
         }
 
         // 4. Validate admin note

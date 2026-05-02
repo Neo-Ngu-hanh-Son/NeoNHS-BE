@@ -7,4 +7,6 @@ public interface OrderService {
     Order createOrder(String userEmail, CreateOrderRequest request);
 
     void handlePaymentSuccess(long orderCode);
+
+    void cancelExpiredOrders();
 }

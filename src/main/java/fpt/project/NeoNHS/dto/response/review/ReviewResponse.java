@@ -24,6 +24,7 @@ public class ReviewResponse {
     UserResponse user;
     Integer rating;
     String comment;
+    List<String> imageUrls;
     LocalDateTime createdAt;
 
     public static ReviewResponse fromEntity(Review r) {
@@ -34,6 +35,7 @@ public class ReviewResponse {
                 .user(r.getUser() != null ? UserResponse.fromEntity(r.getUser()) : null)
                 .rating(r.getRating())
                 .comment(r.getComment())
+                .imageUrls(r.getReviewImages() != null ? r.getReviewImages().stream().map(fpt.project.NeoNHS.entity.ReviewImage::getImageUrl).collect(toList()) : new java.util.ArrayList<>())
                 .createdAt(r.getCreatedAt())
                 .build();
     }

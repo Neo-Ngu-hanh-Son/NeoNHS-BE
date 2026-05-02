@@ -20,6 +20,8 @@ public class TicketDetailResponse {
     private String ticketType; // EVENT | WORKSHOP | VISITOR
     private String status;
     private String itemName;
+    private String eventName;
+    private String workshopName;
     private LocalDateTime validFrom;
     private LocalDateTime validTo;
     private BigDecimal price;
