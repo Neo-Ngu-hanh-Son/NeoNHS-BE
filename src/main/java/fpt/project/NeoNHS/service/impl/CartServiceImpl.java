@@ -103,8 +103,9 @@ public class CartServiceImpl implements CartService {
                 cartItemRepository.save(newItem);
             }
         } else {
-            WorkshopSession workshopSession = workshopSessionRepository.findById(request.getWorkshopSessionId())
-                    .orElseThrow(() -> new BadRequestException("Workshop Session not found"));
+            WorkshopSession workshopSession = workshopSessionRepository
+                    .findByIdAndDeletedAtIsNull(request.getWorkshopSessionId())
+                    .orElseThrow(() -> new BadRequestException("Workshop Session not found or is no longer available"));
 
             Optional<CartItem> existingItem = cart.getCartItems().stream()
                     .filter(item -> item.getWorkshopSession() != null

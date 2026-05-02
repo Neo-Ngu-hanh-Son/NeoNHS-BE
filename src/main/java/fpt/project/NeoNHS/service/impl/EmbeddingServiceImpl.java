@@ -26,7 +26,7 @@ public class EmbeddingServiceImpl implements EmbeddingService {
 
     private final OpenAiConfig openAiConfig;
     private final RestClient openAiRestClient;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper; // Injected Spring bean — DO NOT use new ObjectMapper()
 
     @Override
     public List<Double> getEmbedding(String text) {

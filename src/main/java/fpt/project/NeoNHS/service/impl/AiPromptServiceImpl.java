@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import fpt.project.NeoNHS.document.ChatMessage;
 import fpt.project.NeoNHS.document.KnowledgeDocument;
 import fpt.project.NeoNHS.enums.KnowledgeTypeStatus;
+import fpt.project.NeoNHS.repository.EventRepository;
+import fpt.project.NeoNHS.repository.WorkshopTemplateRepository;
 import fpt.project.NeoNHS.repository.mongo.ChatMessageRepository;
 import fpt.project.NeoNHS.repository.mongo.KnowledgeRepository;
 import fpt.project.NeoNHS.repository.mongo.VectorSearchRepository;
@@ -33,6 +35,8 @@ public class AiPromptServiceImpl implements AiPromptService {
     private final ChatMessageRepository chatMessageRepository;
     private final ObjectMapper objectMapper;
     private final LanguageDetectionService languageDetectionService;
+    private final WorkshopTemplateRepository workshopTemplateRepository;
+    private final EventRepository eventRepository;
 
     // ═══════════════════════════════════════════════════════════════════
     // System Prompt
@@ -60,7 +64,7 @@ public class AiPromptServiceImpl implements AiPromptService {
             4. NO DATA RESPONSE: If the Tool returns nothing AND there is no relevant information in the Context, ONLY THEN you MUST reply with the equivalent of: "Dạ, hiện tại hệ thống chưa cập nhật thông tin này ạ." TRANSLATED into the user's language.
             5. FRESH DATA OVER HISTORY: ALWAYS prioritize Function Calling tools for specific entities over conversation history.
             </strict_data_policy>
-            
+
             <tool_rules>
             1. CHIT-CHAT: DO NOT use tools for basic greetings.
             2. PRICING: Always list ALL available ticket types clearly.
@@ -68,22 +72,35 @@ public class AiPromptServiceImpl implements AiPromptService {
             - You MUST NOT generate Markdown formatting for images.
             - You ONLY need to write 1-2 short sentences introducing the results. Ensure this introduction is TRANSLATED to the user's language.
             </tool_rules>
-            
+
             <booking_workflow>
-            Mandatory strict sequence:
-            1. SEARCH: Call getWorkshopSessions or getTicketPrices to retrieve UUIDs. NEVER use raw Workshop IDs.
-            2. EXECUTE: Call addToCart IMMEDIATELY upon user confirmation. DO NOT ask for redundant text confirmation.
-            3. CONFIRM: Upon tool SUCCESS, reply with the equivalent of: "Đã thêm vào giỏ hàng thành công! Anh/chị có muốn tới My Cart để thanh toán ngay không?" TRANSLATED to the user's language.
-            4. ERROR: Politely explain the exact reason based on the tool's error.
-            </booking_workflow>
+            TWO-PHASE MANDATORY WORKFLOW — NEVER SKIP ANY PHASE:
+
+            *** PHASE 1 — DISCOVERY & SELECTION: ***
+            1. Call getWorkshopSessions or getTicketPrices.
+            2. Display ALL options clearly to the user with indices (e.g. "Buổi 1: ...", "Buổi 2: ...").
+            3. ASK the user: "Bạn muốn đặt buổi/loại vé nào?"
+            4. STOP HERE. Wait for user input.
+
+            *** PHASE 2 — BOOKING (user picks an option): ***
+            1. Use the stable 'workshopTemplateId' or 'eventId' from the ID Table or search result.
+            2. Map the user's choice (e.g. "buổi 1") to a zero-based index (e.g. 0).
+            3. Call addWorkshopToCart(workshopTemplateId, sessionIndex) or addEventTicketToCart(eventId, ticketIndex).
+            4. NEVER use transient UUIDs for sessions or tickets. ONLY use the Root ID + Index.
+
+            STRICT RULE: Even if there is only 1 option available, you MUST still ask the user to confirm before booking. NO AUTOMATIC BOOKING.
             
+            CONFIRM: Upon SUCCESS → reply: "Đã thêm vào giỏ hàng thành công! Anh/chị có muốn tới My Cart để thanh toán ngay không?"
+            ERROR: If booking fails → explain the error.
+            </booking_workflow>
+
             <scope_and_routing>
             SCOPE: Marble Mountains history, local crafts, NeoNHS services, and related Da Nang tourism.
             [TIER 1 - DECLINE]: For out-of-scope topics (math, coding, unrelated news, unrelated locations), politely decline and pivot back to NeoNHS. DO NOT use routing tags. DO NOT offer human transfer.
             [TIER 2 - ANSWER]: ONLY answer using data EXPLICITLY provided by Tools/Context. If the Tool returns nothing or Context is empty, immediately apply the ZERO HALLUCINATION RULE.
             [TIER 3 - TRANSFER]: For complaints, refunds, emergencies, complex bookings, or explicit requests for a human, you MUST prepend the exact tag [TRANSFER_TO_HUMAN] at the very beginning of your response.
             </scope_and_routing>
-            
+
             <final_output_rule>
             CRITICAL LANGUAGE CHECK:
             - Before generating your response, detect the language of the USER'S LAST MESSAGE. Your ENTIRE output MUST be strictly translated into that EXACT language.
@@ -144,7 +161,8 @@ public class AiPromptServiceImpl implements AiPromptService {
 
             // Fallback to keyword search if vector search returns no results
             if (knowledgeBase == null || knowledgeBase.isEmpty()) {
-                log.info("[AI Strategy] Vector Search found no results. Falling back to keyword search for: '{}'", queryForSearch);
+                log.info("[AI Strategy] Vector Search found no results. Falling back to keyword search for: '{}'",
+                        queryForSearch);
                 knowledgeBase = knowledgeRepository.searchByKeyword(queryForSearch).stream()
                         .filter(KnowledgeDocument::isActive)
                         .limit(3)
@@ -153,7 +171,8 @@ public class AiPromptServiceImpl implements AiPromptService {
         }
 
         if (!knowledgeBase.isEmpty()) {
-            log.info("[AI Strategy] Vector Search (MongoDB): Found {} relevant knowledge documents (lang='{}', vi-query='{}').",
+            log.info(
+                    "[AI Strategy] Vector Search (MongoDB): Found {} relevant knowledge documents (lang='{}', vi-query='{}').",
                     knowledgeBase.size(), detectedLang, queryForSearch);
             prompt.append("\n\n---\n")
                     .append("DỮ LIỆU KIẾN THỨC NỘI BỘ (Chỉ sử dụng khi cần trả lời các câu hỏi cụ thể):\n");
@@ -175,19 +194,60 @@ public class AiPromptServiceImpl implements AiPromptService {
 
         // ── Inject user language directive so GPT-4o always replies correctly ───
         // Even when context is found via cross-lingual search, GPT needs an explicit
-        // reminder of the target output language, because context docs are in Vietnamese.
+        // reminder of the target output language, because context docs are in
+        // Vietnamese.
         prompt.append("\n---\n");
         prompt.append("*** FINAL CRITICAL INSTRUCTIONS (MUST OBEY) ***\n");
 
         if (!"vi".equals(detectedLang)) {
             prompt.append("1. STRICT LANGUAGE OVERRIDE: The user is speaking '").append(detectedLang).append("'. ");
-            prompt.append("You MUST translate ALL factual content from Context/Tools into '").append(detectedLang).append("'. ");
+            prompt.append("You MUST translate ALL factual content from Context/Tools into '").append(detectedLang)
+                    .append("'. ");
             prompt.append("Do NOT output any Vietnamese text.\n");
         }
 
         prompt.append("2. TOOL FAILURE OVERRIDE: If a Tool returns empty ([], null), DO NOT APOLOGIZE IMMEDIATELY. ");
-        prompt.append("You MUST read the Vietnamese Context above. If the Context has the answer, translate and use it. ");
+        prompt.append(
+                "You MUST read the Vietnamese Context above. If the Context has the answer, translate and use it. ");
         prompt.append("ONLY apologize if BOTH Tool and Context are empty.\n");
+
+        // ── Workshop & Event UUID Reference Table (injected every turn to prevent ID loss) ──
+        // AI loses tool-call results between conversation turns because only text
+        // messages are stored in chat history. By always providing the UUID mapping
+        // here, the AI can call getWorkshopSessions or getTicketPrices directly.
+        try {
+            var publishedWorkshops = workshopTemplateRepository.findAll().stream()
+                    .filter(w -> Boolean.TRUE.equals(w.getIsPublished()) && w.getDeletedAt() == null)
+                    .toList();
+            if (!publishedWorkshops.isEmpty() || !eventRepository.findAll().isEmpty()) {
+                prompt.append("\n--- BẢNG TRA CỨU ID (dùng ngay, KHÔNG tự tạo ID giả) ---\n");
+                
+                if (!publishedWorkshops.isEmpty()) {
+                    prompt.append("WORKSHOPS:\n");
+                    for (var w : publishedWorkshops) {
+                        prompt.append(String.format("- \"%s\" → workshopTemplateId: \"%s\"\n",
+                                w.getName(), w.getId().toString()));
+                    }
+                }
+
+                var activeEvents = eventRepository.findAll().stream()
+                        .filter(e -> e.getDeletedAt() == null && (e.getStatus() == fpt.project.NeoNHS.enums.EventStatus.UPCOMING || e.getStatus() == fpt.project.NeoNHS.enums.EventStatus.ONGOING))
+                        .toList();
+                if (!activeEvents.isEmpty()) {
+                    prompt.append("\nSỰ KIỆN (EVENTS):\n");
+                    for (var e : activeEvents) {
+                        prompt.append(String.format("- \"%s\" → eventId: \"%s\"\n",
+                                e.getName(), e.getId().toString()));
+                    }
+                }
+                
+                prompt.append("\nQUY TẮC ID: TUYỆT ĐỐI KHÔNG tự tạo chuỗi UUID giả (như 'f3e6b7de...') hay placeholder (như 'adult_ticket_id'). ");
+                prompt.append("Nếu không thấy ID trong bảng này hoặc kết quả tool, bạn PHẢI báo lỗi hoặc gọi tool search tương ứng.\n");
+                prompt.append("---\n");
+            }
+        } catch (Exception e) {
+            log.warn("[AI] Could not inject UUID tables into system prompt: {}", e.getMessage());
+        }
 
         return prompt.toString();
     }
