@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.tasks;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.entity.Event;
 import fpt.project.NeoNHS.entity.Voucher;
 import fpt.project.NeoNHS.enums.EventStatus;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Component
@@ -26,7 +28,7 @@ public class StatusUpdateTask {
     @Scheduled(cron = "0 0 0 * * *") // Every day at midnight
     @Transactional
     public void updateStatuses() {
-        log.info("Starting StatusUpdateTask at {}", LocalDateTime.now());
+        log.info("Starting StatusUpdateTask at {}", LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         updateVoucherStatuses();
         updateEventStatuses();
         log.info("Finished StatusUpdateTask");
@@ -34,7 +36,7 @@ public class StatusUpdateTask {
 
     private void updateVoucherStatuses() {
         List<Voucher> activeVouchers = voucherRepository.findAllByStatusAndDeletedAtIsNull(VoucherStatus.ACTIVE);
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH));
         int count = 0;
 
         for (Voucher voucher : activeVouchers) {
@@ -53,7 +55,7 @@ public class StatusUpdateTask {
     private void updateEventStatuses() {
         List<EventStatus> targets = List.of(EventStatus.UPCOMING, EventStatus.ONGOING);
         List<Event> events = eventRepository.findAllByStatusInAndDeletedAtIsNull(targets);
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH));
         int count = 0;
 
         for (Event event : events) {

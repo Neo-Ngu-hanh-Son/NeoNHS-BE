@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.blog.BlogRequest;
 import fpt.project.NeoNHS.dto.response.blog.BlogResponse;
 import fpt.project.NeoNHS.entity.Blog;
@@ -19,6 +20,7 @@ import fpt.project.NeoNHS.specification.BlogSpecification;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -83,7 +85,7 @@ public class BlogServiceImpl implements BlogService {
                 .isFeatured(Boolean.TRUE.equals(request.getIsFeatured()))
                 .status(resolveStatus(request.getStatus()))
                 .publishedAt(resolvePublishedAt(null, resolveStatus(request.getStatus())))
-                .createdAt(LocalDateTime.now())
+                .createdAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                 .blogCategory(blogCategory)
                 .user(author)
                 .build();
@@ -154,7 +156,7 @@ public class BlogServiceImpl implements BlogService {
                 .orElseThrow(() -> new ResourceNotFoundException("Blog not found"));
         validateOwner(blog);
         var currentUser = getCurrentUserPrincipal();
-        blog.setDeletedAt(LocalDateTime.now());
+        blog.setDeletedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         blog.setDeletedBy(currentUser.getId());
         blog.setStatus(BlogStatus.ARCHIVED);
         blogRepository.save(blog);
@@ -257,7 +259,7 @@ public class BlogServiceImpl implements BlogService {
 
     private LocalDateTime resolvePublishedAt(LocalDateTime currentPublishedAt, BlogStatus status) {
         if (status == BlogStatus.PUBLISHED) {
-            return currentPublishedAt != null ? currentPublishedAt : LocalDateTime.now();
+            return currentPublishedAt != null ? currentPublishedAt : LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH));
         }
         return null;
     }

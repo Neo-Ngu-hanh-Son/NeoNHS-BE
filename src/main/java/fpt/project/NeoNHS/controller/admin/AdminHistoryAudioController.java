@@ -1,6 +1,5 @@
 package fpt.project.NeoNHS.controller.admin;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import fpt.project.NeoNHS.dto.request.point.CreatePointHistoryAudio;
 import fpt.project.NeoNHS.dto.request.point.historyAudio.CreateSpeechFromTextRequest;
 import fpt.project.NeoNHS.dto.request.point.historyAudio.HistoryAudioTranslateRequest;

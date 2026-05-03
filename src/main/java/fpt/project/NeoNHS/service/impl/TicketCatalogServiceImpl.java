@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.ticketcatalog.CreateTicketCatalogRequest;
 import fpt.project.NeoNHS.dto.request.ticketcatalog.UpdateTicketCatalogRequest;
 import fpt.project.NeoNHS.dto.response.ticketcatalog.TicketCatalogResponse;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -154,7 +156,7 @@ public class TicketCatalogServiceImpl implements TicketCatalogService {
             throw new BadRequestException("Ticket catalog is already deleted");
         }
 
-        ticketCatalog.setDeletedAt(LocalDateTime.now());
+        ticketCatalog.setDeletedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         ticketCatalog.setDeletedBy(deletedBy);
         ticketCatalogRepository.save(ticketCatalog);
     }

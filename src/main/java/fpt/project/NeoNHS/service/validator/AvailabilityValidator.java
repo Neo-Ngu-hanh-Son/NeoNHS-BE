@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.validator;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.entity.Event;
 import fpt.project.NeoNHS.entity.TicketCatalog;
 import fpt.project.NeoNHS.entity.WorkshopSession;
@@ -10,6 +11,7 @@ import fpt.project.NeoNHS.exception.BadRequestException;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Component
 public class AvailabilityValidator {
@@ -21,7 +23,7 @@ public class AvailabilityValidator {
         }
 
         // 2. Check Date Validity
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH));
         if (ticketCatalog.getValidFromDate() != null && now.isBefore(ticketCatalog.getValidFromDate())) {
             throw new BadRequestException("Ticket sale has not started yet: " + ticketCatalog.getName());
         }
@@ -45,7 +47,7 @@ public class AvailabilityValidator {
                 throw new BadRequestException("Event is not available for booking: " + event.getName());
             }
 
-            if (event.getEndTime() != null && LocalDateTime.now().isAfter(event.getEndTime())) {
+            if (event.getEndTime() != null && LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)).isAfter(event.getEndTime())) {
                 throw new BadRequestException("Event has already ended: " + event.getName());
             }
 
@@ -67,7 +69,7 @@ public class AvailabilityValidator {
         }
 
         // 2. Check if workshop session has already started (only allow booking before startTime)
-        if (workshopSession.getStartTime() != null && !LocalDateTime.now().isBefore(workshopSession.getStartTime())) {
+        if (workshopSession.getStartTime() != null && !LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)).isBefore(workshopSession.getStartTime())) {
             throw new BadRequestException(
                     "Workshop session has already started: " + workshopSession.getWorkshopTemplate().getName());
         }

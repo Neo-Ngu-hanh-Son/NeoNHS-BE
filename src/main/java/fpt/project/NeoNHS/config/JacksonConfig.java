@@ -27,7 +27,7 @@ public class JacksonConfig {
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        mapper.setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL);
         return mapper;
     }
 }

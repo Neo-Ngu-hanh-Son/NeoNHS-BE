@@ -1,8 +1,8 @@
 package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.constants.NotificationMessages;
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.constants.GeoConstants;
-import fpt.project.NeoNHS.dto.request.usercheckin.CheckinImageRequest;
 import fpt.project.NeoNHS.dto.request.usercheckin.UpdateCheckinImageCaptionRequest;
 import fpt.project.NeoNHS.dto.request.usercheckin.UpdateUserCheckinRequest;
 import fpt.project.NeoNHS.dto.request.usercheckin.UserCheckinRequest;
@@ -20,7 +20,6 @@ import fpt.project.NeoNHS.repository.CheckinPointRepository;
 import fpt.project.NeoNHS.repository.UserCheckInRepository;
 import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.service.GeoService;
-import fpt.project.NeoNHS.service.ImageUploadService;
 import fpt.project.NeoNHS.service.NotificationService;
 import fpt.project.NeoNHS.service.UserCheckInService;
 import jakarta.transaction.Transactional;
@@ -32,6 +31,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +50,6 @@ public class UserCheckInServiceImpl implements UserCheckInService {
     private final CheckinPointRepository checkinPointRepository;
     private final GeoService geoService;
     private final UserRepository userRepository;
-    private final ImageUploadService imageUploadService;
     private final NotificationService notificationService;
 
     @Override
@@ -75,7 +74,7 @@ public class UserCheckInServiceImpl implements UserCheckInService {
                 .earnedPoints(checkinPoint.getRewardPoints())
                 .checkinPoint(checkinPoint)
                 .user(user)
-                .checkinTime(LocalDateTime.now())
+                .checkinTime(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                 .build();
 
         if (request.getCheckinImageRequest() == null || request.getCheckinImageRequest().isEmpty()) {
@@ -123,22 +122,22 @@ public class UserCheckInServiceImpl implements UserCheckInService {
     }
 
     // TODO: Allow user to handle CRUD on their own ?
-    private void addImageToExistingCheckin(UserCheckinRequest request, CheckinPoint checkinPoint, User user) {
-        checkinPoint.getUserCheckIns().stream().filter(checkIn -> checkIn.getUser().getId().equals(user.getId()))
-                .findFirst().ifPresent(checkIn -> {
-                    List<CheckinImage> existingImages = checkIn.getCheckinImages();
-                    List<CheckinImageRequest> newImages = request.getCheckinImageRequest();
-                    for (var newImg : newImages) {
-                        existingImages.add(CheckinImage.builder()
-                                .id(UUID.randomUUID())
-                                .imageUrl(newImg.getImageUrl())
-                                .userCheckIn(checkIn)
-                                .caption(newImg.getCaption())
-                                .build());
-                    }
-                    userCheckInRepository.save(checkIn);
-                });
-    }
+    // private void addImageToExistingCheckin(UserCheckinRequest request, CheckinPoint checkinPoint, User user) {
+    //     checkinPoint.getUserCheckIns().stream().filter(checkIn -> checkIn.getUser().getId().equals(user.getId()))
+    //             .findFirst().ifPresent(checkIn -> {
+    //                 List<CheckinImage> existingImages = checkIn.getCheckinImages();
+    //                 List<CheckinImageRequest> newImages = request.getCheckinImageRequest();
+    //                 for (var newImg : newImages) {
+    //                     existingImages.add(CheckinImage.builder()
+    //                             .id(UUID.randomUUID())
+    //                             .imageUrl(newImg.getImageUrl())
+    //                             .userCheckIn(checkIn)
+    //                             .caption(newImg.getCaption())
+    //                             .build());
+    //                 }
+    //                 userCheckInRepository.save(checkIn);
+    //             });
+    // }
 
     @Override
     public Page<UserCheckinResponse> getUserCheckins(int page, int size, String sortBy, String sortDir) {

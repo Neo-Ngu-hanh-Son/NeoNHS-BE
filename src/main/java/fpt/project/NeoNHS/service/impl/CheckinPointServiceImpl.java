@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.constants.PaginationConstants;
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.point.CheckinPointRequest;
 import fpt.project.NeoNHS.dto.response.point.CheckinPointResponse;
 import fpt.project.NeoNHS.entity.CheckinPoint;
@@ -16,6 +17,7 @@ import fpt.project.NeoNHS.specification.CheckinPointSpecification;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -150,7 +152,7 @@ public class CheckinPointServiceImpl implements CheckinPointService {
 //            throw new BadRequestException("Cannot delete check-in point that has user check-ins");
 //        }
 
-        checkinPoint.setDeletedAt(LocalDateTime.now());
+        checkinPoint.setDeletedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         checkinPoint.setDeletedBy(currentUserId);
         checkinPoint.setIsActive(false);
         checkinPointRepository.save(checkinPoint);

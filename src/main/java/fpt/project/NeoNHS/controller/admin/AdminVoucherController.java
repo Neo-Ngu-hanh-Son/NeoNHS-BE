@@ -7,7 +7,6 @@ import fpt.project.NeoNHS.dto.request.voucher.VoucherFilterRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.voucher.VoucherResponse;
 import fpt.project.NeoNHS.enums.*;
-import fpt.project.NeoNHS.security.UserPrincipal;
 import fpt.project.NeoNHS.service.VoucherService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

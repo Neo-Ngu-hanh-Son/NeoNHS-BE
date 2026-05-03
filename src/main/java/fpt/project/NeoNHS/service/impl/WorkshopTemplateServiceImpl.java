@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.workshop.CreateWorkshopTemplateRequest;
 import fpt.project.NeoNHS.dto.request.workshop.UpdateWorkshopTemplateRequest;
 
@@ -13,8 +14,6 @@ import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.repository.VendorProfileRepository;
 import fpt.project.NeoNHS.repository.WTagRepository;
-import fpt.project.NeoNHS.repository.WorkshopImageRepository;
-import fpt.project.NeoNHS.repository.WorkshopTagRepository;
 import fpt.project.NeoNHS.repository.WorkshopTemplateRepository;
 
 import fpt.project.NeoNHS.service.WorkshopTemplateService;
@@ -29,6 +28,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -41,8 +41,6 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
     private final WorkshopTemplateRepository workshopTemplateRepository;
     private final VendorProfileRepository vendorProfileRepository;
     private final WTagRepository wTagRepository;
-    private final WorkshopImageRepository workshopImageRepository;
-    private final WorkshopTagRepository workshopTagRepository;
     private final UserRepository userRepository;
 
     // ==================== CREATE ====================
@@ -170,7 +168,7 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
     @Override
     public Page<WorkshopTemplateResponse> getWorkshopTemplatesByVendorId(UUID vendorId, Pageable pageable) {
         // Validate vendor exists
-        VendorProfile vendor = vendorProfileRepository.findById(vendorId)
+        vendorProfileRepository.findById(vendorId)
                 .orElseThrow(() -> new ResourceNotFoundException("VendorProfile", "id", vendorId));
 
         Page<WorkshopTemplate> templates = workshopTemplateRepository.findByVendorId(vendorId, pageable);
@@ -552,7 +550,7 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
         template.setStatus(WorkshopStatus.ACTIVE);
         template.setIsPublished(false);
         template.setReviewedBy(admin.getId());
-        template.setReviewedAt(LocalDateTime.now());
+        template.setReviewedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
 
         // Set admin note (optional)
         template.setAdminNote(adminNote);
@@ -589,7 +587,7 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
         template.setIsPublished(false);
         template.setAdminNote(adminNote);
         template.setReviewedBy(admin.getId());
-        template.setReviewedAt(LocalDateTime.now());
+        template.setReviewedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
 
         // 6. Save and return
         WorkshopTemplate rejectedTemplate = workshopTemplateRepository.save(template);

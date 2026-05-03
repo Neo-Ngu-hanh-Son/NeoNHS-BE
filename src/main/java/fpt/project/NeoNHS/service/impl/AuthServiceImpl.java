@@ -3,6 +3,7 @@ package fpt.project.NeoNHS.service.impl;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import fpt.project.NeoNHS.dto.request.auth.ChangePasswordRequest;
 import fpt.project.NeoNHS.constants.EmailTemplate;
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.auth.LoginRequest;
 import fpt.project.NeoNHS.dto.request.auth.RegisterRequest;
 import fpt.project.NeoNHS.dto.request.auth.SetPasswordRequest;
@@ -32,6 +33,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Random;
 import java.util.UUID;
 
@@ -153,7 +155,7 @@ public class AuthServiceImpl implements AuthService {
                 .avatarUrl("defaultAvatar.png")
                 .passwordHash(passwordEncoder.encode("test_password"))
                 .isActive(true)
-                .createdAt(LocalDateTime.now())
+                .createdAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                 .build();
         mailService.sendVerifyEmailAsync(u, EmailTemplate.VERIFY_ACCOUNT, generateVerifyToken(), appUrl);
     }
@@ -208,7 +210,7 @@ public class AuthServiceImpl implements AuthService {
                 .avatarUrl(result.get("picture") != null ? (String) result.get("picture") : "defaultAvatar.png")
                 .passwordHash(passwordEncoder.encode("google_oauth2_user"))
                 .isActive(true)
-                .createdAt(LocalDateTime.now())
+                .createdAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                 .build();
         return userRepository.save(u);
     }

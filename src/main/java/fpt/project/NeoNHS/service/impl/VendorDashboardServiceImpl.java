@@ -1,7 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.dto.response.vendor.dashboard.*;
-import fpt.project.NeoNHS.entity.Transaction;
 import fpt.project.NeoNHS.entity.VendorProfile;
 import fpt.project.NeoNHS.entity.WorkshopSession;
 import fpt.project.NeoNHS.enums.ReviewTypeFlagEnum;
@@ -110,7 +109,7 @@ public class VendorDashboardServiceImpl implements VendorDashboardService {
 
     private VendorStatsResponse buildStats(UUID vendorId, LocalDateTime now) {
         LocalDateTime weekAgo = now.minusWeeks(1);
-        LocalDateTime twoWeeksAgo = now.minusWeeks(2);
+        // LocalDateTime twoWeeksAgo = now.minusWeeks(2);
 
         BigDecimal totalRevenue = safeDecimal(orderDetailRepository.sumTotalRevenueByVendorId(vendorId));
         BigDecimal previousRevenue = null; // No trend mapping for all-time total revenue
