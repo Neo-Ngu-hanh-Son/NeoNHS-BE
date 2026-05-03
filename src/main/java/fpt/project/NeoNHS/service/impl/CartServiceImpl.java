@@ -259,6 +259,11 @@ public class CartServiceImpl implements CartService {
                         .workshopSessionId(workshopSessionId)
                         .workshopTemplateId(workshopTemplateId)
                         .workshopName(workshopName)
+                        .vendorId(item.getWorkshopSession() != null
+                                && item.getWorkshopSession().getWorkshopTemplate() != null
+                                && item.getWorkshopSession().getWorkshopTemplate().getVendor() != null
+                                        ? item.getWorkshopSession().getWorkshopTemplate().getVendor().getId()
+                                        : null)
                         .build());
             }
         }
@@ -345,6 +350,11 @@ public class CartServiceImpl implements CartService {
                     .workshopSessionId(workshopSessionId)
                     .workshopTemplateId(workshopTemplateId2)
                     .workshopName(workshopName)
+                    .vendorId(item.getWorkshopSession() != null
+                            && item.getWorkshopSession().getWorkshopTemplate() != null
+                            && item.getWorkshopSession().getWorkshopTemplate().getVendor() != null
+                                    ? item.getWorkshopSession().getWorkshopTemplate().getVendor().getId()
+                                    : null)
                     .build());
         }
 
@@ -381,7 +391,7 @@ public class CartServiceImpl implements CartService {
     @Transactional(readOnly = true)
     public List<UserVoucherRespone> getUserVouchers(String userEmail) {
         User user = getUserByEmail(userEmail);
-        
+
         Cart cart = getOrCreateCart(user);
         List<CartItem> cartItems = cart.getCartItems() != null ? cart.getCartItems() : new ArrayList<>();
 
@@ -396,7 +406,8 @@ public class CartServiceImpl implements CartService {
             totalPrice = totalPrice.add(subTotal);
         }
 
-        VoucherClassificationResult classification = voucherService.classifyVouchersForCart(user, cartItems, totalPrice);
+        VoucherClassificationResult classification = voucherService.classifyVouchersForCart(user, cartItems,
+                totalPrice);
 
         return classification.getValidVouchers().stream()
                 .filter(v -> v.getVoucherType() == VoucherType.DISCOUNT)
