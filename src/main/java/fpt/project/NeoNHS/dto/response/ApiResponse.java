@@ -1,6 +1,8 @@
 package fpt.project.NeoNHS.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -8,6 +10,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 /**
  * Generic API Response wrapper for standardized response format.
@@ -46,7 +49,7 @@ public class ApiResponse<T> {
      * Timestamp when the response was generated
      */
     @Builder.Default
-    private LocalDateTime timestamp = LocalDateTime.now();
+    private LocalDateTime timestamp = LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH));
 
     /**
      * Creates a success response with custom message and data.
@@ -62,7 +65,7 @@ public class ApiResponse<T> {
                 .success(true)
                 .message(message)
                 .data(data)
-                .timestamp(LocalDateTime.now())
+                .timestamp(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                 .build();
     }
 
@@ -79,7 +82,7 @@ public class ApiResponse<T> {
                 .success(true)
                 .message("Success")
                 .data(data)
-                .timestamp(LocalDateTime.now())
+                .timestamp(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                 .build();
     }
 
@@ -98,7 +101,7 @@ public class ApiResponse<T> {
                 .success(true)
                 .message(message)
                 .data(data)
-                .timestamp(LocalDateTime.now())
+                .timestamp(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                 .build();
     }
 
@@ -115,7 +118,7 @@ public class ApiResponse<T> {
                 .success(false)
                 .message(message)
                 .data(null)
-                .timestamp(LocalDateTime.now())
+                .timestamp(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                 .build();
     }
 
@@ -133,7 +136,7 @@ public class ApiResponse<T> {
                 .success(false)
                 .message(message)
                 .data(null)
-                .timestamp(LocalDateTime.now())
+                .timestamp(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                 .build();
     }
 }

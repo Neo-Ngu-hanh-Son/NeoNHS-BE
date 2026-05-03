@@ -34,4 +34,6 @@ public class EventPointRequest {
     private UUID eventPointTagId;
 
     private EventPointTagRequest eventPointTagRequest;
+
+    private Boolean restore;
 }

@@ -1,13 +1,11 @@
 package fpt.project.NeoNHS.dto.response.blog;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 import fpt.project.NeoNHS.dto.response.auth.UserInfoResponse;
 import fpt.project.NeoNHS.entity.Blog;
 import fpt.project.NeoNHS.enums.BlogStatus;
-import jakarta.persistence.Column;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

@@ -43,7 +43,7 @@ public class EventPoint extends BaseEntity {
     @JoinColumn(name = "event_point_tag_id")
     private EventPointTag eventPointTag;
 
-    @OneToMany(mappedBy = "eventPoint", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "eventPoint", fetch = FetchType.LAZY)
     @Builder.Default
     private List<EventTimeline> eventTimelines = new ArrayList<>(); // Event point can be independent (Ex: WC, Parking lots, etc).
 }

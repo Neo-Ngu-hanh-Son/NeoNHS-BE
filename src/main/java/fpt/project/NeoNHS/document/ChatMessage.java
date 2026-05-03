@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.document;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.enums.MessageStatus;
 import lombok.*;
 import org.springframework.data.annotation.Id;
@@ -7,6 +8,7 @@ import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Document(collection = "chat_messages")
 @CompoundIndex(name = "room_timestamp_idx", def = "{'chatRoomId': 1, 'timestamp': -1}")
@@ -27,7 +29,7 @@ public class ChatMessage {
     private String content;
 
     @Builder.Default
-    private LocalDateTime timestamp = LocalDateTime.now();
+    private LocalDateTime timestamp = LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH));
 
     @Builder.Default
     private MessageStatus status = MessageStatus.SENT;

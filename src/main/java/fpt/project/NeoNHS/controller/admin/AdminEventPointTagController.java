@@ -42,6 +42,14 @@ public class AdminEventPointTagController {
         return ResponseEntity.ok(ApiResponse.success("Tag updated successfully", response));
     }
 
+    @PutMapping("/{id}/restore")
+    @Operation(summary = "Restore a tag status")
+    public ResponseEntity<ApiResponse<EventPointTagResponse>> restoreTag(
+            @PathVariable UUID id) {
+        tagService.restoreTag(id);
+        return ResponseEntity.ok(ApiResponse.success("Tag restored successfully", null));
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Get tag by ID")
     public ResponseEntity<ApiResponse<EventPointTagResponse>> getTagById(@PathVariable UUID id) {
@@ -52,7 +60,7 @@ public class AdminEventPointTagController {
     @GetMapping
     @Operation(summary = "Get all tags")
     public ResponseEntity<ApiResponse<List<EventPointTagResponse>>> getAllTags() {
-        List<EventPointTagResponse> response = tagService.getAllTags();
+        List<EventPointTagResponse> response = tagService.getAllTagsAdmin();
         return ResponseEntity.ok(ApiResponse.success("Tags retrieved successfully", response));
     }
 

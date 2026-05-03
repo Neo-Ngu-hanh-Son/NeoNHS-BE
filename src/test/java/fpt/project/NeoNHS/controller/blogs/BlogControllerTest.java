@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.controller.blogs;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.controller.BlogController;
 import fpt.project.NeoNHS.dto.response.blog.BlogResponse;
 import fpt.project.NeoNHS.enums.BlogStatus;
@@ -25,6 +26,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -66,8 +68,8 @@ class BlogControllerTest {
                 .contentHTML("<p>content</p>")
                 .isFeatured(false)
                 .status(BlogStatus.PUBLISHED)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .createdAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
+                .updatedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                 .build();
     }
 

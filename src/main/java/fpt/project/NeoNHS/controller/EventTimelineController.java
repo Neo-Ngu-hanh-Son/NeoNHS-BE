@@ -66,7 +66,6 @@ public class EventTimelineController {
     @Operation(summary = "Get all event points (map markers) for a specific event")
     public ResponseEntity<ApiResponse<List<EventPointResponse>>> getPointsByEvent(
             @Parameter(description = "Event ID") @PathVariable UUID eventId) {
-        // TODO: Implement filtering by eventId when EventPoint has a direct relationship to Event
         List<EventPointResponse> response = pointService.getAllPoints();
         return ResponseEntity.ok(ApiResponse.success("Points retrieved successfully", response));
     }

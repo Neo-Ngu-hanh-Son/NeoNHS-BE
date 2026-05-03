@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
@@ -18,6 +19,7 @@ public class EventPointTagResponse {
     private String description;
     private String tagColor;
     private String iconUrl;
+    private LocalDateTime deletedAt;
 
     public static EventPointTagResponse fromEntity(EventPointTag tag) {
         if (tag == null) return null;
@@ -27,6 +29,7 @@ public class EventPointTagResponse {
                 .description(tag.getDescription())
                 .tagColor(tag.getTagColor())
                 .iconUrl(tag.getIconUrl())
+                .deletedAt(tag.getDeletedAt())
                 .build();
     }
 }

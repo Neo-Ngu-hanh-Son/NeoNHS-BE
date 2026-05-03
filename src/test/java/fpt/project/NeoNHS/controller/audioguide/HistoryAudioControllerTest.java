@@ -72,8 +72,8 @@
 //                .pointId(pId)
 //                .audioUrl("https://cdn.example.com/audio/history-1.mp3")
 //                .historyText("Historic story")
-//                .createdAt(LocalDateTime.now())
-//                .updatedAt(LocalDateTime.now())
+//                .createdAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
+//                .updatedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
 //                .build();
 //    }
 //

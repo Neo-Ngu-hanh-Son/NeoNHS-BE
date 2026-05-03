@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.document.KnowledgeDocument;
 import fpt.project.NeoNHS.enums.KnowledgeTypeStatus;
 import fpt.project.NeoNHS.repository.mongo.KnowledgeRepository;
@@ -14,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Service
@@ -57,7 +59,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         if (knowledgeType != null) {
             doc.setKnowledgeType(knowledgeType);
         }
-        doc.setUpdatedAt(LocalDateTime.now());
+        doc.setUpdatedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
 
         // Delete old chunks first in case we are changing types or content
         knowledgeRepository.deleteByParentDocumentId(id);
@@ -87,14 +89,14 @@ public class KnowledgeServiceImpl implements KnowledgeService {
     public void toggleVisibility(String id, boolean isActive) {
         KnowledgeDocument doc = getDocument(id);
         doc.setActive(isActive);
-        doc.setUpdatedAt(LocalDateTime.now());
+        doc.setUpdatedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         knowledgeRepository.save(doc);
 
         // Also toggle visibility on chunks
         List<KnowledgeDocument> chunks = knowledgeRepository.findByParentDocumentId(id);
         for (KnowledgeDocument chunk : chunks) {
             chunk.setActive(isActive);
-            chunk.setUpdatedAt(LocalDateTime.now());
+            chunk.setUpdatedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         }
         if (!chunks.isEmpty()) {
             knowledgeRepository.saveAll(chunks);
@@ -162,7 +164,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
 
         // Re-generate embedding for parent
         doc.setEmbedding(embeddingService.getEmbedding(doc.getTitle() + " " + doc.getContent()));
-        doc.setUpdatedAt(LocalDateTime.now());
+        doc.setUpdatedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         doc = knowledgeRepository.save(doc);
 
         // Re-create chunks

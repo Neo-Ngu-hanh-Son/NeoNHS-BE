@@ -8,7 +8,6 @@ import fpt.project.NeoNHS.dto.response.auth.UserProfileResponse;
 import fpt.project.NeoNHS.dto.response.kyc.KycResponse;
 import fpt.project.NeoNHS.dto.response.payout.PayoutResponse;
 import fpt.project.NeoNHS.exception.BadRequestException;
-import fpt.project.NeoNHS.repository.UserRepository;
 import fpt.project.NeoNHS.service.UserService;
 import fpt.project.NeoNHS.service.VnptEkycService;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +26,6 @@ import java.util.UUID;
 public class UserController {
 
     private final UserService userService;
-    private final UserRepository userRepository;
     private final VnptEkycService vnptEkycService;
 
     @GetMapping("/profile")

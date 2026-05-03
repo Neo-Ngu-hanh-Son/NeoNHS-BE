@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.cart.AddToCartRequest;
 import fpt.project.NeoNHS.dto.request.cart.CheckoutRequest;
 import fpt.project.NeoNHS.dto.request.cart.UpdateCartItemRequest;
@@ -12,20 +13,19 @@ import fpt.project.NeoNHS.entity.Cart;
 import fpt.project.NeoNHS.entity.CartItem;
 import fpt.project.NeoNHS.entity.TicketCatalog;
 import fpt.project.NeoNHS.entity.User;
-import fpt.project.NeoNHS.entity.UserVoucher;
-import fpt.project.NeoNHS.entity.Voucher;
 import fpt.project.NeoNHS.entity.WorkshopSession;
 import fpt.project.NeoNHS.exception.BadRequestException;
 import fpt.project.NeoNHS.repository.CartItemRepository;
 import fpt.project.NeoNHS.repository.CartRepository;
 import fpt.project.NeoNHS.repository.TicketCatalogRepository;
 import fpt.project.NeoNHS.repository.UserRepository;
-import fpt.project.NeoNHS.repository.UserVoucherRepository;
 import fpt.project.NeoNHS.repository.WorkshopSessionRepository;
 import fpt.project.NeoNHS.service.CartService;
 import fpt.project.NeoNHS.enums.VoucherType;
 import fpt.project.NeoNHS.service.VoucherService;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+
 import fpt.project.NeoNHS.entity.Event;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -45,7 +45,6 @@ public class CartServiceImpl implements CartService {
     private final CartItemRepository cartItemRepository;
     private final UserRepository userRepository;
     private final TicketCatalogRepository ticketCatalogRepository;
-    private final UserVoucherRepository userVoucherRepository;
     private final WorkshopSessionRepository workshopSessionRepository;
     private final AvailabilityValidator avai;
     private final VoucherService voucherService;
@@ -372,7 +371,7 @@ public class CartServiceImpl implements CartService {
                 .invalidVouchers(classification.getInvalidVouchers())
                 .discountValue(discountValue)
                 .finalTotalPrice(finalTotalPrice)
-                .transactionDate(LocalDateTime.now())
+                .transactionDate(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                 .appliedVoucher(appliedVoucherResponse)
                 .build();
     }

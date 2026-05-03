@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.response.TicketDetailResponse;
 import fpt.project.NeoNHS.entity.Ticket;
 import fpt.project.NeoNHS.enums.TicketStatus;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Service
 @RequiredArgsConstructor
@@ -67,7 +69,7 @@ public class TicketServiceImpl implements TicketService {
         }
 
         if (ticket.getStatus() == TicketStatus.EXPIRED ||
-                (ticket.getExpiryDate() != null && ticket.getExpiryDate().isBefore(LocalDateTime.now()))) {
+                (ticket.getExpiryDate() != null && ticket.getExpiryDate().isBefore(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH))))) {
             if (ticket.getStatus() != TicketStatus.EXPIRED) {
                 ticket.setStatus(TicketStatus.EXPIRED);
                 ticketRepository.save(ticket);
@@ -76,7 +78,7 @@ public class TicketServiceImpl implements TicketService {
         }
 
         ticket.setStatus(TicketStatus.USED);
-        ticket.setRedeemedAt(LocalDateTime.now());
+        ticket.setRedeemedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         ticketRepository.save(ticket);
 
         String itemName = "Unknown Type";

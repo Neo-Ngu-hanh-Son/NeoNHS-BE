@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.constants.NotificationMessages;
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.workshop.CreateWorkshopSessionRequest;
 import fpt.project.NeoNHS.dto.request.workshop.UpdateWorkshopSessionRequest;
 import fpt.project.NeoNHS.dto.response.workshop.WTagResponse;
@@ -36,6 +37,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -74,7 +76,7 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
         }
 
         // 4. Validate time constraints
-        if (request.getStartTime().isBefore(LocalDateTime.now())) {
+        if (request.getStartTime().isBefore(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))) {
             throw new BadRequestException("Start time must be in the future");
         }
         if (request.getEndTime().isBefore(request.getStartTime()) || request.getEndTime().equals(request.getStartTime())) {
@@ -141,7 +143,7 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
             }
 
             // Validate thời gian cho từng phiên
-            if (request.getStartTime().isBefore(LocalDateTime.now())) {
+            if (request.getStartTime().isBefore(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))) {
                 throw new BadRequestException("Start time must be in the future");
             }
             if (request.getEndTime().isBefore(request.getStartTime()) || request.getEndTime().equals(request.getStartTime())) {
@@ -194,7 +196,7 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
         // Get all SCHEDULED sessions that start in the future, only from published templates
         Specification<WorkshopSession> spec = Specification
                 .where(WorkshopSessionSpecification.hasStatus(SessionStatus.SCHEDULED))
-                .and(WorkshopSessionSpecification.hasStartTimeAfter(LocalDateTime.now()))
+                .and(WorkshopSessionSpecification.hasStartTimeAfter(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH))))
                 .and(WorkshopSessionSpecification.hasPublishedTemplate());
         Page<WorkshopSession> sessions = workshopSessionRepository.findAll(spec, pageable);
         return sessions.map(this::mapToResponse);
@@ -232,7 +234,7 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
         Specification<WorkshopSession> spec = Specification
                 .where(WorkshopSessionSpecification.hasTemplateId(templateId))
                 .and(WorkshopSessionSpecification.hasStatus(SessionStatus.SCHEDULED))
-                .and(WorkshopSessionSpecification.hasStartTimeAfter(LocalDateTime.now()));
+                .and(WorkshopSessionSpecification.hasStartTimeAfter(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH))));
         return workshopSessionRepository.findAll(spec, pageable).map(this::mapToResponse);
     }
 
@@ -309,7 +311,7 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
 
         // 5. Update fields if provided
         if (request.getStartTime() != null) {
-            if (request.getStartTime().isBefore(LocalDateTime.now())) {
+            if (request.getStartTime().isBefore(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))) {
                 throw new BadRequestException("Start time must be in the future");
             }
             session.setStartTime(request.getStartTime());
@@ -365,7 +367,7 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
                 throw new BadRequestException("Cannot start the session because no tourists are registered.");
             }
 
-            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime now = LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH));
             LocalDateTime minAllowableStart = session.getStartTime().minusMinutes(30);
             LocalDateTime maxAllowableStart = session.getStartTime().plusMinutes(30);
 
@@ -378,7 +380,7 @@ public class WorkshopSessionServiceImpl implements WorkshopSessionService {
                 throw new BadRequestException("Can only update status to COMPLETED if current status is ONGOING. Current status: " + session.getStatus());
             }
 
-            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime now = LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH));
             LocalDateTime minAllowableEnd = session.getEndTime().minusMinutes(30);
             LocalDateTime maxAllowableEnd = session.getEndTime().plusMinutes(30);
 
