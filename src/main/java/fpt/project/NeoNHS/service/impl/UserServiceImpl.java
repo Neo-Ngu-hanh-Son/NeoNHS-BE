@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.constants.PaginationConstants;
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.auth.UpdateUserProfileRequest;
 import fpt.project.NeoNHS.dto.request.kyc.KycRequest;
 import fpt.project.NeoNHS.dto.response.admin.UserStatsResponse;
@@ -29,6 +30,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.Normalizer;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.Collections;
@@ -306,7 +309,7 @@ public class UserServiceImpl implements UserService {
                 throw new BadRequestException("Reason is required when banning a user");
             }
             user.setBanReason(reason);
-            user.setBannedAt(java.time.LocalDateTime.now());
+            user.setBannedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         } else {
             user.setBanReason(null);
             user.setBannedAt(null);

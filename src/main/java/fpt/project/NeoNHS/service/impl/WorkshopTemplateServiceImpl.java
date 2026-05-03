@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.workshop.CreateWorkshopTemplateRequest;
 import fpt.project.NeoNHS.dto.request.workshop.UpdateWorkshopTemplateRequest;
 
@@ -29,6 +30,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -544,7 +546,7 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
         template.setStatus(WorkshopStatus.ACTIVE);
         template.setIsPublished(false);
         template.setReviewedBy(admin.getId());
-        template.setReviewedAt(LocalDateTime.now());
+        template.setReviewedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
 
         // Set admin note (optional)
         template.setAdminNote(adminNote);
@@ -580,7 +582,7 @@ public class WorkshopTemplateServiceImpl implements WorkshopTemplateService {
         template.setIsPublished(false);
         template.setAdminNote(adminNote);
         template.setReviewedBy(admin.getId());
-        template.setReviewedAt(LocalDateTime.now());
+        template.setReviewedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
 
         // 6. Save and return
         WorkshopTemplate rejectedTemplate = workshopTemplateRepository.save(template);

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import fpt.project.NeoNHS.config.OpenAiConfig;
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.document.ChatMessage;
 import fpt.project.NeoNHS.document.KnowledgeDocument;
 import fpt.project.NeoNHS.enums.KnowledgeTypeStatus;
@@ -42,6 +43,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -430,7 +432,7 @@ public class AiChatServiceImpl implements AiChatService {
         var template = templateOpt.get();
         var sessions = workshopSessionRepository.findAll().stream()
                 .filter(s -> s.getWorkshopTemplate().getId().equals(template.getId())
-                        && s.getStartTime().isAfter(LocalDateTime.now())
+                        && s.getStartTime().isAfter(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                         && s.getStatus() == SessionStatus.SCHEDULED
                         && s.getDeletedAt() == null)
                 .limit(5)

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import fpt.project.NeoNHS.config.OpenAiConfig;
 import fpt.project.NeoNHS.constants.PointHistoryAudioConstants;
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.point.historyAudio.*;
 import fpt.project.NeoNHS.dto.request.point.CreateMultiplePointHistoryAudioRequest;
 import fpt.project.NeoNHS.dto.request.point.CreatePointHistoryAudio;
@@ -40,6 +41,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 
 @Service
@@ -153,7 +155,7 @@ public class PointHistoryAudioServiceImpl implements PointHistoryAudioService {
         }
         PointHistoryAudio entity = pointHistoryAudioRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException("PointHistoryAudio", "id", id));
-        entity.setDeletedAt(LocalDateTime.now());
+        entity.setDeletedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         pointHistoryAudioRepository.save(entity);
     }
 

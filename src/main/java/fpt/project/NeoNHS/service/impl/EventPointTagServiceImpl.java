@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.event.EventPointTagRequest;
 import fpt.project.NeoNHS.dto.response.event.EventPointTagResponse;
 import fpt.project.NeoNHS.entity.EventPointTag;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -90,7 +92,7 @@ public class EventPointTagServiceImpl implements EventPointTagService {
         var user = getCurrentUser();
         EventPointTag tag = tagRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("EventPointTag not found with id: " + id));
-        tag.setDeletedAt(LocalDateTime.now());
+        tag.setDeletedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         tag.setDeletedBy(user.getId());
         tagRepository.save(tag);
     }

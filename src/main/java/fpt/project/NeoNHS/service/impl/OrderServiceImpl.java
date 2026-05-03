@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.constants.NotificationMessages;
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.order.CreateOrderRequest;
 import fpt.project.NeoNHS.entity.*;
 import fpt.project.NeoNHS.enums.*;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -84,7 +86,7 @@ public class OrderServiceImpl implements OrderService {
                 throw new BadRequestException("Some vouchers not found");
             }
 
-            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime now = LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH));
 
             for (UserVoucher userVoucher : userVouchers) {
                 if (!userVoucher.getUser().getId().equals(user.getId())) {
@@ -225,7 +227,7 @@ public class OrderServiceImpl implements OrderService {
                 .order(order)
                 .amount(finalAmount)
                 .paymentGateway("PAYOS_" + orderCode)
-                .transactionDate(LocalDateTime.now())
+                .transactionDate(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                 .status(TransactionStatus.PENDING)
                 .description(description)
                 .currency("VND")
@@ -315,7 +317,7 @@ public class OrderServiceImpl implements OrderService {
                         .ticketType(type)
                         .ticketCode(generateTicketCode())
                         .qrCode(UUID.randomUUID().toString())
-                        .issueDate(LocalDateTime.now())
+                        .issueDate(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                         .expiryDate(expiryDate)
                         .build();
                 ticketRepository.save(ticket);
@@ -364,7 +366,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public void cancelExpiredOrders() {
         // Find all transactions that are PENDING and older than 10 minutes
-        LocalDateTime tenMinutesAgo = LocalDateTime.now().minusMinutes(10);
+        LocalDateTime tenMinutesAgo = LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)).minusMinutes(10);
         List<Transaction> expiredTransactions = transactionRepository.findByStatusAndTransactionDateBefore(TransactionStatus.PENDING, tenMinutesAgo);
 
         for (Transaction transaction : expiredTransactions) {

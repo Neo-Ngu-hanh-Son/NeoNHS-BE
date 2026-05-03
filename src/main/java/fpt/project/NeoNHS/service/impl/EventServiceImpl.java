@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.constants.NotificationMessages;
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.event.CreateEventRequest;
 import fpt.project.NeoNHS.dto.request.event.EventFilterRequest;
 import fpt.project.NeoNHS.dto.request.event.UpdateEventRequest;
@@ -29,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -233,7 +235,7 @@ public class EventServiceImpl implements EventService {
             throw new BadRequestException("Event is already deleted");
         }
 
-        event.setDeletedAt(LocalDateTime.now());
+        event.setDeletedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         event.setDeletedBy(deletedBy);
         eventRepository.save(event);
     }

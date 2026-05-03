@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.tasks;
 
 import fpt.project.NeoNHS.constants.BlogConstants;
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.service.BlogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 
 @Component
@@ -22,7 +24,7 @@ public class BlogViewSyncTask {
     @Scheduled(fixedRate = 60000 * 15)
     @Transactional
     public void syncViewsToDb() {
-        System.out.println("Starting BlogViewSyncTask at " + LocalDateTime.now());
+        System.out.println("Starting BlogViewSyncTask at " + LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         Set<String> keys = redisTemplate.keys(BlogConstants.BLOG_VIEW_COUNT_KEY_PREFIX + "*");
         if (keys == null || keys.isEmpty()) {
             return;

@@ -82,8 +82,8 @@
 //    private CreateWorkshopSessionRequest buildValidCreateRequest() {
 //        CreateWorkshopSessionRequest request = new CreateWorkshopSessionRequest();
 //        request.setWorkshopTemplateId(templateId);
-//        request.setStartTime(LocalDateTime.now().plusDays(1));
-//        request.setEndTime(LocalDateTime.now().plusDays(1).plusHours(2));
+//        request.setStartTime(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)).plusDays(1));
+//        request.setEndTime(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)).plusDays(1).plusHours(2));
 //        request.setPrice(new BigDecimal("49.99"));
 //        request.setMaxParticipants(20);
 //        return request;
@@ -91,8 +91,8 @@
 //
 //    private UpdateWorkshopSessionRequest buildValidUpdateRequest() {
 //        UpdateWorkshopSessionRequest request = new UpdateWorkshopSessionRequest();
-//        request.setStartTime(LocalDateTime.now().plusDays(2));
-//        request.setEndTime(LocalDateTime.now().plusDays(2).plusHours(3));
+//        request.setStartTime(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)).plusDays(2));
+//        request.setEndTime(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)).plusDays(2).plusHours(3));
 //        request.setPrice(new BigDecimal("59.99"));
 //        request.setMaxParticipants(25);
 //        return request;
@@ -304,9 +304,9 @@
 //        @WithMockUser(roles = "VENDOR")
 //        void utcid01_validBatchRequest_shouldReturn201() throws Exception {
 //            List<CreateWorkshopSessionRequest> requests = Arrays.asList(
-//                    buildValidCreateRequest(LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(1).plusHours(2)),
-//                    buildValidCreateRequest(LocalDateTime.now().plusDays(2), LocalDateTime.now().plusDays(2).plusHours(2)),
-//                    buildValidCreateRequest(LocalDateTime.now().plusDays(3), LocalDateTime.now().plusDays(3).plusHours(2))
+//                    buildValidCreateRequest(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)).plusDays(1), LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)).plusDays(1).plusHours(2)),
+//                    buildValidCreateRequest(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)).plusDays(2), LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)).plusDays(2).plusHours(2)),
+//                    buildValidCreateRequest(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)).plusDays(3), LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)).plusDays(3).plusHours(2))
 //            );
 //
 //            List<WorkshopSessionResponse> responses = Arrays.asList(

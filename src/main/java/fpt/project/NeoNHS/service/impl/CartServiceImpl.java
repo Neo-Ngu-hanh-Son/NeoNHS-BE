@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.cart.AddToCartRequest;
 import fpt.project.NeoNHS.dto.request.cart.CheckoutRequest;
 import fpt.project.NeoNHS.dto.request.cart.UpdateCartItemRequest;
@@ -26,6 +27,8 @@ import fpt.project.NeoNHS.service.CartService;
 import fpt.project.NeoNHS.enums.VoucherType;
 import fpt.project.NeoNHS.service.VoucherService;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+
 import fpt.project.NeoNHS.entity.Event;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -371,7 +374,7 @@ public class CartServiceImpl implements CartService {
                 .invalidVouchers(classification.getInvalidVouchers())
                 .discountValue(discountValue)
                 .finalTotalPrice(finalTotalPrice)
-                .transactionDate(LocalDateTime.now())
+                .transactionDate(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                 .appliedVoucher(appliedVoucherResponse)
                 .build();
     }

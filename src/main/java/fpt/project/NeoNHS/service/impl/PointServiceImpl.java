@@ -6,6 +6,7 @@ import fpt.project.NeoNHS.entity.ReviewImage;
 import fpt.project.NeoNHS.exception.BadRequestException;
 
 import fpt.project.NeoNHS.constants.PaginationConstants;
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.event.EventFilterRequest;
 import fpt.project.NeoNHS.dto.request.point.PointRequest;
 import fpt.project.NeoNHS.dto.response.point.MapPointResponse;
@@ -33,6 +34,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -154,7 +156,7 @@ public class PointServiceImpl implements PointService {
             throw new RuntimeException("Point is already deleted");
         }
 
-        point.setDeletedAt(java.time.LocalDateTime.now());
+        point.setDeletedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         point.setDeletedBy(userId);
 
         pointRepository.save(point);
@@ -254,7 +256,7 @@ public class PointServiceImpl implements PointService {
         var points = pointRepository.findAll(PointSpecification.withFilters(null, true));
         var eventFilter = EventFilterRequest.builder()
                 .status(EventStatus.UPCOMING)
-                .startDate(LocalDate.from(LocalDateTime.now()))
+                .startDate(LocalDate.from(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH))))
                 .includeDeleted(false)
                 .build();
         var events = eventRepository.findAll(EventSpecification.withFilters(eventFilter));

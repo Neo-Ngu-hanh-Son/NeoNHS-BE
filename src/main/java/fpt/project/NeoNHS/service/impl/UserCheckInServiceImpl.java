@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.constants.NotificationMessages;
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.constants.GeoConstants;
 import fpt.project.NeoNHS.dto.request.usercheckin.CheckinImageRequest;
 import fpt.project.NeoNHS.dto.request.usercheckin.UpdateCheckinImageCaptionRequest;
@@ -32,6 +33,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -75,7 +77,7 @@ public class UserCheckInServiceImpl implements UserCheckInService {
                 .earnedPoints(checkinPoint.getRewardPoints())
                 .checkinPoint(checkinPoint)
                 .user(user)
-                .checkinTime(LocalDateTime.now())
+                .checkinTime(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                 .build();
 
         if (request.getCheckinImageRequest() == null || request.getCheckinImageRequest().isEmpty()) {

@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.constants.EmailTemplate;
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.admin.BanVendorRequest;
 import fpt.project.NeoNHS.dto.request.admin.CreateVendorByAdminRequest;
 import fpt.project.NeoNHS.dto.request.admin.UpdateVendorByAdminRequest;
@@ -31,6 +32,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -262,7 +264,7 @@ public class AdminVendorManagementServiceImpl implements AdminVendorManagementSe
         user.setIsBanned(true);
         user.setIsActive(false);
         user.setBanReason(request.getReason());
-        user.setBannedAt(LocalDateTime.now());
+        user.setBannedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         userRepository.save(user);
 
         log.info("Vendor banned successfully: {} - Reason: {}", user.getEmail(), request.getReason());

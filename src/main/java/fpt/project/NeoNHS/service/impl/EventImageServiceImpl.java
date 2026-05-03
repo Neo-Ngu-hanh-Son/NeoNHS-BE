@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.response.event.EventImageResponse;
 import fpt.project.NeoNHS.dto.response.upload.ImageUploadResponse;
 import fpt.project.NeoNHS.entity.Event;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -76,7 +78,7 @@ public class EventImageServiceImpl implements EventImageService {
             throw new BadRequestException("Cannot delete the current thumbnail image. Please set another image as thumbnail first.");
         }
 
-        image.setDeletedAt(LocalDateTime.now());
+        image.setDeletedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         eventImageRepository.save(image);
     }
 
@@ -91,7 +93,7 @@ public class EventImageServiceImpl implements EventImageService {
             if (Boolean.TRUE.equals(image.getIsThumbnail())) {
                 throw new BadRequestException("Cannot delete image with ID " + image.getId() + " because it is the current thumbnail.");
             }
-            image.setDeletedAt(LocalDateTime.now());
+            image.setDeletedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         }
         eventImageRepository.saveAll(images);
     }

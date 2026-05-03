@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.voucher.CreateVoucherRequest;
 import fpt.project.NeoNHS.dto.request.voucher.UpdateVoucherRequest;
 import fpt.project.NeoNHS.dto.request.voucher.VoucherFilterRequest;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -93,7 +95,7 @@ public class VoucherServiceImpl implements VoucherService {
         Voucher voucher = getActiveVoucher(id);
         validateAdminPlatformAccess(voucher);
         UserPrincipal principal = getCurrentUserPrincipal();
-        voucher.setDeletedAt(LocalDateTime.now());
+        voucher.setDeletedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         voucher.setDeletedBy(principal.getId());
         voucher.setStatus(VoucherStatus.INACTIVE);
         voucherRepository.save(voucher);
@@ -187,7 +189,7 @@ public class VoucherServiceImpl implements VoucherService {
         Voucher voucher = getActiveVoucher(id);
         validateVendorOwnership(voucher);
         UserPrincipal principal = getCurrentUserPrincipal();
-        voucher.setDeletedAt(LocalDateTime.now());
+        voucher.setDeletedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         voucher.setDeletedBy(principal.getId());
         voucher.setStatus(VoucherStatus.INACTIVE);
         voucherRepository.save(voucher);
@@ -232,7 +234,7 @@ public class VoucherServiceImpl implements VoucherService {
     @Transactional(readOnly = true)
     public Page<VoucherResponse> getAvailablePlatformVouchers(VoucherFilterRequest filter, Pageable pageable) {
         filter.setScope(VoucherScope.PLATFORM);
-        var spec = VoucherSpecification.withAvailableFilters(filter, LocalDateTime.now());
+        var spec = VoucherSpecification.withAvailableFilters(filter, LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         Page<VoucherResponse> response = voucherRepository.findAll(spec, pageable)
                 .map(VoucherResponse::fromEntity);
         
@@ -243,7 +245,7 @@ public class VoucherServiceImpl implements VoucherService {
     @Override
     @Transactional(readOnly = true)
     public Page<VoucherResponse> getAvailableVendorVouchers(UUID vendorId, VoucherFilterRequest filter, Pageable pageable) {
-        var spec = VoucherSpecification.withAvailableVendorFilters(vendorId, filter, LocalDateTime.now());
+        var spec = VoucherSpecification.withAvailableVendorFilters(vendorId, filter, LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         Page<VoucherResponse> response = voucherRepository.findAll(spec, pageable)
                 .map(VoucherResponse::fromEntity);
         
@@ -255,7 +257,7 @@ public class VoucherServiceImpl implements VoucherService {
     @Transactional(readOnly = true)
     public Page<VoucherResponse> getAvailableAllVendorVouchers(VoucherFilterRequest filter, Pageable pageable) {
         filter.setScope(VoucherScope.VENDOR);
-        var spec = VoucherSpecification.withAvailableFilters(filter, LocalDateTime.now());
+        var spec = VoucherSpecification.withAvailableFilters(filter, LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         Page<VoucherResponse> response = voucherRepository.findAll(spec, pageable)
                 .map(VoucherResponse::fromEntity);
         
@@ -273,10 +275,10 @@ public class VoucherServiceImpl implements VoucherService {
         if (voucher.getStatus() != VoucherStatus.ACTIVE) {
             throw new BadRequestException("Voucher is not active");
         }
-        if (voucher.getEndDate() != null && voucher.getEndDate().isBefore(LocalDateTime.now())) {
+        if (voucher.getEndDate() != null && voucher.getEndDate().isBefore(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))) {
             throw new BadRequestException("Voucher has expired");
         }
-        if (voucher.getStartDate() != null && voucher.getStartDate().isAfter(LocalDateTime.now())) {
+        if (voucher.getStartDate() != null && voucher.getStartDate().isAfter(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))) {
             throw new BadRequestException("Voucher is not yet available");
         }
         if (voucher.getUsageLimit() != null && voucher.getUsageCount() >= voucher.getUsageLimit()) {
@@ -305,7 +307,7 @@ public class VoucherServiceImpl implements VoucherService {
         UserVoucher userVoucher = UserVoucher.builder()
                 .user(currentUser)
                 .voucher(voucher)
-                .obtainedDate(LocalDateTime.now())
+                .obtainedDate(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                 .isUsed(false)
                 .build();
 
@@ -366,12 +368,12 @@ public class VoucherServiceImpl implements VoucherService {
             throw new BadRequestException("Voucher is no longer active");
         }
 
-        if (voucher.getEndDate() != null && voucher.getEndDate().isBefore(LocalDateTime.now())) {
+        if (voucher.getEndDate() != null && voucher.getEndDate().isBefore(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))) {
             throw new BadRequestException("Voucher has expired");
         }
 
         userVoucher.setIsUsed(true);
-        userVoucher.setUsedDate(LocalDateTime.now());
+        userVoucher.setUsedDate(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
 
         return UserVoucherRespone.fromEntity(userVoucherRepository.save(userVoucher));
     }
@@ -511,7 +513,7 @@ public class VoucherServiceImpl implements VoucherService {
         List<UserVoucher> userVouchers = userVoucherRepository.findByUser_IdAndIsUsedFalse(user.getId());
         List<UserVoucherRespone> valid = new ArrayList<>();
         List<UserVoucherRespone> invalid = new ArrayList<>();
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH));
 
         boolean cartHasTicket   = cartItems.stream().anyMatch(i -> i.getTicketCatalog() != null);
         boolean cartHasWorkshop = cartItems.stream().anyMatch(i -> i.getWorkshopSession() != null);
