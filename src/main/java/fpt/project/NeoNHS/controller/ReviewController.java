@@ -6,6 +6,7 @@ import fpt.project.NeoNHS.dto.request.review.UpdateReviewRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.PagedResponse;
 import fpt.project.NeoNHS.dto.response.review.GenericReviewResponseWrapper;
+import fpt.project.NeoNHS.dto.response.review.ReviewEligibilityResponse;
 import fpt.project.NeoNHS.dto.response.review.ReviewResponse;
 import fpt.project.NeoNHS.entity.User;
 import fpt.project.NeoNHS.enums.ReviewTypeFlagEnum;
@@ -101,6 +102,21 @@ public class ReviewController {
 
         var response = reviewService.getReviews(reviewTypeId, reviewTypeFlg, buildReviewPageable(page, size, sortBy, sortDir));
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Reviews retrieved successfully", response));
+    }
+
+    @GetMapping("/eligibility")
+    @PreAuthorize("hasAuthority('ROLE_TOURIST')")
+    @Operation(summary = "Check if user is eligible to write a review")
+    public ResponseEntity<ApiResponse<ReviewEligibilityResponse>> checkEligibility(
+            Principal principal,
+            @RequestParam(required = true) UUID reviewTypeId,
+            @RequestParam(required = true) ReviewTypeFlagEnum reviewTypeFlg) {
+
+        User user = userRepository.findByEmail(principal.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", principal.getName()));
+
+        var response = reviewService.checkEligibility(user.getId(), reviewTypeId, reviewTypeFlg);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, "Eligibility checked", response));
     }
 
     private static PageRequest buildReviewPageable(int page, int size, String sortBy, String sortDir) {

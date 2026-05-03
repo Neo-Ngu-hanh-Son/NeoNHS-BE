@@ -566,7 +566,7 @@ public class VoucherServiceImpl implements VoucherService {
             VoucherClassificationResult classification) {
 
         // Must be in the valid list
-        UserVoucherRespone voucherResponse = classification.getValidVouchers().stream()
+        classification.getValidVouchers().stream()
                 .filter(v -> v.getUserVoucherId().equals(userVoucherId))
                 .findFirst()
                 .orElseThrow(() -> new BadRequestException("Selected voucher is not applicable for this order"));

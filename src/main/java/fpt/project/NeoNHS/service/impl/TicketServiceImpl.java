@@ -13,15 +13,18 @@ import fpt.project.NeoNHS.repository.TicketRepository;
 import fpt.project.NeoNHS.security.UserPrincipal;
 import fpt.project.NeoNHS.service.TicketService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TicketServiceImpl implements TicketService {
 
     private final TicketRepository ticketRepository;
@@ -112,5 +115,19 @@ public class TicketServiceImpl implements TicketService {
             throw new UnauthorizedException("Invalid authentication principal");
         }
         return (UserPrincipal) auth.getPrincipal();
+    }
+
+    @Override
+    @Transactional
+    public void expireOutdatedTickets() {
+        int updatedCount = ticketRepository.updateExpiredTickets(
+                TicketStatus.EXPIRED,
+                TicketStatus.ACTIVE,
+                LocalDateTime.now()
+        );
+        
+        if (updatedCount > 0) {
+            log.info("Successfully updated {} tickets to EXPIRED status.", updatedCount);
+        }
     }
 }

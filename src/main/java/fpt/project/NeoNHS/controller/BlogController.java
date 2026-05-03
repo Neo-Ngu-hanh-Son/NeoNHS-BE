@@ -82,7 +82,7 @@ public class BlogController {
     }
 
     @PostMapping("/{id}/view")
-    public ResponseEntity<ApiResponse> incrementViewCount(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<String>> incrementViewCount(@PathVariable UUID id) {
         blogService.incrementViewCount(id);
         return ResponseEntity.ok(ApiResponse.success("Ok"));
     }

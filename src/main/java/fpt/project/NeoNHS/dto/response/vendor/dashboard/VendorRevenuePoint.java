@@ -13,5 +13,6 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class VendorRevenuePoint {
     private String label;
-    private BigDecimal revenue;
+    private BigDecimal revenue; // Tổng tiền transaction
+    private BigDecimal netAmount; // Tiền vendor thực nhận (sau commission)
 }

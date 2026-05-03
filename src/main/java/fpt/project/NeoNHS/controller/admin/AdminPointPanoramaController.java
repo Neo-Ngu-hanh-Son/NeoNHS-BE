@@ -1,10 +1,8 @@
 package fpt.project.NeoNHS.controller.admin;
 
-import fpt.project.NeoNHS.dto.request.point.PanoramaHotSpotRequest;
 import fpt.project.NeoNHS.dto.request.point.PanoramaRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.point.LinkingPanoramaResponse;
-import fpt.project.NeoNHS.dto.response.point.PanoramaHotSpotResponse;
 import fpt.project.NeoNHS.dto.response.point.PointPanoramaResponse;
 import fpt.project.NeoNHS.service.PanoramaService;
 import io.swagger.v3.oas.annotations.Operation;

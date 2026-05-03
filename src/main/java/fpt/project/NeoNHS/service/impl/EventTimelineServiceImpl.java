@@ -18,15 +18,12 @@ import fpt.project.NeoNHS.repository.EventPointTagRepository;
 import fpt.project.NeoNHS.repository.EventRepository;
 import fpt.project.NeoNHS.repository.EventTimelineRepository;
 import fpt.project.NeoNHS.service.EventTimelineService;
-import fpt.project.NeoNHS.service.ImageUploadService;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.*;
 
 @Service
@@ -37,7 +34,6 @@ public class EventTimelineServiceImpl implements EventTimelineService {
     private final EventPointRepository pointRepository;
     private final EventRepository eventRepository;
     private final EventPointTagRepository pointTagRepository;
-    private final ImageUploadService imageUploadService;
 
     @Override
     @Transactional

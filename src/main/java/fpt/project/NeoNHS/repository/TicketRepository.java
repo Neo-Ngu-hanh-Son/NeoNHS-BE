@@ -1,11 +1,15 @@
 package fpt.project.NeoNHS.repository;
 
 import fpt.project.NeoNHS.entity.Ticket;
+import fpt.project.NeoNHS.enums.TicketStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -25,4 +29,23 @@ public interface TicketRepository extends JpaRepository<Ticket, UUID> {
         ORDER BY t.createdAt DESC
     """)
     List<Ticket> findRecentSold(Pageable pageable);
+
+    @Modifying
+    @Query("UPDATE Ticket t SET t.status = :expiredStatus WHERE t.status = :activeStatus AND t.expiryDate < :now")
+    int updateExpiredTickets(
+            @Param("expiredStatus") TicketStatus expiredStatus,
+            @Param("activeStatus") TicketStatus activeStatus,
+            @Param("now") LocalDateTime now
+    );
+
+    @Query("""
+        SELECT COUNT(t) > 0 FROM Ticket t
+        JOIN t.orderDetail od
+        JOIN od.order o
+        JOIN t.workshopSession ws
+        WHERE o.user.id = :userId
+        AND ws.workshopTemplate.id = :workshopId
+        AND t.status = 'USED'
+    """)
+    boolean hasUserUsedTicketForWorkshop(@org.springframework.data.repository.query.Param("userId") UUID userId, @org.springframework.data.repository.query.Param("workshopId") UUID workshopId);
 }

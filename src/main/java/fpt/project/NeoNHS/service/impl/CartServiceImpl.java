@@ -13,15 +13,12 @@ import fpt.project.NeoNHS.entity.Cart;
 import fpt.project.NeoNHS.entity.CartItem;
 import fpt.project.NeoNHS.entity.TicketCatalog;
 import fpt.project.NeoNHS.entity.User;
-import fpt.project.NeoNHS.entity.UserVoucher;
-import fpt.project.NeoNHS.entity.Voucher;
 import fpt.project.NeoNHS.entity.WorkshopSession;
 import fpt.project.NeoNHS.exception.BadRequestException;
 import fpt.project.NeoNHS.repository.CartItemRepository;
 import fpt.project.NeoNHS.repository.CartRepository;
 import fpt.project.NeoNHS.repository.TicketCatalogRepository;
 import fpt.project.NeoNHS.repository.UserRepository;
-import fpt.project.NeoNHS.repository.UserVoucherRepository;
 import fpt.project.NeoNHS.repository.WorkshopSessionRepository;
 import fpt.project.NeoNHS.service.CartService;
 import fpt.project.NeoNHS.enums.VoucherType;
@@ -48,7 +45,6 @@ public class CartServiceImpl implements CartService {
     private final CartItemRepository cartItemRepository;
     private final UserRepository userRepository;
     private final TicketCatalogRepository ticketCatalogRepository;
-    private final UserVoucherRepository userVoucherRepository;
     private final WorkshopSessionRepository workshopSessionRepository;
     private final AvailabilityValidator avai;
     private final VoucherService voucherService;
@@ -106,8 +102,9 @@ public class CartServiceImpl implements CartService {
                 cartItemRepository.save(newItem);
             }
         } else {
-            WorkshopSession workshopSession = workshopSessionRepository.findById(request.getWorkshopSessionId())
-                    .orElseThrow(() -> new BadRequestException("Workshop Session not found"));
+            WorkshopSession workshopSession = workshopSessionRepository
+                    .findByIdAndDeletedAtIsNull(request.getWorkshopSessionId())
+                    .orElseThrow(() -> new BadRequestException("Workshop Session not found or is no longer available"));
 
             Optional<CartItem> existingItem = cart.getCartItems().stream()
                     .filter(item -> item.getWorkshopSession() != null

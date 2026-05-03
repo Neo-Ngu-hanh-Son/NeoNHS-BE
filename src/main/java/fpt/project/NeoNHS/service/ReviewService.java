@@ -4,6 +4,7 @@ import fpt.project.NeoNHS.dto.request.review.CreateReviewRequest;
 import fpt.project.NeoNHS.dto.request.review.UpdateReviewRequest;
 import fpt.project.NeoNHS.dto.response.PagedResponse;
 import fpt.project.NeoNHS.dto.response.review.GenericReviewResponseWrapper;
+import fpt.project.NeoNHS.dto.response.review.ReviewEligibilityResponse;
 import fpt.project.NeoNHS.dto.response.review.ReviewResponse;
 import fpt.project.NeoNHS.enums.ReviewTypeFlagEnum;
 import org.springframework.data.domain.Pageable;
@@ -17,5 +18,6 @@ public interface ReviewService {
     PagedResponse<ReviewResponse> getReviewsForWorkshopTemplate(UUID workshopTemplateId, Pageable pageable);
 
     GenericReviewResponseWrapper getReviews(UUID pointId, ReviewTypeFlagEnum flag, Pageable pageable);
-
+    
+    ReviewEligibilityResponse checkEligibility(UUID userId, UUID reviewTypeId, ReviewTypeFlagEnum flag);
 }

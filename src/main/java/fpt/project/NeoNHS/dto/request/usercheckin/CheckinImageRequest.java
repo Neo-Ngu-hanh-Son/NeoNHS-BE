@@ -1,6 +1,5 @@
 package fpt.project.NeoNHS.dto.request.usercheckin;
 
-import jakarta.persistence.Column;
 import lombok.Data;
 
 import java.util.UUID;

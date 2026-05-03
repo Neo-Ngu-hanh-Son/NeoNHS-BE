@@ -5,8 +5,6 @@ import fpt.project.NeoNHS.dto.request.event.EventPointTagRequest;
 import fpt.project.NeoNHS.dto.response.event.EventPointTagResponse;
 import fpt.project.NeoNHS.entity.EventPointTag;
 import fpt.project.NeoNHS.entity.User;
-import fpt.project.NeoNHS.enums.UserRole;
-import fpt.project.NeoNHS.exception.BadRequestException;
 import fpt.project.NeoNHS.exception.ResourceNotFoundException;
 import fpt.project.NeoNHS.repository.EventPointTagRepository;
 import fpt.project.NeoNHS.repository.UserRepository;

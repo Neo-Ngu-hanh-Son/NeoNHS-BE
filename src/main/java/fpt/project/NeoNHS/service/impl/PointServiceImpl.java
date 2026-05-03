@@ -1,7 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.dto.response.review.ReviewImageResponse;
-import fpt.project.NeoNHS.entity.Review;
 import fpt.project.NeoNHS.entity.ReviewImage;
 import fpt.project.NeoNHS.exception.BadRequestException;
 
@@ -18,9 +17,7 @@ import fpt.project.NeoNHS.entity.Point;
 import fpt.project.NeoNHS.enums.EventStatus;
 import fpt.project.NeoNHS.helpers.AuthHelper;
 import fpt.project.NeoNHS.repository.*;
-import fpt.project.NeoNHS.service.PanoramaService;
 import fpt.project.NeoNHS.service.PointService;
-import fpt.project.NeoNHS.service.ReviewService;
 import fpt.project.NeoNHS.specification.EventSpecification;
 import fpt.project.NeoNHS.specification.PointSpecification;
 import jakarta.transaction.Transactional;
@@ -36,7 +33,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -44,7 +40,6 @@ public class PointServiceImpl implements PointService {
 
     private final PointRepository pointRepository;
     private final AttractionRepository attractionRepository;
-    private final PanoramaService panoramaService;
     private final EventRepository eventRepository;
     private final WorkshopTemplateRepository workshopTemplateRepository;
     private final UserCheckInRepository userCheckInRepository;

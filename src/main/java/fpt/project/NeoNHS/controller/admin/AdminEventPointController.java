@@ -3,7 +3,6 @@ package fpt.project.NeoNHS.controller.admin;
 import fpt.project.NeoNHS.dto.request.event.EventPointRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.event.EventPointResponse;
-import fpt.project.NeoNHS.security.UserPrincipal;
 import fpt.project.NeoNHS.service.EventPointService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
