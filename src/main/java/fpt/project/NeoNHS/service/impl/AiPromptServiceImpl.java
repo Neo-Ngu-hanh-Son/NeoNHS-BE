@@ -63,36 +63,41 @@ public class AiPromptServiceImpl implements AiPromptService {
             3. VERIFY CONTEXT BEFORE DECLINING: If a Tool returns empty/null, DO NOT immediately apologize. You MUST check the provided Context first. If the Context contains the answer, use it.
             4. NO DATA RESPONSE: If the Tool returns nothing AND there is no relevant information in the Context, ONLY THEN you MUST reply with the equivalent of: "Dạ, hiện tại hệ thống chưa cập nhật thông tin này ạ." TRANSLATED into the user's language.
             5. FRESH DATA OVER HISTORY: ALWAYS prioritize Function Calling tools for specific entities over conversation history.
+            6. UUID OVER NAMES: Some items (workshops/events) have SIMILAR NAMES. You MUST use the exact workshopTemplateId or eventId from the 'ID Table' provided in this prompt. NEVER search by name if you already have the ID.
             </strict_data_policy>
 
             <tool_rules>
             1. CHIT-CHAT: DO NOT use tools for basic greetings.
-            2. PRICING: Always list ALL available ticket types clearly.
+            2. PRICING & DATA: Always list ALL available options clearly.
             3. UI CARDS (DATA-DRIVEN UI): When you call search tools, the backend will automatically render UI Cards.
             - You MUST NOT generate Markdown formatting for images.
-            - You ONLY need to write 1-2 short sentences introducing the results. Ensure this introduction is TRANSLATED to the user's language.
+            - You SHOULD write 1-2 friendly sentences introducing the results and a short conclusion or follow-up question. Ensure this is TRANSLATED to the user's language.
+            - DO NOT skip the introductory sentence.
             </tool_rules>
 
             <booking_workflow>
-            TWO-PHASE MANDATORY WORKFLOW — NEVER SKIP ANY PHASE:
+            STRICT TWO-PHASE MANDATORY WORKFLOW FOR BOOKING/TICKETS — NEVER SKIP ANY PHASE:
 
             *** PHASE 1 — DISCOVERY & SELECTION: ***
-            1. Call getWorkshopSessions or getTicketPrices.
-            2. Display ALL options clearly to the user with indices (e.g. "Buổi 1: ...", "Buổi 2: ...").
-            3. ASK the user: "Bạn muốn đặt buổi/loại vé nào?"
-            4. STOP HERE. Wait for user input.
-
-            *** PHASE 2 — BOOKING (user picks an option): ***
-            1. Use the stable 'workshopTemplateId' or 'eventId' from the ID Table or search result.
-            2. Map the user's choice (e.g. "buổi 1") to a zero-based index (e.g. 0).
-            3. Call addWorkshopToCart(workshopTemplateId, sessionIndex) or addEventTicketToCart(eventId, ticketIndex).
-            4. NEVER use transient UUIDs for sessions or tickets. ONLY use the Root ID + Index.
-
-            STRICT RULE: Even if there is only 1 option available, you MUST still ask the user to confirm before booking. NO AUTOMATIC BOOKING.
+            1. When user asks to book or find sessions, CALL getWorkshopSessions(workshopTemplateId) or getTicketPrices(eventId).
+            2. Display ALL options clearly to the user with indices (e.g. "Buổi 1: 08:00 - 10:00", "Buổi 2: 14:00 - 16:00").
+            3. ASK the user: "Bạn muốn đặt buổi nào/loại vé nào?" (or translate to their language).
+            4. YOU MUST STOP HERE. DO NOT call addWorkshopToCart yet.
             
-            CONFIRM: Upon SUCCESS → reply: "Đã thêm vào giỏ hàng thành công! Anh/chị có muốn tới My Cart để thanh toán ngay không?"
-            ERROR: If booking fails → explain the error.
+            *** PHASE 2 — BOOKING (only after user picks an option): ***
+            1. After user replies with a choice (e.g., "buổi 1", "vé người lớn"), map it to a zero-based index (e.g., 0).
+            2. Call addWorkshopToCart(workshopTemplateId, sessionIndex) or addEventTicketToCart(eventId, ticketIndex).
+            3. NEVER use transient UUIDs for sessions or tickets. ONLY use the Root ID + Index.
+
+            CRITICAL SAFETY RULE: NO AUTOMATIC BOOKING. Even if there is only 1 session available, you MUST display it and ask: "Bạn có muốn đặt buổi này không?" before proceeding to Phase 2. Jumping straight to Phase 2 is a VIOLATION.
             </booking_workflow>
+
+            <navigation_workflow>
+            DIRECT ACTION RULE: 
+            - If the user explicitly asks for directions or how to get to a place (e.g., "Hướng dẫn đường đi đến...", "Chỉ đường tới..."), you MUST call navigateToLocation immediately if you have the pointId. 
+            - DO NOT ask for confirmation before calling navigateToLocation if the user's intent is already a request for directions.
+            - If you don't have the pointId, call searchMapPoints first to find the location, then call navigateToLocation.
+            </navigation_workflow>
 
             <scope_and_routing>
             SCOPE: Marble Mountains history, local crafts, NeoNHS services, and related Da Nang tourism.
@@ -116,10 +121,28 @@ public class AiPromptServiceImpl implements AiPromptService {
         String currentPrompt = DEFAULT_SYSTEM_PROMPT;
 
         // Only use the custom SYSTEM_PROMPT if it is active
-        if (!dbPrompts.isEmpty() && dbPrompts.getFirst().isActive() && dbPrompts.getFirst().getContent() != null
-                && !dbPrompts.getFirst().getContent().isBlank()) {
-            currentPrompt = dbPrompts.getFirst().getContent();
-        } else if (dbPrompts.isEmpty()) {
+        if (!dbPrompts.isEmpty()) {
+            KnowledgeDocument dbPrompt = dbPrompts.getFirst();
+            // If the prompt in DB is different from the hardcoded default, we might want to sync or use the DB one.
+            // For development consistency, we will update the DB prompt if the code's version is newer/different,
+            // OR if the DB prompt is not active.
+            if (dbPrompt.isActive() && dbPrompt.getContent() != null && !dbPrompt.getContent().isBlank()) {
+                currentPrompt = dbPrompt.getContent();
+                
+                // OPTIONAL: If you want to FORCE the code's version over the DB (handy during dev):
+                if (!currentPrompt.equals(DEFAULT_SYSTEM_PROMPT)) {
+                    log.info("System prompt in DB differs from code. Updating DB to match code version.");
+                    dbPrompt.setContent(DEFAULT_SYSTEM_PROMPT);
+                    knowledgeRepository.save(dbPrompt);
+                    currentPrompt = DEFAULT_SYSTEM_PROMPT;
+                }
+            } else {
+                dbPrompt.setContent(DEFAULT_SYSTEM_PROMPT);
+                dbPrompt.setActive(true);
+                knowledgeRepository.save(dbPrompt);
+                currentPrompt = DEFAULT_SYSTEM_PROMPT;
+            }
+        } else {
             // Seed the prompt in the database if it doesn't exist
             KnowledgeDocument newPromptDoc = KnowledgeDocument.builder()
                     .title("AI System Prompt")

@@ -6,13 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fpt.project.NeoNHS.dto.request.cart.AddToCartRequest;
 import fpt.project.NeoNHS.enums.BlogStatus;
 import fpt.project.NeoNHS.enums.EventStatus;
-import fpt.project.NeoNHS.repository.BlogRepository;
-import fpt.project.NeoNHS.repository.EventRepository;
-import fpt.project.NeoNHS.repository.PointRepository;
-import fpt.project.NeoNHS.repository.TicketCatalogRepository;
-import fpt.project.NeoNHS.repository.UserRepository;
-import fpt.project.NeoNHS.repository.WorkshopSessionRepository;
-import fpt.project.NeoNHS.repository.WorkshopTemplateRepository;
+import fpt.project.NeoNHS.repository.*;
 import fpt.project.NeoNHS.service.AiFunctionCallingService;
 import fpt.project.NeoNHS.service.CartService;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +17,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+import static java.util.Collections.shuffle;
 
 @Service
 @RequiredArgsConstructor
@@ -235,7 +231,7 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
     // ═══════════════════════════════════════════════════════════════════
     @Override
     public String executeFunctionCall(String functionName, JsonNode args, String senderId,
-            Map<String, Object> metadata) {
+                                      Map<String, Object> metadata) {
         log.info("[AI] Executing function: {} with args: {} for user: {}", functionName, args, senderId);
         try {
             return switch (functionName) {
@@ -258,9 +254,16 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
 
     private String executeSearchWorkshops(JsonNode args, Map<String, Object> metadata) {
         String keyword = args.has("keyword") ? args.get("keyword").asText("") : "";
-        var workshops = workshopTemplateRepository.findAll().stream()
+        var allWorkshops = workshopTemplateRepository.findAll().stream()
                 .filter(w -> Boolean.TRUE.equals(w.getIsPublished()) && w.getDeletedAt() == null &&
+                        (w.getDefaultPrice() != null && w.getDefaultPrice().compareTo(java.math.BigDecimal.ZERO) > 0) &&
                         (keyword.isEmpty() || w.getName().toLowerCase().contains(keyword.toLowerCase())))
+                .collect(java.util.stream.Collectors.toList());
+
+        // Shuffle to get random 3 instead of always the same ones
+        shuffle(allWorkshops);
+
+        var workshops = allWorkshops.stream()
                 .limit(3)
                 .map(w -> Map.of(
                         "workshopTemplateId", w.getId().toString(),
@@ -271,10 +274,10 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
                         "rating", w.getAverageRating() != null ? w.getAverageRating().toString() : "0.0",
                         "imageUrl", (w.getWorkshopImages() != null && !w.getWorkshopImages().isEmpty())
                                 ? w.getWorkshopImages().stream()
-                                        .filter(img -> Boolean.TRUE.equals(img.getIsThumbnail()))
-                                        .findFirst()
-                                        .map(fpt.project.NeoNHS.entity.WorkshopImage::getImageUrl)
-                                        .orElse(w.getWorkshopImages().getFirst().getImageUrl())
+                                .filter(img -> Boolean.TRUE.equals(img.getIsThumbnail()))
+                                .findFirst()
+                                .map(fpt.project.NeoNHS.entity.WorkshopImage::getImageUrl)
+                                .orElse(w.getWorkshopImages().getFirst().getImageUrl())
                                 : ""))
                 .toList();
 
@@ -331,7 +334,8 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
     }
 
     /**
-     * Fallback: find workshop by name keyword when the AI passed a non-UUID workshopId
+     * Fallback: find workshop by name keyword when the AI passed a non-UUID
+     * workshopId
      * (e.g., "1", "2", or the workshop name itself from conversation history).
      */
     private String executeGetWorkshopSessionsByName(String keyword) {
@@ -343,23 +347,32 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
         }
 
         // Otherwise treat it as a name/keyword search
-        var matched = workshopTemplateRepository.findAll().stream()
+        var matchedList = workshopTemplateRepository.findAll().stream()
                 .filter(w -> Boolean.TRUE.equals(w.getIsPublished())
                         && w.getDeletedAt() == null
                         && w.getName().toLowerCase().contains(keyword.toLowerCase()))
-                .findFirst();
+                .toList();
 
-        if (matched.isEmpty()) {
+        if (matchedList.isEmpty()) {
             return "Không tìm thấy workshop nào với từ khóa '" + keyword + "'. "
                     + "Hãy gọi searchWorkshops để lấy danh sách workshop và workshopTemplateId chính xác.";
         }
 
+        if (matchedList.size() > 1) {
+            return "Có nhiều workshop trùng tên hoặc chứa từ khóa '" + keyword + "'. "
+                    + "Bạn PHẢI gọi searchWorkshops để lấy UUID chính xác cho workshop muốn tìm buổi học.";
+        }
+
+        var matched = matchedList.get(0);
         log.info("[AI] getWorkshopSessions name-fallback: '{}' → matched workshop '{}' (id={})",
-                keyword, matched.get().getName(), matched.get().getId());
-        return buildSessionsResponse(matched.get());
+                keyword, matched.getName(), matched.getId());
+        return buildSessionsResponse(matched);
     }
 
-    /** Shared helper: build the sessions JSON response for a resolved WorkshopTemplate. */
+    /**
+     * Shared helper: build the sessions JSON response for a resolved
+     * WorkshopTemplate.
+     */
     private String buildSessionsResponse(fpt.project.NeoNHS.entity.WorkshopTemplate template) {
         var rawSessions = workshopSessionRepository
                 .findUpcomingByTemplateId(template.getId(), LocalDateTime.now());
@@ -382,7 +395,7 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
                             : template.getDefaultPrice() + " VND");
                     sessionMap.put("availableSlots",
                             (s.getMaxParticipants() != null ? s.getMaxParticipants() : 0)
-                            - (s.getCurrentEnrolled() != null ? s.getCurrentEnrolled() : 0));
+                                    - (s.getCurrentEnrolled() != null ? s.getCurrentEnrolled() : 0));
                     return sessionMap;
                 })
                 .toList();
@@ -521,13 +534,15 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
             int index = args.has("sessionIndex") ? args.get("sessionIndex").asInt() : 0;
             int quantity = args.has("quantity") ? args.get("quantity").asInt() : 1;
 
-            if (templateIdStr.isEmpty()) return "ERROR: Thiếu workshopTemplateId.";
+            if (templateIdStr.isEmpty())
+                return "ERROR: Thiếu workshopTemplateId.";
 
             UUID templateId = UUID.fromString(templateIdStr);
             var sessions = workshopSessionRepository.findUpcomingByTemplateId(templateId, LocalDateTime.now());
 
             if (index < 0 || index >= sessions.size()) {
-                return "ERROR: Số thứ tự buổi học '" + index + "' không hợp lệ. Workshop này chỉ có " + sessions.size() + " buổi sắp tới.";
+                return "ERROR: Số thứ tự buổi học '" + index + "' không hợp lệ. Workshop này chỉ có " + sessions.size()
+                        + " buổi sắp tới.";
             }
 
             UUID sessionId = sessions.get(index).getId();
@@ -584,7 +599,6 @@ public class AiFunctionCallingServiceImpl implements AiFunctionCallingService {
             return "ERROR: " + e.getMessage();
         }
     }
-
 
     private String executeSearchBlogs(JsonNode args, Map<String, Object> metadata) {
         String keyword = args.has("keyword") ? args.get("keyword").asText("") : "";
