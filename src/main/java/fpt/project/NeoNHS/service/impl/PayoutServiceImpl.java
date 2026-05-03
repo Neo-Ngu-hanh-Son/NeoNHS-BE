@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.payout.CreatePayoutRequest;
 import fpt.project.NeoNHS.dto.response.payout.PayoutResponse;
 import fpt.project.NeoNHS.service.PayoutService;
@@ -17,6 +18,7 @@ import vn.payos.PayOS;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -113,7 +115,7 @@ public class PayoutServiceImpl implements PayoutService {
                         .approvalState((String) data.get("approvalState"))
                         .createdAt(data.get("createdAt") != null
                                 ? OffsetDateTime.parse((String) data.get("createdAt")).toLocalDateTime()
-                                : LocalDateTime.now())
+                                : LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                         .build();
 
                 return payoutResponse;
@@ -182,7 +184,7 @@ public class PayoutServiceImpl implements PayoutService {
                         .approvalState((String) data.get("approvalState"))
                         .createdAt(data.get("createdAt") != null
                                 ? OffsetDateTime.parse((String) data.get("createdAt")).toLocalDateTime()
-                                : LocalDateTime.now())
+                                : LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                         .build();
 
                 return payoutResponse;

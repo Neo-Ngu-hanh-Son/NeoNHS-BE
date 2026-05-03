@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.controller;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.payout.CreatePayoutRequest;
 import fpt.project.NeoNHS.dto.response.ApiResponse;
 import fpt.project.NeoNHS.dto.response.payout.PayoutResponse;
@@ -14,6 +15,7 @@ import vn.payos.PayOS;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.*;
 
 @Slf4j
@@ -125,7 +127,8 @@ public class PayoutController {
                                                 .createdAt(data.get("createdAt") != null
                                                                 ? OffsetDateTime.parse((String) data.get("createdAt"))
                                                                                 .toLocalDateTime()
-                                                                : LocalDateTime.now())
+                                                                : LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH))
+)
                                                 .build();
 
                                 log.info("Payout created successfully: {}", payoutResponse.getId());
@@ -213,7 +216,7 @@ public class PayoutController {
                                                 .createdAt(data.get("createdAt") != null
                                                                 ? OffsetDateTime.parse((String) data.get("createdAt"))
                                                                                 .toLocalDateTime()
-                                                                : LocalDateTime.now())
+                                                                : LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                                                 .build();
 
                                 return ResponseEntity.ok(

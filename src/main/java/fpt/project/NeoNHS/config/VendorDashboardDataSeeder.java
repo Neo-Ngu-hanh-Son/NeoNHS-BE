@@ -1,6 +1,6 @@
 package fpt.project.NeoNHS.config;
 
-import fpt.project.NeoNHS.enums.ReviewTypeFlagEnum;
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.entity.*;
 import fpt.project.NeoNHS.enums.*;
 import fpt.project.NeoNHS.repository.*;
@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -43,10 +44,12 @@ public class VendorDashboardDataSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) {
         var vendorOpt = vendorProfileRepository.findByUserEmail("vendor@neonhs.com");
-        if (vendorOpt.isEmpty()) return;
+        if (vendorOpt.isEmpty())
+            return;
 
         VendorProfile vendor = vendorOpt.get();
-        if (workshopTemplateRepository.countByVendorIdAndDeletedAtIsNull(vendor.getId()) > 0) return;
+        if (workshopTemplateRepository.countByVendorIdAndDeletedAtIsNull(vendor.getId()) > 0)
+            return;
 
         log.info("Seeding vendor dashboard demo data...");
 
@@ -64,14 +67,14 @@ public class VendorDashboardDataSeeder implements CommandLineRunner {
 
     private List<User> seedTouristUsers() {
         String[][] people = {
-                {"Nguyen Van An", "an.nguyen@example.com"},
-                {"Tran Thi Bich", "bich.tran@example.com"},
-                {"Le Hoang Cuong", "cuong.le@example.com"},
-                {"Pham Minh Duc", "duc.pham@example.com"},
-                {"Vo Thi Em", "em.vo@example.com"},
-                {"Hoang Quoc Fai", "fai.hoang@example.com"},
-                {"Dang Thi Giang", "giang.dang@example.com"},
-                {"Bui Thanh Hai", "hai.bui@example.com"},
+                { "Nguyen Van An", "an.nguyen@example.com" },
+                { "Tran Thi Bich", "bich.tran@example.com" },
+                { "Le Hoang Cuong", "cuong.le@example.com" },
+                { "Pham Minh Duc", "duc.pham@example.com" },
+                { "Vo Thi Em", "em.vo@example.com" },
+                { "Hoang Quoc Fai", "fai.hoang@example.com" },
+                { "Dang Thi Giang", "giang.dang@example.com" },
+                { "Bui Thanh Hai", "hai.bui@example.com" },
         };
 
         List<User> tourists = new ArrayList<>();
@@ -96,16 +99,18 @@ public class VendorDashboardDataSeeder implements CommandLineRunner {
 
     private List<WorkshopTemplate> seedWorkshopTemplates(VendorProfile vendor) {
         Object[][] data = {
-                {"Pottery Making", "Learn traditional Vietnamese pottery techniques", WorkshopStatus.ACTIVE, 120, 150000},
-                {"Marble Sculpting", "Hands-on marble sculpting with local artisans", WorkshopStatus.ACTIVE, 180, 250000},
-                {"Lantern Crafting", "Create your own Hoi An-style lantern", WorkshopStatus.ACTIVE, 90, 120000},
-                {"Incense Making", "Traditional incense crafting workshop", WorkshopStatus.ACTIVE, 60, 80000},
-                {"Silk Painting", "Vietnamese silk painting masterclass", WorkshopStatus.ACTIVE, 150, 200000},
-                {"Bamboo Weaving", "Learn the art of bamboo basket weaving", WorkshopStatus.PENDING, 90, 100000},
-                {"Conical Hat Making", "Craft your own nón lá", WorkshopStatus.PENDING, 75, 90000},
-                {"Woodblock Printing", "Traditional woodblock printing on fabric", WorkshopStatus.DRAFT, 120, 180000},
-                {"Ceramic Glazing", "Explore ceramic glazing techniques", WorkshopStatus.DRAFT, 100, 160000},
-                {"Stone Carving Intro", "Beginner stone carving experience", WorkshopStatus.REJECTED, 60, 70000},
+                { "Pottery Making", "Learn traditional Vietnamese pottery techniques", WorkshopStatus.ACTIVE, 120,
+                        150000 },
+                { "Marble Sculpting", "Hands-on marble sculpting with local artisans", WorkshopStatus.ACTIVE, 180,
+                        250000 },
+                { "Lantern Crafting", "Create your own Hoi An-style lantern", WorkshopStatus.ACTIVE, 90, 120000 },
+                { "Incense Making", "Traditional incense crafting workshop", WorkshopStatus.ACTIVE, 60, 80000 },
+                { "Silk Painting", "Vietnamese silk painting masterclass", WorkshopStatus.ACTIVE, 150, 200000 },
+                { "Bamboo Weaving", "Learn the art of bamboo basket weaving", WorkshopStatus.PENDING, 90, 100000 },
+                { "Conical Hat Making", "Craft your own nón lá", WorkshopStatus.PENDING, 75, 90000 },
+                { "Woodblock Printing", "Traditional woodblock printing on fabric", WorkshopStatus.DRAFT, 120, 180000 },
+                { "Ceramic Glazing", "Explore ceramic glazing techniques", WorkshopStatus.DRAFT, 100, 160000 },
+                { "Stone Carving Intro", "Beginner stone carving experience", WorkshopStatus.REJECTED, 60, 70000 },
         };
 
         List<WorkshopTemplate> templates = new ArrayList<>();
@@ -113,7 +118,8 @@ public class VendorDashboardDataSeeder implements CommandLineRunner {
             WorkshopTemplate wt = WorkshopTemplate.builder()
                     .name((String) d[0])
                     .shortDescription((String) d[1])
-                    .fullDescription((String) d[1] + ". Join us for an unforgettable cultural experience at Ngu Hanh Son.")
+                    .fullDescription(
+                            (String) d[1] + ". Join us for an unforgettable cultural experience at Ngu Hanh Son.")
                     .status((WorkshopStatus) d[2])
                     .estimatedDuration((int) d[3])
                     .defaultPrice(BigDecimal.valueOf((int) d[4]))
@@ -131,7 +137,7 @@ public class VendorDashboardDataSeeder implements CommandLineRunner {
 
     private List<WorkshopSession> seedWorkshopSessions(List<WorkshopTemplate> templates) {
         List<WorkshopSession> allSessions = new ArrayList<>();
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH));
 
         List<WorkshopTemplate> activeTemplates = templates.stream()
                 .filter(t -> t.getStatus() == WorkshopStatus.ACTIVE)
@@ -210,7 +216,8 @@ public class VendorDashboardDataSeeder implements CommandLineRunner {
                 savedOrder.setOrderDetails(List.of(od));
                 orderRepository.save(savedOrder);
 
-                TransactionStatus txStatus = (txIndex % 10 == 9) ? TransactionStatus.REFUNDED : TransactionStatus.SUCCESS;
+                TransactionStatus txStatus = (txIndex % 10 == 9) ? TransactionStatus.REFUNDED
+                        : TransactionStatus.SUCCESS;
                 LocalDateTime paidAt = ws.getStartTime().minusHours(RNG.nextInt(24) + 1);
 
                 Transaction tx = Transaction.builder()
@@ -258,7 +265,7 @@ public class VendorDashboardDataSeeder implements CommandLineRunner {
 
                 Review review = Review.builder()
                         .user(tourist)
-//                        .workshopTemplate(wt)
+                        // .workshopTemplate(wt)
                         .reviewTypeId(wt.getId())
                         .reviewTypeFlg(ReviewTypeFlagEnum.WORKSHOP)
                         .rating(rating)
@@ -275,9 +282,10 @@ public class VendorDashboardDataSeeder implements CommandLineRunner {
         // Update averageRating on templates
         for (WorkshopTemplate wt : activeTemplates) {
             List<Review> reviews = reviewRepository.findAll().stream()
-//                    .filter(r -> r.getWorkshopTemplate() != null && r.getWorkshopTemplate().getId().equals(wt.getId()))
+                    // .filter(r -> r.getWorkshopTemplate() != null &&
+                    // r.getWorkshopTemplate().getId().equals(wt.getId()))
                     .toList();
-            //todo
+            // todo
             if (!reviews.isEmpty()) {
                 double avg = reviews.stream().mapToInt(Review::getRating).average().orElse(0);
                 wt.setAverageRating(BigDecimal.valueOf(avg).setScale(2, java.math.RoundingMode.HALF_UP));
@@ -293,19 +301,20 @@ public class VendorDashboardDataSeeder implements CommandLineRunner {
 
     private void seedVouchers(VendorProfile vendor) {
         User vendorUser = vendor.getUser();
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH));
 
         Object[][] data = {
-                {"WELCOME10", "10% off your first workshop", DiscountType.PERCENT, 10, 50000},
-                {"SUMMER20", "20% off summer workshops", DiscountType.PERCENT, 20, 100000},
-                {"FLAT50K", "50,000 VND off any workshop", DiscountType.FIXED, 50000, 0},
-                {"MARBLE15", "15% off marble sculpting", DiscountType.PERCENT, 15, 75000},
-                {"CRAFT25", "25,000 VND off craft workshops", DiscountType.FIXED, 25000, 0},
+                { "WELCOME10", "10% off your first workshop", DiscountType.PERCENT, 10, 50000 },
+                { "SUMMER20", "20% off summer workshops", DiscountType.PERCENT, 20, 100000 },
+                { "FLAT50K", "50,000 VND off any workshop", DiscountType.FIXED, 50000, 0 },
+                { "MARBLE15", "15% off marble sculpting", DiscountType.PERCENT, 15, 75000 },
+                { "CRAFT25", "25,000 VND off craft workshops", DiscountType.FIXED, 25000, 0 },
         };
 
         int count = 0;
         for (Object[] d : data) {
-            if (voucherRepository.existsByCode((String) d[0])) continue;
+            if (voucherRepository.existsByCode((String) d[0]))
+                continue;
 
             Voucher v = Voucher.builder()
                     .code((String) d[0])

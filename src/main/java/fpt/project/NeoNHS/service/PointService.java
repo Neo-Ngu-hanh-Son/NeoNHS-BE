@@ -2,7 +2,6 @@ package fpt.project.NeoNHS.service;
 
 import fpt.project.NeoNHS.dto.request.point.PointRequest;
 import fpt.project.NeoNHS.dto.response.point.MapPointResponse;
-import fpt.project.NeoNHS.dto.response.point.PointPanoramaResponse;
 import fpt.project.NeoNHS.dto.response.point.PointResponse;
 import fpt.project.NeoNHS.dto.response.review.ReviewImageResponse;
 import org.springframework.data.domain.Page;

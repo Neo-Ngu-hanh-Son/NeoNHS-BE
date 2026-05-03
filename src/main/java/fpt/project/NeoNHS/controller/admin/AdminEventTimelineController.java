@@ -69,7 +69,7 @@ public class AdminEventTimelineController {
     }
 
     @GetMapping("/point-tags")
-    @Operation(summary = "Get all event-points based on the current event ID")
+    @Operation(summary = "Get all event-points-tags based on the current event ID")
     public ResponseEntity<ApiResponse<List<EventPointTagResponse>>> getAllEventPointTags(@PathVariable UUID eventId) {
         List<EventPointTagResponse> response = timelineService.getAllEventPointTagByEventId(eventId);
         return ResponseEntity.ok(ApiResponse.success("Event-points retrieved successfully", response));

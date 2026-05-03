@@ -5,7 +5,10 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
+
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Document(collection = "chat_rooms")
@@ -25,7 +28,7 @@ public class ChatRoom {
     private List<String> participants; // List of user UUID strings from MySQL
 
     @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH));
 
     private LocalDateTime lastMessageAt;
 

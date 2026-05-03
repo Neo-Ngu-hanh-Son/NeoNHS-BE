@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.constants.NotificationMessages;
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.admin.ReportFilterRequest;
 import fpt.project.NeoNHS.dto.request.admin.ResolveReportRequest;
 import fpt.project.NeoNHS.dto.request.report.CreateReportRequest;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 
 @Service
@@ -65,7 +67,7 @@ public class ReportServiceImpl implements ReportService {
         report.setStatus(request.getStatus());
         report.setHandleNote(request.getHandleNote());
         report.setHandlerId(adminId.toString());
-        report.setResolvedAt(LocalDateTime.now());
+        report.setResolvedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
 
         Report savedReport = reportRepository.save(report);
 

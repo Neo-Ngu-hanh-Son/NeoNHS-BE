@@ -1,11 +1,11 @@
 package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.dto.response.review.ReviewImageResponse;
-import fpt.project.NeoNHS.entity.Review;
 import fpt.project.NeoNHS.entity.ReviewImage;
 import fpt.project.NeoNHS.exception.BadRequestException;
 
 import fpt.project.NeoNHS.constants.PaginationConstants;
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.event.EventFilterRequest;
 import fpt.project.NeoNHS.dto.request.point.PointRequest;
 import fpt.project.NeoNHS.dto.response.point.MapPointResponse;
@@ -17,9 +17,7 @@ import fpt.project.NeoNHS.entity.Point;
 import fpt.project.NeoNHS.enums.EventStatus;
 import fpt.project.NeoNHS.helpers.AuthHelper;
 import fpt.project.NeoNHS.repository.*;
-import fpt.project.NeoNHS.service.PanoramaService;
 import fpt.project.NeoNHS.service.PointService;
-import fpt.project.NeoNHS.service.ReviewService;
 import fpt.project.NeoNHS.specification.EventSpecification;
 import fpt.project.NeoNHS.specification.PointSpecification;
 import jakarta.transaction.Transactional;
@@ -33,8 +31,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -42,7 +40,6 @@ public class PointServiceImpl implements PointService {
 
     private final PointRepository pointRepository;
     private final AttractionRepository attractionRepository;
-    private final PanoramaService panoramaService;
     private final EventRepository eventRepository;
     private final WorkshopTemplateRepository workshopTemplateRepository;
     private final UserCheckInRepository userCheckInRepository;
@@ -154,7 +151,7 @@ public class PointServiceImpl implements PointService {
             throw new RuntimeException("Point is already deleted");
         }
 
-        point.setDeletedAt(java.time.LocalDateTime.now());
+        point.setDeletedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         point.setDeletedBy(userId);
 
         pointRepository.save(point);
@@ -254,7 +251,7 @@ public class PointServiceImpl implements PointService {
         var points = pointRepository.findAll(PointSpecification.withFilters(null, true));
         var eventFilter = EventFilterRequest.builder()
                 .status(EventStatus.UPCOMING)
-                .startDate(LocalDate.from(LocalDateTime.now()))
+                .startDate(LocalDate.from(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH))))
                 .includeDeleted(false)
                 .build();
         var events = eventRepository.findAll(EventSpecification.withFilters(eventFilter));

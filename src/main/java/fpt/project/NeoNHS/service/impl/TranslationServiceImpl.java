@@ -114,7 +114,7 @@ public class TranslationServiceImpl implements TranslationService {
             JsonNode translationsNode = root.path("translations");
 
             Map<String, String> result = new HashMap<>();
-            translationsNode.fields().forEachRemaining(e -> result.put(e.getKey(), e.getValue().asText()));
+            translationsNode.properties().forEach(e -> result.put(e.getKey(), e.getValue().asText()));
 
             log.debug("NLLB batch translated {} fields to {}", result.size(), targetLang);
             return result;

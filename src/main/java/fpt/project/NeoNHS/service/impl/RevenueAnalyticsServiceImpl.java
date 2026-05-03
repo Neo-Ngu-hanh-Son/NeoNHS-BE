@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.admin.RevenueReportRequest;
 import fpt.project.NeoNHS.dto.response.admin.*;
 import fpt.project.NeoNHS.entity.OrderDetail;
@@ -12,6 +13,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,7 +31,7 @@ public class RevenueAnalyticsServiceImpl implements RevenueAnalyticsService {
 
                 // --- 1. XỬ LÝ THỜI GIAN ---
                 if (request.getPeriod() != null && !request.getPeriod().isEmpty()) {
-                        end = LocalDateTime.now();
+                        end = LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH));
                         switch (request.getPeriod()) {
                                 case "3_MONTHS":
                                         start = end.minusMonths(3).with(LocalTime.MIN);
@@ -51,7 +53,7 @@ public class RevenueAnalyticsServiceImpl implements RevenueAnalyticsService {
 
                         end = (request.getEndDate() != null)
                                         ? request.getEndDate().atTime(23, 59, 59)
-                                        : LocalDateTime.now();
+                                        : LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH));
                 }
 
                 // --- 2. TRUY VẤN DỮ LIỆU ---

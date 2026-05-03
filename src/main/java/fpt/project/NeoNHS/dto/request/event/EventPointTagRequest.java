@@ -22,4 +22,6 @@ public class EventPointTagRequest {
     private String tagColor;
 
     private String iconUrl;
+
+    private Boolean restore;
 }

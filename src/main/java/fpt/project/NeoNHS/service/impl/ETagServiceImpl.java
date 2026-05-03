@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.event.CreateTagRequest;
 import fpt.project.NeoNHS.dto.request.event.UpdateTagRequest;
 import fpt.project.NeoNHS.dto.response.event.TagResponse;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -102,7 +104,7 @@ public class ETagServiceImpl implements ETagService {
             throw new BadRequestException("Tag is already deleted");
         }
 
-        eTag.setDeletedAt(LocalDateTime.now());
+        eTag.setDeletedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         eTag.setDeletedBy(deletedBy);
         eTagRepository.save(eTag);
     }

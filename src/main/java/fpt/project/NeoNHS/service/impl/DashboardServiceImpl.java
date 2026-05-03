@@ -13,11 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.Blob;
@@ -447,32 +445,32 @@ public class DashboardServiceImpl implements DashboardService {
         return roundTo1Decimal((current - previous) * 100.0 / previous);
     }
 
-    private static String toWeekLabel(String mysqlWeekKey) {
-        if (mysqlWeekKey == null || mysqlWeekKey.isBlank()) {
-            return mysqlWeekKey;
-        }
-        String lower = mysqlWeekKey.toLowerCase(Locale.ROOT);
-        int weekIndex = lower.indexOf("week");
-        if (weekIndex < 0) {
-            return mysqlWeekKey;
-        }
+    // private static String toWeekLabel(String mysqlWeekKey) {
+    //     if (mysqlWeekKey == null || mysqlWeekKey.isBlank()) {
+    //         return mysqlWeekKey;
+    //     }
+    //     String lower = mysqlWeekKey.toLowerCase(Locale.ROOT);
+    //     int weekIndex = lower.indexOf("week");
+    //     if (weekIndex < 0) {
+    //         return mysqlWeekKey;
+    //     }
 
-        String suffix = mysqlWeekKey.substring(weekIndex + 4).trim();
-        if (suffix.isEmpty()) {
-            return mysqlWeekKey;
-        }
+    //     String suffix = mysqlWeekKey.substring(weekIndex + 4).trim();
+    //     if (suffix.isEmpty()) {
+    //         return mysqlWeekKey;
+    //     }
 
-        try {
-            String digits = suffix.replaceFirst("^0+", "");
-            if (digits.isEmpty()) {
-                digits = "0";
-            }
-            int weekNumber = Integer.parseInt(digits);
-            return "Week " + weekNumber;
-        } catch (NumberFormatException ignored) {
-            return mysqlWeekKey;
-        }
-    }
+    //     try {
+    //         String digits = suffix.replaceFirst("^0+", "");
+    //         if (digits.isEmpty()) {
+    //             digits = "0";
+    //         }
+    //         int weekNumber = Integer.parseInt(digits);
+    //         return "Week " + weekNumber;
+    //     } catch (NumberFormatException ignored) {
+    //         return mysqlWeekKey;
+    //     }
+    // }
 
     private static RevenueTrendsResponse buildRevenueTrendsMonthly(
             int pointCount,
@@ -539,70 +537,70 @@ public class DashboardServiceImpl implements DashboardService {
                 .build();
     }
 
-    private static RevenueTrendsResponse buildRevenueTrendsWeekly(
-            int pointCount,
-            LocalDate startCurrentMonday,
-            Map<String, BigDecimal> revenueByPeriod,
-            Map<String, Long> transactionCountByPeriod
-    ) {
-        List<RevenueTrendsResponse.TrendPoint> trends = new ArrayList<>(pointCount);
+    // private static RevenueTrendsResponse buildRevenueTrendsWeekly(
+    //         int pointCount,
+    //         LocalDate startCurrentMonday,
+    //         Map<String, BigDecimal> revenueByPeriod,
+    //         Map<String, Long> transactionCountByPeriod
+    // ) {
+    //     List<RevenueTrendsResponse.TrendPoint> trends = new ArrayList<>(pointCount);
 
-        BigDecimal currentTotal = BigDecimal.ZERO;
-        BigDecimal previousTotal = BigDecimal.ZERO;
-        BigDecimal peakValue = BigDecimal.ZERO;
-        String peakPeriod = null;
+    //     BigDecimal currentTotal = BigDecimal.ZERO;
+    //     BigDecimal previousTotal = BigDecimal.ZERO;
+    //     BigDecimal peakValue = BigDecimal.ZERO;
+    //     String peakPeriod = null;
 
-        for (int i = 0; i < pointCount; i++) {
-            LocalDate currentWeekStart = startCurrentMonday.plusWeeks(i);
-            LocalDate previousWeekStart = currentWeekStart.minusWeeks(pointCount);
+    //     for (int i = 0; i < pointCount; i++) {
+    //         LocalDate currentWeekStart = startCurrentMonday.plusWeeks(i);
+    //         LocalDate previousWeekStart = currentWeekStart.minusWeeks(pointCount);
 
-            String periodKey = formatMysqlWeekU(currentWeekStart);
-            String previousPeriodKey = formatMysqlWeekU(previousWeekStart);
+    //         String periodKey = formatMysqlWeekU(currentWeekStart);
+    //         String previousPeriodKey = formatMysqlWeekU(previousWeekStart);
 
-            BigDecimal revenue = revenueByPeriod.getOrDefault(periodKey, BigDecimal.ZERO);
-            BigDecimal previousRevenue = revenueByPeriod.getOrDefault(previousPeriodKey, BigDecimal.ZERO);
-            long transactionCount = transactionCountByPeriod.getOrDefault(periodKey, 0L);
+    //         BigDecimal revenue = revenueByPeriod.getOrDefault(periodKey, BigDecimal.ZERO);
+    //         BigDecimal previousRevenue = revenueByPeriod.getOrDefault(previousPeriodKey, BigDecimal.ZERO);
+    //         long transactionCount = transactionCountByPeriod.getOrDefault(periodKey, 0L);
 
-            String label = toWeekLabel(periodKey);
+    //         String label = toWeekLabel(periodKey);
 
-            currentTotal = currentTotal.add(revenue);
-            previousTotal = previousTotal.add(previousRevenue);
+    //         currentTotal = currentTotal.add(revenue);
+    //         previousTotal = previousTotal.add(previousRevenue);
 
-            if (peakPeriod == null || revenue.compareTo(peakValue) > 0) {
-                peakValue = revenue;
-                peakPeriod = label;
-            }
+    //         if (peakPeriod == null || revenue.compareTo(peakValue) > 0) {
+    //             peakValue = revenue;
+    //             peakPeriod = label;
+    //         }
 
-            trends.add(RevenueTrendsResponse.TrendPoint.builder()
-                    .periodKey(periodKey)
-                    .period(label)
-                    .revenue(revenue)
-                    .previousRevenue(previousRevenue)
-                    .transactionCount(transactionCount)
-                    .build());
-        }
+    //         trends.add(RevenueTrendsResponse.TrendPoint.builder()
+    //                 .periodKey(periodKey)
+    //                 .period(label)
+    //                 .revenue(revenue)
+    //                 .previousRevenue(previousRevenue)
+    //                 .transactionCount(transactionCount)
+    //                 .build());
+    //     }
 
-        BigDecimal averageValue = pointCount == 0
-                ? BigDecimal.ZERO
-                : currentTotal.divide(BigDecimal.valueOf(pointCount), 0, RoundingMode.HALF_UP);
+    //     BigDecimal averageValue = pointCount == 0
+    //             ? BigDecimal.ZERO
+    //             : currentTotal.divide(BigDecimal.valueOf(pointCount), 0, RoundingMode.HALF_UP);
 
-        return RevenueTrendsResponse.builder()
-                .summary(RevenueTrendsResponse.Summary.builder()
-                        .currentTotal(currentTotal)
-                        .previousTotal(previousTotal)
-                        .growthRate(growthRate(currentTotal, previousTotal))
-                        .averageValue(averageValue)
-                        .peakValue(peakValue)
-                        .peakPeriod(peakPeriod)
-                        .build())
-                .trends(trends)
-                .metadata(RevenueTrendsResponse.Metadata.builder()
-                        .currency("VND")
-                        .periodType("WEEKLY")
-                        .pointCount(pointCount)
-                        .build())
-                .build();
-    }
+    //     return RevenueTrendsResponse.builder()
+    //             .summary(RevenueTrendsResponse.Summary.builder()
+    //                     .currentTotal(currentTotal)
+    //                     .previousTotal(previousTotal)
+    //                     .growthRate(growthRate(currentTotal, previousTotal))
+    //                     .averageValue(averageValue)
+    //                     .peakValue(peakValue)
+    //                     .peakPeriod(peakPeriod)
+    //                     .build())
+    //             .trends(trends)
+    //             .metadata(RevenueTrendsResponse.Metadata.builder()
+    //                     .currency("VND")
+    //                     .periodType("WEEKLY")
+    //                     .pointCount(pointCount)
+    //                     .build())
+    //             .build();
+    // }
 
     private static RevenueTrendsResponse buildRevenueTrendsMonthWeekly(
             YearMonth currentMonth,
@@ -735,72 +733,72 @@ public class DashboardServiceImpl implements DashboardService {
                 .build();
     }
 
-    private static RegistrationGrowthResponse buildRegistrationGrowthWeekly(
-            int pointCount,
-            LocalDate startCurrentMonday,
-            String normalizedType,
-            Map<String, Long> touristByPeriod,
-            Map<String, Long> vendorByPeriod,
-            Double activePercentage
-    ) {
-        List<RegistrationGrowthResponse.TrendPoint> trends = new ArrayList<>(pointCount);
+    // private static RegistrationGrowthResponse buildRegistrationGrowthWeekly(
+    //         int pointCount,
+    //         LocalDate startCurrentMonday,
+    //         String normalizedType,
+    //         Map<String, Long> touristByPeriod,
+    //         Map<String, Long> vendorByPeriod,
+    //         Double activePercentage
+    // ) {
+    //     List<RegistrationGrowthResponse.TrendPoint> trends = new ArrayList<>(pointCount);
 
-        long currentTotal = 0;
-        long previousTotal = 0;
+    //     long currentTotal = 0;
+    //     long previousTotal = 0;
 
-        for (int i = 0; i < pointCount; i++) {
-            LocalDate currentWeekStart = startCurrentMonday.plusWeeks(i);
-            LocalDate previousWeekStart = currentWeekStart.minusWeeks(pointCount);
+    //     for (int i = 0; i < pointCount; i++) {
+    //         LocalDate currentWeekStart = startCurrentMonday.plusWeeks(i);
+    //         LocalDate previousWeekStart = currentWeekStart.minusWeeks(pointCount);
 
-            String periodKey = formatMysqlWeekU(currentWeekStart);
-            String previousPeriodKey = formatMysqlWeekU(previousWeekStart);
+    //         String periodKey = formatMysqlWeekU(currentWeekStart);
+    //         String previousPeriodKey = formatMysqlWeekU(previousWeekStart);
 
-            long currentIndividuals = touristByPeriod.getOrDefault(periodKey, 0L);
-            long currentOrganizations = vendorByPeriod.getOrDefault(periodKey, 0L);
-            long previousIndividuals = touristByPeriod.getOrDefault(previousPeriodKey, 0L);
-            long previousOrganizations = vendorByPeriod.getOrDefault(previousPeriodKey, 0L);
+    //         long currentIndividuals = touristByPeriod.getOrDefault(periodKey, 0L);
+    //         long currentOrganizations = vendorByPeriod.getOrDefault(periodKey, 0L);
+    //         long previousIndividuals = touristByPeriod.getOrDefault(previousPeriodKey, 0L);
+    //         long previousOrganizations = vendorByPeriod.getOrDefault(previousPeriodKey, 0L);
 
-            long breakdownIndividuals = switch (normalizedType) {
-                case "VENDOR" -> 0L;
-                default -> currentIndividuals;
-            };
-            long breakdownOrganizations = switch (normalizedType) {
-                case "USER" -> 0L;
-                default -> currentOrganizations;
-            };
+    //         long breakdownIndividuals = switch (normalizedType) {
+    //             case "VENDOR" -> 0L;
+    //             default -> currentIndividuals;
+    //         };
+    //         long breakdownOrganizations = switch (normalizedType) {
+    //             case "USER" -> 0L;
+    //             default -> currentOrganizations;
+    //         };
 
-            long count = breakdownIndividuals + breakdownOrganizations;
-            long previousCount = switch (normalizedType) {
-                case "USER" -> previousIndividuals;
-                case "VENDOR" -> previousOrganizations;
-                default -> previousIndividuals + previousOrganizations;
-            };
+    //         long count = breakdownIndividuals + breakdownOrganizations;
+    //         long previousCount = switch (normalizedType) {
+    //             case "USER" -> previousIndividuals;
+    //             case "VENDOR" -> previousOrganizations;
+    //             default -> previousIndividuals + previousOrganizations;
+    //         };
 
-            currentTotal += count;
-            previousTotal += previousCount;
+    //         currentTotal += count;
+    //         previousTotal += previousCount;
 
-            trends.add(RegistrationGrowthResponse.TrendPoint.builder()
-                    .periodKey(periodKey)
-                    .period(toWeekLabel(periodKey))
-                    .count(count)
-                    .previousCount(previousCount)
-                    .breakdown(RegistrationGrowthResponse.Breakdown.builder()
-                            .individual(breakdownIndividuals)
-                            .organization(breakdownOrganizations)
-                            .build())
-                    .build());
-        }
+    //         trends.add(RegistrationGrowthResponse.TrendPoint.builder()
+    //                 .periodKey(periodKey)
+    //                 .period(toWeekLabel(periodKey))
+    //                 .count(count)
+    //                 .previousCount(previousCount)
+    //                 .breakdown(RegistrationGrowthResponse.Breakdown.builder()
+    //                         .individual(breakdownIndividuals)
+    //                         .organization(breakdownOrganizations)
+    //                         .build())
+    //                 .build());
+    //     }
 
-        return RegistrationGrowthResponse.builder()
-                .summary(RegistrationGrowthResponse.Summary.builder()
-                        .totalJoined(currentTotal)
-                        .previousTotal(previousTotal)
-                        .growthRate(growthRate(currentTotal, previousTotal))
-                        .activePercentage(activePercentage)
-                        .build())
-                .trends(trends)
-                .build();
-    }
+    //     return RegistrationGrowthResponse.builder()
+    //             .summary(RegistrationGrowthResponse.Summary.builder()
+    //                     .totalJoined(currentTotal)
+    //                     .previousTotal(previousTotal)
+    //                     .growthRate(growthRate(currentTotal, previousTotal))
+    //                     .activePercentage(activePercentage)
+    //                     .build())
+    //             .trends(trends)
+    //             .build();
+    // }
 
     private static RegistrationGrowthResponse buildRegistrationGrowthMonthWeekly(
             YearMonth currentMonth,
@@ -870,21 +868,21 @@ public class DashboardServiceImpl implements DashboardService {
 
     // Matches MySQL DATE_FORMAT(..., '%Y-Week %u'): week number 00-53, Monday as first day,
     // week 1 starts on the first Monday of the year; days before that are week 0.
-    private static String formatMysqlWeekU(LocalDate date) {
-        int year = date.getYear();
-        LocalDate firstMonday = LocalDate.of(year, 1, 1);
-        while (firstMonday.getDayOfWeek() != DayOfWeek.MONDAY) {
-            firstMonday = firstMonday.plusDays(1);
-        }
+    // private static String formatMysqlWeekU(LocalDate date) {
+    //     int year = date.getYear();
+    //     LocalDate firstMonday = LocalDate.of(year, 1, 1);
+    //     while (firstMonday.getDayOfWeek() != DayOfWeek.MONDAY) {
+    //         firstMonday = firstMonday.plusDays(1);
+    //     }
 
-        int week = 0;
-        if (!date.isBefore(firstMonday)) {
-            long days = ChronoUnit.DAYS.between(firstMonday, date);
-            week = (int) (days / 7) + 1;
-        }
+    //     int week = 0;
+    //     if (!date.isBefore(firstMonday)) {
+    //         long days = ChronoUnit.DAYS.between(firstMonday, date);
+    //         week = (int) (days / 7) + 1;
+    //     }
 
-        return String.format("%d-Week %02d", year, week);
-    }
+    //     return String.format("%d-Week %02d", year, week);
+    // }
 
     private static String formatMonthWeekKey(YearMonth month, int weekBucket) {
         return month.format(YEAR_MONTH_FORMATTER) + "-W" + weekBucket;

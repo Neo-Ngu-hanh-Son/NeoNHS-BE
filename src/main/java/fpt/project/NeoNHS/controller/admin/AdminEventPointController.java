@@ -42,6 +42,14 @@ public class AdminEventPointController {
         return ResponseEntity.ok(ApiResponse.success("Point updated successfully", response));
     }
 
+    @PutMapping("/{id}/restore")
+    @Operation(summary = "Restore a point status")
+    public ResponseEntity<ApiResponse<Void>> restorePoint(
+            @PathVariable UUID id) {
+        pointService.restorePoint(id);
+        return ResponseEntity.ok(ApiResponse.success("Point restored", null));
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Get point by ID")
     public ResponseEntity<ApiResponse<EventPointResponse>> getPointById(@PathVariable UUID id) {
@@ -52,7 +60,7 @@ public class AdminEventPointController {
     @GetMapping
     @Operation(summary = "Get all points")
     public ResponseEntity<ApiResponse<List<EventPointResponse>>> getAllPoints() {
-        List<EventPointResponse> response = pointService.getAllPoints();
+        List<EventPointResponse> response = pointService.getAllPointsAdmin();
         return ResponseEntity.ok(ApiResponse.success("Points retrieved successfully", response));
     }
 

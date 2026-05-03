@@ -1,6 +1,7 @@
 package fpt.project.NeoNHS.service.impl;
 
 import fpt.project.NeoNHS.constants.PaginationConstants;
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.dto.request.attraction.AttractionFilterRequest;
 import fpt.project.NeoNHS.dto.request.attraction.AttractionRequest;
 import fpt.project.NeoNHS.dto.response.attraction.AttractionResponse;
@@ -18,6 +19,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -138,7 +141,7 @@ public class AttractionServiceImpl implements AttractionService {
         }
 
         attraction.setIsActive(false);
-        attraction.setDeletedAt(java.time.LocalDateTime.now());
+        attraction.setDeletedAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)));
         attraction.setDeletedBy(userId);
 
         attractionRepository.save(attraction);

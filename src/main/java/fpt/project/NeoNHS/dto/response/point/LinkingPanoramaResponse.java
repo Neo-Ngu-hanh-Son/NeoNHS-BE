@@ -1,12 +1,10 @@
 package fpt.project.NeoNHS.dto.response.point;
 
 import fpt.project.NeoNHS.entity.Point;
-import fpt.project.NeoNHS.entity.PointPanorama;
 import lombok.Builder;
 import lombok.Data;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 // Simple wrapper for linking purpose only
 @Builder

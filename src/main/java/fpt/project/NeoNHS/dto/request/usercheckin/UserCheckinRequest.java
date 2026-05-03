@@ -4,7 +4,6 @@ import fpt.project.NeoNHS.enums.UserCheckinMethod;
 import lombok.Data;
 
 import java.util.List;
-import java.util.Map;
 
 @Data
 public class UserCheckinRequest {

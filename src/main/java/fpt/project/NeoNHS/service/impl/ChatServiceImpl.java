@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.service.impl;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.document.ChatMessage;
 import fpt.project.NeoNHS.document.ChatRoom;
 import fpt.project.NeoNHS.dto.chat.*;
@@ -24,6 +25,7 @@ import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -122,7 +124,7 @@ public class ChatServiceImpl implements ChatService {
                 .name(request.getName())
                 .participants(sortedParticipants)
                 .roomType(request.getRoomType() == null ? "STANDARD" : request.getRoomType())
-                .createdAt(LocalDateTime.now())
+                .createdAt(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                 .build();
 
         ChatRoom saved = chatRoomRepository.save(room);
@@ -155,7 +157,7 @@ public class ChatServiceImpl implements ChatService {
                 .chatRoomId(request.getChatRoomId())
                 .senderId(senderId)
                 .content(request.getContent())
-                .timestamp(LocalDateTime.now())
+                .timestamp(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
                 .status(MessageStatus.SENT)
                 .messageType(request.getMessageType() == null ? "TEXT" : request.getMessageType())
                 .mediaUrl(request.getMediaUrl())

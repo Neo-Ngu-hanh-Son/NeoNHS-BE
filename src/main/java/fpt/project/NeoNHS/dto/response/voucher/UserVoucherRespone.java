@@ -1,5 +1,6 @@
 package fpt.project.NeoNHS.dto.response.voucher;
 
+import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.entity.UserVoucher;
 import fpt.project.NeoNHS.enums.*;
 import lombok.AllArgsConstructor;
@@ -9,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 
 @Data
@@ -83,7 +85,7 @@ public class UserVoucherRespone {
         var voucher = uv.getVoucher();
         if (voucher.getDeletedAt() != null) return false;
         if (voucher.getStatus() != VoucherStatus.ACTIVE) return false;
-        if (voucher.getEndDate() != null && voucher.getEndDate().isBefore(LocalDateTime.now())) return false;
+        if (voucher.getEndDate() != null && voucher.getEndDate().isBefore(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))) return false;
         if (voucher.getUsageLimit() != null && voucher.getUsageCount() >= voucher.getUsageLimit()) return false;
 
         return true;
