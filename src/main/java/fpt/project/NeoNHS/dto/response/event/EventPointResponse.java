@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
@@ -22,6 +23,7 @@ public class EventPointResponse {
     private BigDecimal longitude;
     private String address;
     private EventPointTagResponse eventPointTag;
+    private LocalDateTime deletedAt;
 
     public static EventPointResponse fromEntity(EventPoint point) {
         if (point == null) return null;
@@ -33,6 +35,7 @@ public class EventPointResponse {
                 .latitude(point.getLatitude())
                 .longitude(point.getLongitude())
                 .address(point.getAddress())
+                .deletedAt(point.getDeletedAt())
                 .eventPointTag(EventPointTagResponse.fromEntity(point.getEventPointTag()))
                 .build();
     }

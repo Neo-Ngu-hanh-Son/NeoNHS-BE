@@ -31,7 +31,7 @@ public class EventPointTag extends BaseEntity {
 
     private String iconUrl;
 
-    @OneToMany(mappedBy = "eventPointTag", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "eventPointTag", fetch = FetchType.LAZY)
     @Builder.Default
     private List<EventPoint> eventPoints = new ArrayList<>();
 }

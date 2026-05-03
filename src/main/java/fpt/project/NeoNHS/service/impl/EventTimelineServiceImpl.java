@@ -97,8 +97,12 @@ public class EventTimelineServiceImpl implements EventTimelineService {
     private EventPoint resolvePointForCreate(EventTimelineRequest request) {
         // Reuse an existing point entirely
         if (request.getEventPointId() != null) {
-            return pointRepository.findById(request.getEventPointId())
+            var point = pointRepository.findById(request.getEventPointId())
                     .orElseThrow(() -> new ResourceNotFoundException("Event point not found with id: " + request.getEventPointId()));
+            if (point.getDeletedAt() != null) {
+                throw new BadRequestException("Event point with id '" + request.getEventPointId() + "' has been deleted");
+            }
+            return point;
         }
 
         // Create a new point — eventPoint payload is required
@@ -136,6 +140,10 @@ public class EventTimelineServiceImpl implements EventTimelineService {
         // Get an existing tag with the same name if exist and use it
         var existingTag = pointTagRepository.findByName(pointRequest.getEventPointTagRequest().getName());
         if (existingTag.isPresent()) {
+            if (existingTag.get().getDeletedAt() != null) {
+                throw new BadRequestException("Event point tag with name '" +
+                        pointRequest.getEventPointTagRequest().getName() + "' has been deleted");
+            }
             return existingTag.get();
         }
 
@@ -296,6 +304,7 @@ public class EventTimelineServiceImpl implements EventTimelineService {
                 .toList();
     }
 
+    // Timeline can be deleted easily with no problems since it doesn't have any critical relationship with other entities.
     @Override
     @Transactional
     public void deleteTimeline(UUID id) {
