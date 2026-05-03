@@ -24,4 +24,7 @@ public class CartItemResponse {
     private UUID workshopSessionId;
     private UUID workshopTemplateId;
     private String workshopName;
+
+    // Vendor info (for vendor-scoped voucher matching)
+    private UUID vendorId;
 }
