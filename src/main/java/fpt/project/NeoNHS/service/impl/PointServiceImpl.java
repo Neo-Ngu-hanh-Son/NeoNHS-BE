@@ -212,8 +212,8 @@ public class PointServiceImpl implements PointService {
         }
 
         Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
-                ? Sort.by(sortBy).ascending().and(Sort.by("id").ascending())
-                : Sort.by(sortBy).descending().and(Sort.by("id").ascending());
+                ? Sort.by(sortBy).ascending().and(Sort.by("createdAt").ascending())
+                : Sort.by(sortBy).descending().and(Sort.by("createdAt").ascending());
 
         Pageable pageable = PageRequest.of(page, Math.min(size, PaginationConstants.MAX_PAGE_SIZE), sort);
 
@@ -229,8 +229,8 @@ public class PointServiceImpl implements PointService {
         }
 
         Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
-                ? Sort.by(sortBy).ascending().and(Sort.by("id").ascending())
-                : Sort.by(sortBy).descending().and(Sort.by("id").ascending());
+                ? Sort.by(sortBy).ascending().and(Sort.by("createdAt").ascending())
+                : Sort.by(sortBy).descending().and(Sort.by("createdAt").ascending());
 
         Pageable pageable = PageRequest.of(page, Math.min(size, PaginationConstants.MAX_PAGE_SIZE), sort);
 
@@ -329,8 +329,8 @@ public class PointServiceImpl implements PointService {
     private Page<PointResponse> findAllPoints(int page, int size, String sortBy, String sortDir, String search,
                                               boolean excludeDeleted) {
         Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
-                ? Sort.by(sortBy).ascending().and(Sort.by("id").ascending())
-                : Sort.by(sortBy).descending().and(Sort.by("id").ascending());
+                ? Sort.by(sortBy).ascending().and(Sort.by("createdAt").ascending())
+                : Sort.by(sortBy).descending().and(Sort.by("createdAt").ascending());
 
         Pageable pageable = PageRequest.of(page, Math.min(size, PaginationConstants.MAX_PAGE_SIZE), sort);
 
