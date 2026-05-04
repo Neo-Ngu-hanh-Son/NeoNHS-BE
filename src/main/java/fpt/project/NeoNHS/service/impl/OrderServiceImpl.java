@@ -83,7 +83,7 @@ public class OrderServiceImpl implements OrderService {
         // Handle list of vouchers
         if (request.getVoucherIds() != null && !request.getVoucherIds().isEmpty()) {
             fpt.project.NeoNHS.dto.response.voucher.VoucherClassificationResult classification = voucherService.classifyVouchersForCart(user, cartItems, totalAmount);
-            java.util.Set<UUID> usedVendorIds = new java.util.HashSet<>();
+            java.util.Set<String> usedScopes = new java.util.HashSet<>();
 
             for (UUID reqId : request.getVoucherIds()) {
                 fpt.project.NeoNHS.dto.response.voucher.UserVoucherRespone voucherResponse = classification.getValidVouchers().stream()
@@ -91,12 +91,15 @@ public class OrderServiceImpl implements OrderService {
                         .findFirst()
                         .orElseThrow(() -> new BadRequestException("Voucher not applicable or invalid: " + reqId));
 
-                // Enforce one voucher per vendor
-                UUID vendorId = voucherResponse.getVendorId();
-                if (usedVendorIds.contains(vendorId)) {
-                     throw new BadRequestException("Only one voucher can be applied per vendor. Duplicate vendor found.");
+                // Enforce one voucher per vendor or platform scope
+                String scopeKey = voucherResponse.getVendorId() != null 
+                        ? voucherResponse.getVendorId().toString() 
+                        : voucherResponse.getApplicableProduct() != null ? voucherResponse.getApplicableProduct().name() : "PLATFORM";
+
+                if (usedScopes.contains(scopeKey)) {
+                     throw new BadRequestException("Only one voucher can be applied per vendor or scope. Duplicate found.");
                 }
-                usedVendorIds.add(vendorId);
+                usedScopes.add(scopeKey);
 
                 BigDecimal currentDiscount = voucherService.applyVoucher(reqId, cartItems, totalAmount, classification);
                 discountAmount = discountAmount.add(currentDiscount);

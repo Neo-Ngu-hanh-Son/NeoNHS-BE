@@ -375,8 +375,8 @@ public class CartServiceImpl implements CartService {
         List<CheckoutResponse.AppliedVoucherDetail> appliedVouchers = new ArrayList<>();
 
         if (request.getVoucherIds() != null && !request.getVoucherIds().isEmpty()) {
-            // Track which vendors already have a voucher applied (null key = platform)
-            java.util.Set<UUID> usedVendorIds = new java.util.HashSet<>();
+            // Track which vendors/scopes already have a voucher applied
+            java.util.Set<String> usedScopes = new java.util.HashSet<>();
 
             for (UUID reqId : request.getVoucherIds()) {
                 // Find the voucher in valid list
@@ -385,12 +385,15 @@ public class CartServiceImpl implements CartService {
                         .findFirst().orElse(null);
                 if (voucherResponse == null) continue; // skip invalid
 
-                // Enforce one voucher per vendor
-                UUID vendorId = voucherResponse.getVendorId(); // null for platform vouchers
-                if (usedVendorIds.contains(vendorId)) {
-                    continue; // skip duplicate vendor voucher
+                // Enforce one voucher per vendor or platform scope
+                String scopeKey = voucherResponse.getVendorId() != null 
+                        ? voucherResponse.getVendorId().toString() 
+                        : voucherResponse.getApplicableProduct() != null ? voucherResponse.getApplicableProduct().name() : "PLATFORM";
+
+                if (usedScopes.contains(scopeKey)) {
+                    continue; // skip duplicate vendor/scope voucher
                 }
-                usedVendorIds.add(vendorId);
+                usedScopes.add(scopeKey);
 
                 BigDecimal voucherDiscount = voucherService.applyVoucher(reqId, selectedItems, totalPrice, classification);
                 discountValue = discountValue.add(voucherDiscount);
