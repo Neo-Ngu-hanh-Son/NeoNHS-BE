@@ -45,12 +45,12 @@ public class TicketServiceImpl implements TicketService {
         if (isAdmin) {
             // ADMIN only verifies EVENT and ENTRANCE
             if (ticket.getTicketType() != TicketType.EVENT && ticket.getTicketType() != TicketType.ENTRANCE) {
-                throw new ForbiddenException("ADMIN is only allowed to verify EVENT and ENTRANCE tickets");
+                throw new BadRequestException("ADMIN is only allowed to verify EVENT and ENTRANCE tickets");
             }
         } else if (isVendor) {
             // VENDOR only verifies WORKSHOP
             if (ticket.getTicketType() != TicketType.WORKSHOP) {
-                throw new ForbiddenException("VENDOR is only allowed to verify WORKSHOP tickets");
+                throw new BadRequestException("VENDOR is only allowed to verify WORKSHOP tickets");
             }
             // Check if this workshop belongs to the current vendor
             if (ticket.getWorkshopSession() == null ||
@@ -58,10 +58,10 @@ public class TicketServiceImpl implements TicketService {
                     ticket.getWorkshopSession().getWorkshopTemplate().getVendor() == null ||
                     ticket.getWorkshopSession().getWorkshopTemplate().getVendor().getUser() == null ||
                     !ticket.getWorkshopSession().getWorkshopTemplate().getVendor().getUser().getId().equals(currentUser.getId())) {
-                throw new ForbiddenException("You can only verify tickets for your own workshops");
+                throw new BadRequestException("You can only verify tickets for your own workshops");
             }
         } else {
-            throw new ForbiddenException("You do not have permission to verify tickets");
+            throw new BadRequestException("You do not have permission to verify tickets");
         }
 
         if (ticket.getStatus() == TicketStatus.USED) {
