@@ -263,6 +263,11 @@ public class CartServiceImpl implements CartService {
                                 && item.getWorkshopSession().getWorkshopTemplate().getVendor() != null
                                         ? item.getWorkshopSession().getWorkshopTemplate().getVendor().getId()
                                         : null)
+                        .vendorName(item.getWorkshopSession() != null
+                                && item.getWorkshopSession().getWorkshopTemplate() != null
+                                && item.getWorkshopSession().getWorkshopTemplate().getVendor() != null
+                                        ? item.getWorkshopSession().getWorkshopTemplate().getVendor().getBusinessName()
+                                        : null)
                         .build());
             }
         }
@@ -354,6 +359,11 @@ public class CartServiceImpl implements CartService {
                             && item.getWorkshopSession().getWorkshopTemplate().getVendor() != null
                                     ? item.getWorkshopSession().getWorkshopTemplate().getVendor().getId()
                                     : null)
+                    .vendorName(item.getWorkshopSession() != null
+                            && item.getWorkshopSession().getWorkshopTemplate() != null
+                            && item.getWorkshopSession().getWorkshopTemplate().getVendor() != null
+                                    ? item.getWorkshopSession().getWorkshopTemplate().getVendor().getBusinessName()
+                                    : null)
                     .build());
         }
 
@@ -362,14 +372,36 @@ public class CartServiceImpl implements CartService {
                 totalPrice);
 
         BigDecimal discountValue = BigDecimal.ZERO;
-        UserVoucherRespone appliedVoucherResponse = null;
+        List<CheckoutResponse.AppliedVoucherDetail> appliedVouchers = new ArrayList<>();
 
         if (request.getVoucherIds() != null && !request.getVoucherIds().isEmpty()) {
-            UUID reqId = request.getVoucherIds().get(0);
-            discountValue = voucherService.applyVoucher(reqId, selectedItems, totalPrice, classification);
-            appliedVoucherResponse = classification.getValidVouchers().stream()
-                    .filter(v -> v.getUserVoucherId().equals(reqId))
-                    .findFirst().orElse(null);
+            // Track which vendors/scopes already have a voucher applied
+            java.util.Set<String> usedScopes = new java.util.HashSet<>();
+
+            for (UUID reqId : request.getVoucherIds()) {
+                // Find the voucher in valid list
+                UserVoucherRespone voucherResponse = classification.getValidVouchers().stream()
+                        .filter(v -> v.getUserVoucherId().equals(reqId))
+                        .findFirst().orElse(null);
+                if (voucherResponse == null) continue; // skip invalid
+
+                // Enforce one voucher per vendor or platform scope
+                String scopeKey = voucherResponse.getVendorId() != null 
+                        ? voucherResponse.getVendorId().toString() 
+                        : voucherResponse.getApplicableProduct() != null ? voucherResponse.getApplicableProduct().name() : "PLATFORM";
+
+                if (usedScopes.contains(scopeKey)) {
+                    continue; // skip duplicate vendor/scope voucher
+                }
+                usedScopes.add(scopeKey);
+
+                BigDecimal voucherDiscount = voucherService.applyVoucher(reqId, selectedItems, totalPrice, classification);
+                discountValue = discountValue.add(voucherDiscount);
+                appliedVouchers.add(CheckoutResponse.AppliedVoucherDetail.builder()
+                        .voucher(voucherResponse)
+                        .discountAmount(voucherDiscount)
+                        .build());
+            }
         }
 
         BigDecimal finalTotalPrice = totalPrice.subtract(discountValue).max(BigDecimal.ZERO);
@@ -382,7 +414,7 @@ public class CartServiceImpl implements CartService {
                 .discountValue(discountValue)
                 .finalTotalPrice(finalTotalPrice)
                 .transactionDate(LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH)))
-                .appliedVoucher(appliedVoucherResponse)
+                .appliedVouchers(appliedVouchers)
                 .build();
     }
 
