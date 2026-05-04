@@ -39,6 +39,7 @@ public class OrderServiceImpl implements OrderService {
     private final WorkshopSessionRepository workshopSessionRepository;
     private final fpt.project.NeoNHS.service.NotificationService notificationService;
     private final AvailabilityValidator avai;
+    private final fpt.project.NeoNHS.service.VoucherService voucherService;
 
     @Override
     @Transactional
@@ -81,50 +82,29 @@ public class OrderServiceImpl implements OrderService {
 
         // Handle list of vouchers
         if (request.getVoucherIds() != null && !request.getVoucherIds().isEmpty()) {
-            List<UserVoucher> userVouchers = userVoucherRepository.findAllById(request.getVoucherIds());
-            if (userVouchers.size() != request.getVoucherIds().size()) {
-                throw new BadRequestException("Some vouchers not found");
-            }
+            fpt.project.NeoNHS.dto.response.voucher.VoucherClassificationResult classification = voucherService.classifyVouchersForCart(user, cartItems, totalAmount);
+            java.util.Set<UUID> usedVendorIds = new java.util.HashSet<>();
 
-            LocalDateTime now = LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH));
+            for (UUID reqId : request.getVoucherIds()) {
+                fpt.project.NeoNHS.dto.response.voucher.UserVoucherRespone voucherResponse = classification.getValidVouchers().stream()
+                        .filter(v -> v.getUserVoucherId().equals(reqId))
+                        .findFirst()
+                        .orElseThrow(() -> new BadRequestException("Voucher not applicable or invalid: " + reqId));
 
-            for (UserVoucher userVoucher : userVouchers) {
-                if (!userVoucher.getUser().getId().equals(user.getId())) {
-                    throw new BadRequestException("Voucher does not belong to user");
+                // Enforce one voucher per vendor
+                UUID vendorId = voucherResponse.getVendorId();
+                if (usedVendorIds.contains(vendorId)) {
+                     throw new BadRequestException("Only one voucher can be applied per vendor. Duplicate vendor found.");
                 }
-                if (userVoucher.getIsUsed() != null && userVoucher.getIsUsed()) {
-                    throw new BadRequestException("Voucher already used");
-                }
+                usedVendorIds.add(vendorId);
 
-                Voucher voucher = userVoucher.getVoucher();
-                // Validate voucher
-                if ((voucher.getStartDate() != null && now.isBefore(voucher.getStartDate())) ||
-                        (voucher.getEndDate() != null && now.isAfter(voucher.getEndDate()))) {
-                    throw new BadRequestException("Voucher " + voucher.getCode() + " is not valid at this time");
-                }
-                if (voucher.getUsageLimit() != null && voucher.getUsageCount() >= voucher.getUsageLimit()) {
-                    throw new BadRequestException("Voucher " + voucher.getCode() + " usage limit reached");
-                }
-                if (voucher.getMinOrderValue() != null && totalAmount.compareTo(voucher.getMinOrderValue()) < 0) {
-                    throw new BadRequestException("Order amount not sufficient for voucher " + voucher.getCode());
-                }
-
-                BigDecimal currentDiscount = BigDecimal.ZERO;
-                if (voucher.getDiscountType() == DiscountType.PERCENT) {
-                    currentDiscount = totalAmount.multiply(voucher.getDiscountValue()).divide(BigDecimal.valueOf(100));
-                    if (voucher.getMaxDiscountValue() != null
-                            && currentDiscount.compareTo(voucher.getMaxDiscountValue()) > 0) {
-                        currentDiscount = voucher.getMaxDiscountValue();
-                    }
-                } else {
-                    currentDiscount = voucher.getDiscountValue();
-                }
-
+                BigDecimal currentDiscount = voucherService.applyVoucher(reqId, cartItems, totalAmount, classification);
                 discountAmount = discountAmount.add(currentDiscount);
-                usedUserVoucherIds.add(userVoucher.getId());
+                usedUserVoucherIds.add(reqId);
 
                 if (primaryVoucher == null) {
-                    primaryVoucher = voucher;
+                    primaryVoucher = userVoucherRepository.findById(reqId)
+                                .map(UserVoucher::getVoucher).orElse(null);
                 }
             }
 

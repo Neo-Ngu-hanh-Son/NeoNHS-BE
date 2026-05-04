@@ -21,6 +21,15 @@ public class CheckoutResponse {
     private List<UserVoucherRespone> invalidVouchers;
     private BigDecimal discountValue;
     private BigDecimal finalTotalPrice;
-    private UserVoucherRespone appliedVoucher;
+    private List<AppliedVoucherDetail> appliedVouchers;
     private LocalDateTime transactionDate;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AppliedVoucherDetail {
+        private UserVoucherRespone voucher;
+        private BigDecimal discountAmount;
+    }
 }

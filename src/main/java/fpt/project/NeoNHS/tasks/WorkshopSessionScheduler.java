@@ -1,6 +1,5 @@
 package fpt.project.NeoNHS.tasks;
 
-import fpt.project.NeoNHS.constants.TimezoneConstants;
 import fpt.project.NeoNHS.entity.WorkshopSession;
 import fpt.project.NeoNHS.enums.SessionStatus;
 import fpt.project.NeoNHS.repository.WorkshopSessionRepository;
@@ -12,7 +11,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.List;
 
 @Slf4j
@@ -39,7 +37,7 @@ public class WorkshopSessionScheduler {
     @Scheduled(cron = "0 */15 * * * *") // Every 15 minutes at 0 seconds
     @Transactional
     public void handleExpiredAndUnattendedSessions() {
-        LocalDateTime now = LocalDateTime.now(ZoneId.of(TimezoneConstants.ASIA_HO_CHI_MINH));
+        LocalDateTime now = LocalDateTime.now();
         log.info("[Scheduler] Running checking for expired or unattended workshop sessions at {}", now);
 
         // 1. Cancel un-enrolled sessions that have already started
