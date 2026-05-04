@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -82,7 +83,7 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
                                         @Param("status") ReviewStatus status);
 
     boolean existsByUser_IdAndReviewTypeIdAndReviewTypeFlgAndDeletedAtIsNull(UUID userId, UUID reviewTypeId, ReviewTypeFlagEnum reviewTypeFlg);
-
+    Optional<Review> findByUser_IdAndReviewTypeIdAndReviewTypeFlgAndDeletedAtIsNull(UUID userId, UUID reviewTypeId, ReviewTypeFlagEnum reviewTypeFlg);
     @Query("""
                 SELECT wt.id, wt.name, COUNT(r), COALESCE(AVG(r.rating), 0),
                        SUM(CASE WHEN r.createdAt >= :since THEN 1 ELSE 0 END)

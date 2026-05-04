@@ -51,7 +51,8 @@ public class ReviewServiceImpl implements ReviewService {
     public ReviewEligibilityResponse checkEligibility(UUID userId, UUID reviewTypeId, ReviewTypeFlagEnum flag) {
         if (flag == ReviewTypeFlagEnum.WORKSHOP) {
             boolean hasUsedTicket = ticketRepository.hasUserUsedTicketForWorkshop(userId, reviewTypeId);
-            return new ReviewEligibilityResponse(hasUsedTicket, hasUsedTicket ? "" : "You must book a session and have a USED ticket before reviewing this workshop.");
+            return new ReviewEligibilityResponse(hasUsedTicket, hasUsedTicket ? ""
+                    : "You must book a session and have a USED ticket before reviewing this workshop.");
         }
         return new ReviewEligibilityResponse(true, "");
     }
@@ -64,15 +65,27 @@ public class ReviewServiceImpl implements ReviewService {
 
         // Validate the target exists
         validateReviewTarget(request.getReviewTypeId(), request.getReviewTypeFlg());
-        
-        ReviewEligibilityResponse eligibility = checkEligibility(userId, request.getReviewTypeId(), request.getReviewTypeFlg());
+
+        ReviewEligibilityResponse eligibility = checkEligibility(userId, request.getReviewTypeId(),
+                request.getReviewTypeFlg());
         if (!eligibility.isEligible()) {
             throw new BadRequestException(eligibility.getMessage());
         }
 
         // Check if user already reviewed this target
-        if (reviewRepository.existsByUser_IdAndReviewTypeIdAndReviewTypeFlgAndDeletedAtIsNull(userId, request.getReviewTypeId(), request.getReviewTypeFlg())) {
-            throw new BadRequestException("You have already reviewed this item. Please update your existing review instead.");
+        if (reviewRepository.existsByUser_IdAndReviewTypeIdAndReviewTypeFlgAndDeletedAtIsNull(userId,
+                request.getReviewTypeId(), request.getReviewTypeFlg())) {
+            // Update review for user
+            Review existingReview = reviewRepository
+                    .findByUser_IdAndReviewTypeIdAndReviewTypeFlgAndDeletedAtIsNull(userId, request.getReviewTypeId(),
+                            request.getReviewTypeFlg())
+                    .orElseThrow(() -> new ResourceNotFoundException("Review", "userId + reviewTypeId + reviewTypeFlg",
+                            userId + ", " + request.getReviewTypeId() + ", " + request.getReviewTypeFlg()));
+            UpdateReviewRequest updateRequest = new UpdateReviewRequest();
+            updateRequest.setRating(request.getRating());
+            updateRequest.setComment(request.getComment());
+            updateRequest.setImageUrls(request.getImageUrls());
+            return updateReview(userId, existingReview.getId(), updateRequest);
         }
 
         Review review = Review.builder()
@@ -222,16 +235,20 @@ public class ReviewServiceImpl implements ReviewService {
                 throw new ResourceNotFoundException("Point", "id", reviewTypeId);
             }
         } else {
-            throw new BadRequestException("Invalid review type flag. Allowed values: 1 (Workshop), 2 (Event), 3 (Point)");
+            throw new BadRequestException(
+                    "Invalid review type flag. Allowed values: 1 (Workshop), 2 (Event), 3 (Point)");
         }
     }
 
     private void updateStatsIfNeeded(UUID reviewTypeId, ReviewTypeFlagEnum reviewTypeFlg) {
-        if (reviewTypeFlg != null && reviewTypeFlg == ReviewTypeFlagEnum.WORKSHOP) { // Workshop has average rating fields
+        if (reviewTypeFlg != null && reviewTypeFlg == ReviewTypeFlagEnum.WORKSHOP) { // Workshop has average rating
+                                                                                     // fields
             WorkshopTemplate workshopTemplate = workshopTemplateRepository.findById(reviewTypeId).orElse(null);
             if (workshopTemplate != null) {
-                Double avgRating = reviewRepository.getAverageRatingByReviewType(reviewTypeId, reviewTypeFlg, ReviewStatus.VISIBLE);
-                Long totalReviews = reviewRepository.countByReviewTypeIdAndReviewTypeFlgAndStatus(reviewTypeId, reviewTypeFlg, ReviewStatus.VISIBLE);
+                Double avgRating = reviewRepository.getAverageRatingByReviewType(reviewTypeId, reviewTypeFlg,
+                        ReviewStatus.VISIBLE);
+                Long totalReviews = reviewRepository.countByReviewTypeIdAndReviewTypeFlgAndStatus(reviewTypeId,
+                        reviewTypeFlg, ReviewStatus.VISIBLE);
 
                 workshopTemplate.setAverageRating(BigDecimal.valueOf(avgRating != null ? avgRating : 0.0));
                 workshopTemplate.setTotalRatings(totalReviews.intValue());
