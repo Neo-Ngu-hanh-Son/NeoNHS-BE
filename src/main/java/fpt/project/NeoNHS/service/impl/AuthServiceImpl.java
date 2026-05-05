@@ -73,6 +73,10 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("not activated");
         }
 
+        if (user.getIsBanned()) {
+            throw new BadRequestException("User banned");
+        }
+
         return getAuthResponse(user, authentication);
     }
 
@@ -134,6 +138,9 @@ public class AuthServiceImpl implements AuthService {
             System.out.println("[AuthServiceImpl] Google ID Token payload email: " + result.getEmail());
             User user = userRepository.findByEmail(result.getEmail())
                     .orElseGet(() -> createUserFromGooglePayload(result));
+            if (user.getIsBanned()) {
+                throw new BadRequestException("User banned");
+            }
             UserPrincipal userPrincipal = UserPrincipal.create(user);
             Authentication authentication = new UsernamePasswordAuthenticationToken(
                     userPrincipal,
