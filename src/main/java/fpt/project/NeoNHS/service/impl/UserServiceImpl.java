@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.Collections;
@@ -60,6 +61,9 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public User createUser(User user) {
+        if (user.getPhoneNumber() != null && userRepository.existsByPhoneNumber(user.getPhoneNumber())) {
+            throw new BadRequestException("Phone number is already in use!");
+        }
         return userRepository.save(user);
     }
 
@@ -97,13 +101,17 @@ public class UserServiceImpl implements UserService {
             if (!isValidPhoneNumber(request.getPhoneNumber())) {
                 throw new IllegalArgumentException("Invalid phone number format");
             }
-            var existingUser = userRepository.findByPhoneNumber(request.getPhoneNumber())
-                    .orElse(null);
-            // If the phone number belongs to another user
-            if (existingUser != null && !existingUser.getId().equals(id)) {
+            var existingUsers = userRepository.findByPhoneNumber(request.getPhoneNumber())
+                    .orElse(Collections.emptyList());
+
+            boolean isTakenBySomeoneElse = existingUsers.stream()
+                    .anyMatch(u -> !u.getId().equals(id));
+
+            if (isTakenBySomeoneElse) {
                 throw new DuplicatePhonenumberException(
                         "Phone number '" + request.getPhoneNumber() + "' is already in use!");
             }
+
             user.setPhoneNumber(request.getPhoneNumber());
         }
 
@@ -165,7 +173,7 @@ public class UserServiceImpl implements UserService {
                     log.info("Face embedding extracted and saved for user: {}", userId);
                 } catch (Exception e) {
                     log.warn("Failed to extract face embedding for user: {}. " +
-                            "KYC still succeeds but face verification for withdrawal won't work. Error: {}",
+                                    "KYC still succeeds but face verification for withdrawal won't work. Error: {}",
                             userId, e.getMessage());
                 }
 
@@ -321,9 +329,9 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public Page<UserResponse> getAllUsersWithPagination(int page, int size, String sortBy,
-            String sortDir, String search,
-            UserRole role, Boolean isBanned,
-            Boolean deleted, Boolean includeDeleted) {
+                                                        String sortDir, String search,
+                                                        UserRole role, Boolean isBanned,
+                                                        Boolean deleted, Boolean includeDeleted) {
 
         Sort sort = sortDir.equalsIgnoreCase(PaginationConstants.SORT_ASC)
                 ? Sort.by(sortBy).ascending()
