@@ -23,7 +23,7 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
 
         boolean existsByPhoneNumber(String phoneNumber);
 
-        Optional<User> findByPhoneNumber(String phoneNumber);
+        Optional<List<User>> findByPhoneNumber(String phoneNumber);
 
         @Query(value = "SELECT DATE_FORMAT(created_at, '%Y-%m') as period, COUNT(*) as count " +
                         "FROM users GROUP BY period ORDER BY period DESC LIMIT :limit", nativeQuery = true)
