@@ -28,23 +28,21 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
                         @Param("sessionId") UUID sessionId,
                         @Param("txStatus") TransactionStatus txStatus);
 
-        @Query("SELECT SUM(o.finalAmount) FROM Order o JOIN o.transactions t " +
-                        "WHERE t.status = fpt.project.NeoNHS.enums.TransactionStatus.SUCCESS")
+        @Query("SELECT SUM(o.finalAmount) FROM Order o " +
+                        "WHERE EXISTS (SELECT 1 FROM Transaction t WHERE t.order = o AND t.status = fpt.project.NeoNHS.enums.TransactionStatus.SUCCESS)")
         Double sumTotalRevenue();
 
         @Query(value = "SELECT DATE_FORMAT(o.created_at, '%Y-%m') as period, SUM(o.final_amount) as amount " +
                         "FROM orders o " +
-                        "JOIN transactions t ON o.id = t.order_id " +
-                        "WHERE t.status = 'SUCCESS' " +
+                        "WHERE EXISTS (SELECT 1 FROM transactions t WHERE t.order_id = o.id AND t.status = 'SUCCESS') " +
                         "GROUP BY period ORDER BY period DESC LIMIT :limit", nativeQuery = true)
         List<Map<String, Object>> getMonthlyRevenueTrends(@Param("limit") Integer limit);
 
         @Query(value = "SELECT DATE_FORMAT(o.created_at, '%Y-%m') as period, " +
                         "SUM(o.final_amount) as amount, " +
-                        "COUNT(DISTINCT o.id) as transactionCount " +
+                        "COUNT(o.id) as transactionCount " +
                         "FROM orders o " +
-                        "JOIN transactions t ON o.id = t.order_id " +
-                        "WHERE t.status = 'SUCCESS' " +
+                        "WHERE EXISTS (SELECT 1 FROM transactions t WHERE t.order_id = o.id AND t.status = 'SUCCESS') " +
                         "  AND o.created_at >= :start " +
                         "  AND o.created_at < :end " +
                         "GROUP BY period", nativeQuery = true)
@@ -55,17 +53,15 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
         @Query(value = "SELECT DATE_FORMAT(o.created_at, '%Y-Week %u') as period, SUM(o.final_amount) as amount " +
                         "FROM orders o " +
-                        "JOIN transactions t ON o.id = t.order_id " +
-                        "WHERE t.status = 'SUCCESS' " +
+                        "WHERE EXISTS (SELECT 1 FROM transactions t WHERE t.order_id = o.id AND t.status = 'SUCCESS') " +
                         "GROUP BY period ORDER BY period DESC LIMIT :limit", nativeQuery = true)
         List<Map<String, Object>> getWeeklyRevenueTrends(@Param("limit") Integer limit);
 
         @Query(value = "SELECT DATE_FORMAT(o.created_at, '%Y-Week %u') as period, " +
                         "SUM(o.final_amount) as amount, " +
-                        "COUNT(DISTINCT o.id) as transactionCount " +
+                        "COUNT(o.id) as transactionCount " +
                         "FROM orders o " +
-                        "JOIN transactions t ON o.id = t.order_id " +
-                        "WHERE t.status = 'SUCCESS' " +
+                        "WHERE EXISTS (SELECT 1 FROM transactions t WHERE t.order_id = o.id AND t.status = 'SUCCESS') " +
                         "  AND o.created_at >= :start " +
                         "  AND o.created_at < :end " +
                         "GROUP BY period", nativeQuery = true)
@@ -76,10 +72,9 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
         @Query(value = "SELECT CONCAT(DATE_FORMAT(o.created_at, '%Y-%m'), '-W', (FLOOR((DAYOFMONTH(o.created_at) - 1) / 7) + 1)) as period, " +
                         "SUM(o.final_amount) as amount, " +
-                        "COUNT(DISTINCT o.id) as transactionCount " +
+                        "COUNT(o.id) as transactionCount " +
                         "FROM orders o " +
-                        "JOIN transactions t ON o.id = t.order_id " +
-                        "WHERE t.status = 'SUCCESS' " +
+                        "WHERE EXISTS (SELECT 1 FROM transactions t WHERE t.order_id = o.id AND t.status = 'SUCCESS') " +
                         "  AND o.created_at >= :start " +
                         "  AND o.created_at < :end " +
                         "GROUP BY period", nativeQuery = true)
@@ -93,9 +88,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
                         "SUM(od.quantity) as totalQuantity, " +
                         "SUM(od.unit_price * od.quantity) as totalRevenue " +
                         "FROM order_details od " +
-                        "JOIN orders o ON od.order_id = o.id " +
-                        "JOIN transactions t ON o.id = t.order_id " +
-                        "WHERE t.status = 'SUCCESS' " +
+                        "WHERE EXISTS (SELECT 1 FROM transactions t WHERE t.order_id = od.order_id AND t.status = 'SUCCESS') " +
                         "GROUP BY type", nativeQuery = true)
         List<Map<String, Object>> getRevenueByTicketType();
 }
